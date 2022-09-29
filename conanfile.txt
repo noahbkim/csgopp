@@ -1,0 +1,6 @@
+[requires]
+protobuf/3.21.4
+abseil/20220623.0
+
+[generators]
+cmake

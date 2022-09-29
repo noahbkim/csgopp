@@ -1,0 +1,27 @@
+# IntelliJ
+.idea/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+cmake-build-debug
+cmake-build-release
+
+# VSC++
+*.vcxproj
+*.vcxproj.filters
+*.sln
+/csgopp.dir
+/Debug
+/Release
+/x64
+/x86
+
+# Conan
+conan.lock
+conanbuildinfo.cmake
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
