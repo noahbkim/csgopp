@@ -1,13 +1,13 @@
-# IntelliJ
-.idea/
+# .idea
+**/.idea/workspace.xml
+**/.idea/tasks.xml
 
 # CMake
 CMakeCache.txt
 CMakeFiles/
 Makefile
 cmake_install.cmake
-cmake-build-debug
-cmake-build-release
+cmake-build-*
 
 # VSC++
 *.vcxproj
