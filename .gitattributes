@@ -1,1 +1,4 @@
 demos/ filter=lfs diff=lfs merge=lfs -text
+/demos/eg-black-vs-kari-m1-mirage.dem filter=lfs diff=lfs merge=lfs -text
+/demos/eg-black-vs-kari-m2-overpass.dem filter=lfs diff=lfs merge=lfs -text
+/demos/eg-black-vs-kari-m3-nuke.dem filter=lfs diff=lfs merge=lfs -text
