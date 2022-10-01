@@ -1,8 +1,12 @@
 find_package(Protobuf REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.proto")
-PROTOBUF_GENERATE_CPP(PROTO_SOURCES PROTO_HEADERS ${PROTO_FILES})
+PROTOBUF_GENERATE_CPP(PROTO_SOURCES PROTO_HEADERS
+        cstrike15_gcmessages.proto
+        cstrike15_usermessages.proto
+        engine_gcmessages.proto
+        netmessages.proto
+        steammessages.proto)
 add_library(csgopp.msg STATIC ${PROTO_SOURCES} ${PROTO_HEADERS})
 
 # https://stackoverflow.com/questions/20824194/cmake-with-google-protocol-buffers

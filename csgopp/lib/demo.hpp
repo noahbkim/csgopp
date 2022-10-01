@@ -6,9 +6,31 @@
 namespace csgopp::demo
 {
 
-struct Event
+class ParseError : std::domain_error
 {
-    enum class Type : uint8_t
+    using std::domain_error::domain_error;
+};
+
+struct Header
+{
+    char magic[8];
+    int demo_protocol;
+    int network_protocol;
+    char server_name[260];
+    char client_name[260];
+    char map_name[260];
+    char game_directory[260];
+    float playback_time;
+    int tick_count;
+    int frame_count;
+    int sign_on_size;
+};
+
+Header parse_header(std::istream& input);
+
+struct Frame
+{
+    enum class Command : uint8_t
     {
         SIGN_ON = 1,
         PACKET = 2,
@@ -21,20 +43,14 @@ struct Event
         STRING_TABLES = 9,
     };
 
-    struct SignOn
-    {
-
-    };
+    struct SignOn {};
 
     struct Packet
     {
 
     };
 
-    struct SyncTick
-    {
-
-    };
+    struct SyncTick {};
 
     struct ConsoleCommand
     {
@@ -51,10 +67,7 @@ struct Event
 
     };
 
-    struct Stop
-    {
-
-    };
+    struct Stop {};
 
     struct CustomData
     {
@@ -89,32 +102,31 @@ struct Event
         explicit Data(StringTables data) noexcept : string_tables(data) {}
     };
 
-    Type type;
+    Command command;
     Data data;
 
-    explicit Event(SignOn data) noexcept : type(Type::SIGN_ON), data(data) {}
-    explicit Event(Packet data) noexcept : type(Type::PACKET), data(data) {}
-    explicit Event(SyncTick data) noexcept : type(Type::SYNC_TICK), data(data) {}
-    explicit Event(ConsoleCommand data) noexcept : type(Type::CONSOLE_COMMAND), data(data) {}
-    explicit Event(UserCommand data) noexcept : type(Type::USER_COMMAND), data(data) {}
-    explicit Event(DataTables data) noexcept : type(Type::DATA_TABLES), data(data) {}
-    explicit Event(Stop data) noexcept : type(Type::STOP), data(data) {}
-    explicit Event(CustomData data) noexcept : type(Type::CUSTOM_DATA), data(data) {}
-    explicit Event(StringTables data) noexcept : type(Type::STRING_TABLES), data(data) {}
+    explicit Frame(SignOn data) noexcept : command(Command::SIGN_ON), data(data) {}
+    explicit Frame(Packet data) noexcept : command(Command::PACKET), data(data) {}
+    explicit Frame(SyncTick data) noexcept : command(Command::SYNC_TICK), data(data) {}
+    explicit Frame(ConsoleCommand data) noexcept : command(Command::CONSOLE_COMMAND), data(data) {}
+    explicit Frame(UserCommand data) noexcept : command(Command::USER_COMMAND), data(data) {}
+    explicit Frame(DataTables data) noexcept : command(Command::DATA_TABLES), data(data) {}
+    explicit Frame(Stop data) noexcept : command(Command::STOP), data(data) {}
+    explicit Frame(CustomData data) noexcept : command(Command::CUSTOM_DATA), data(data) {}
+    explicit Frame(StringTables data) noexcept : command(Command::STRING_TABLES), data(data) {}
 };
 
-Event parse(std::istream& input);
+Frame parse_frame(std::istream& input);
 
 template<typename T>
-T parse_little_endian(std::istream &input)
+T parse_little_endian(std::istream& input)
 {
-    static_assert(sizeof(char) == sizeof(uint8_t));
-    static_assert(sizeof(T) > 1);
-
-    uint8_t buffer[sizeof(T)];
-    input.read(reinterpret_cast<char *>(buffer), sizeof(T));
+//    static_assert(sizeof(char) == sizeof(uint8_t));
+//    static_assert(sizeof(T) > 1);
 
     T result {};
+    uint8_t buffer[sizeof(T)];
+    input.read(reinterpret_cast<char*>(buffer), sizeof(T));
     for (uint32_t i{0}; i < sizeof(T); ++i)
     {
         result += static_cast<T>(buffer[i]) << (i * 8);
@@ -123,5 +135,21 @@ T parse_little_endian(std::istream &input)
     return result;
 }
 
+template<typename T>
+T parse_variable_size(std::istream& input)
+{
+//    static_assert(sizeof(char) == sizeof(uint8_t));
+//    static_assert(sizeof(T) > 1);
+
+    T result {};
+    uint8_t cursor = 0x80;
+    for (uint32_t i{0}; (cursor & 0x80) != 0 && i < sizeof(T); ++i)
+    {
+        input.read(reinterpret_cast<char*>(&cursor), 1);
+        result |= static_cast<T>(cursor & 0x7F) << (7 * i);
+    }
+
+    return result;
+}
 
 }

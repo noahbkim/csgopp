@@ -19,3 +19,8 @@ TEST(Demo, parse_little_endian_large) {
     std::stringstream input("\x8b(?\x05\xff\xff\xff\xff");
     EXPECT_EQ(parse_little_endian<int64_t>(input), -4206942069LL);
 }
+
+TEST(Demo, parse_variable_size_simple) {
+    std::stringstream input("\x2a\x80");
+    EXPECT_EQ(parse_variable_size<int>(input), 42);
+}

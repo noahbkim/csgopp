@@ -1,3 +1,7 @@
+syntax = "proto2";
+
+package csgo.message.steam;
+
 import "google/protobuf/descriptor.proto";
 
 option optimize_for = SPEED;
@@ -33,7 +37,7 @@ message CMsgProtoBufHeader {
   optional int32 eresult = 13 [default = 2];
   optional string error_message = 14;
   optional uint32 ip = 15;
-  optional .GCProtoBufMsgSrc gc_msg_src = 200 [default = GCProtoBufMsgSrc_Unspecified];
+  optional csgo.message.steam.GCProtoBufMsgSrc gc_msg_src = 200 [default = GCProtoBufMsgSrc_Unspecified];
   optional uint32 gc_dir_index_source = 201;
 }
 
@@ -59,9 +63,9 @@ message CMsgHttpRequest {
   optional uint32 request_method = 1;
   optional string hostname = 2;
   optional string url = 3;
-  repeated .CMsgHttpRequest.RequestHeader headers = 4;
-  repeated .CMsgHttpRequest.QueryParam get_params = 5;
-  repeated .CMsgHttpRequest.QueryParam post_params = 6;
+  repeated csgo.message.steam.CMsgHttpRequest.RequestHeader headers = 4;
+  repeated csgo.message.steam.CMsgHttpRequest.QueryParam get_params = 5;
+  repeated csgo.message.steam.CMsgHttpRequest.QueryParam post_params = 6;
   optional bytes body = 7;
   optional uint32 absolute_timeout = 8;
 }
@@ -71,8 +75,8 @@ message CMsgWebAPIRequest {
   optional string interface_name = 2;
   optional string method_name = 3;
   optional uint32 version = 4;
-  optional .CMsgWebAPIKey api_key = 5;
-  optional .CMsgHttpRequest request = 6;
+  optional csgo.message.steam.CMsgWebAPIKey api_key = 5;
+  optional csgo.message.steam.CMsgHttpRequest request = 6;
   optional uint32 routing_app_id = 7;
 }
 
@@ -83,7 +87,7 @@ message CMsgHttpResponse {
   }
 
   optional uint32 status_code = 1;
-  repeated .CMsgHttpResponse.ResponseHeader headers = 2;
+  repeated csgo.message.steam.CMsgHttpResponse.ResponseHeader headers = 2;
   optional bytes body = 3;
 }
 
@@ -117,7 +121,7 @@ message CMsgPackageLicense {
 }
 
 message CMsgAMGetLicensesResponse {
-  repeated .CMsgPackageLicense license = 1;
+  repeated csgo.message.steam.CMsgPackageLicense license = 1;
   optional uint32 result = 2;
 }
 
@@ -142,8 +146,8 @@ message CMsgAMGetUserGameStatsResponse {
   optional fixed64 steam_id = 1;
   optional fixed64 game_id = 2;
   optional int32 eresult = 3 [default = 2];
-  repeated .CMsgAMGetUserGameStatsResponse.Stats stats = 4;
-  repeated .CMsgAMGetUserGameStatsResponse.Achievement_Blocks achievement_blocks = 5;
+  repeated csgo.message.steam.CMsgAMGetUserGameStatsResponse.Stats stats = 4;
+  repeated csgo.message.steam.CMsgAMGetUserGameStatsResponse.Achievement_Blocks achievement_blocks = 5;
 }
 
 message CMsgGCGetCommandList {
@@ -165,7 +169,7 @@ message CGCMsgMemCachedGetResponse {
     optional bytes value = 2;
   }
 
-  repeated .CGCMsgMemCachedGetResponse.ValueTag values = 1;
+  repeated csgo.message.steam.CGCMsgMemCachedGetResponse.ValueTag values = 1;
 }
 
 message CGCMsgMemCachedSet {
@@ -174,7 +178,7 @@ message CGCMsgMemCachedSet {
     optional bytes value = 2;
   }
 
-  repeated .CGCMsgMemCachedSet.KeyPair keys = 1;
+  repeated csgo.message.steam.CGCMsgMemCachedSet.KeyPair keys = 1;
 }
 
 message CGCMsgMemCachedDelete {
@@ -244,7 +248,7 @@ message CIPLocationInfo {
 }
 
 message CGCMsgGetIPLocationResponse {
-  repeated .CIPLocationInfo infos = 1;
+  repeated csgo.message.steam.CIPLocationInfo infos = 1;
 }
 
 message CGCMsgSystemStatsSchema {
@@ -285,9 +289,9 @@ message CMsgAMSendEmail {
   optional fixed64 steamid = 1;
   optional uint32 email_msg_type = 2;
   optional uint32 email_format = 3;
-  repeated .CMsgAMSendEmail.PersonaNameReplacementToken persona_name_tokens = 5;
+  repeated csgo.message.steam.CMsgAMSendEmail.PersonaNameReplacementToken persona_name_tokens = 5;
   optional uint32 source_gc = 6;
-  repeated .CMsgAMSendEmail.ReplacementToken tokens = 7;
+  repeated csgo.message.steam.CMsgAMSendEmail.ReplacementToken tokens = 7;
 }
 
 message CMsgAMSendEmailResponse {
@@ -380,7 +384,7 @@ message CMsgGCGetPersonaNames_Response {
     optional string persona_name = 2;
   }
 
-  repeated .CMsgGCGetPersonaNames_Response.PersonaName succeeded_lookups = 1;
+  repeated csgo.message.steam.CMsgGCGetPersonaNames_Response.PersonaName succeeded_lookups = 1;
   repeated fixed64 failed_lookup_steamids = 2;
 }
 
@@ -404,7 +408,7 @@ message CMsgGCMsgMasterSetDirectory {
   }
 
   optional uint32 master_dir_index = 1;
-  repeated .CMsgGCMsgMasterSetDirectory.SubGC dir = 2;
+  repeated csgo.message.steam.CMsgGCMsgMasterSetDirectory.SubGC dir = 2;
 }
 
 message CMsgGCMsgMasterSetDirectory_Response {
@@ -457,8 +461,8 @@ message CMsgGCRoutingInfo {
   }
 
   repeated uint32 dir_index = 1;
-  optional .CMsgGCRoutingInfo.RoutingMethod method = 2 [default = RANDOM];
-  optional .CMsgGCRoutingInfo.RoutingMethod fallback = 3 [default = DISCARD];
+  optional csgo.message.steam.CMsgGCRoutingInfo.RoutingMethod method = 2 [default = RANDOM];
+  optional csgo.message.steam.CMsgGCRoutingInfo.RoutingMethod fallback = 3 [default = DISCARD];
   optional uint32 protobuf_field = 4;
   optional string webapi_param = 5;
 }
@@ -467,19 +471,19 @@ message CMsgGCMsgMasterSetWebAPIRouting {
   message Entry {
     optional string interface_name = 1;
     optional string method_name = 2;
-    optional .CMsgGCRoutingInfo routing = 3;
+    optional csgo.message.steam.CMsgGCRoutingInfo routing = 3;
   }
 
-  repeated .CMsgGCMsgMasterSetWebAPIRouting.Entry entries = 1;
+  repeated csgo.message.steam.CMsgGCMsgMasterSetWebAPIRouting.Entry entries = 1;
 }
 
 message CMsgGCMsgMasterSetClientMsgRouting {
   message Entry {
     optional uint32 msg_type = 1;
-    optional .CMsgGCRoutingInfo routing = 2;
+    optional csgo.message.steam.CMsgGCRoutingInfo routing = 2;
   }
 
-  repeated .CMsgGCMsgMasterSetClientMsgRouting.Entry entries = 1;
+  repeated csgo.message.steam.CMsgGCMsgMasterSetClientMsgRouting.Entry entries = 1;
 }
 
 message CMsgGCMsgMasterSetWebAPIRouting_Response {
@@ -503,8 +507,8 @@ message CMsgGCMsgSetOptions {
     NOTIFY_VAC_ACTION = 3;
   }
 
-  repeated .CMsgGCMsgSetOptions.Option options = 1;
-  repeated .CMsgGCMsgSetOptions.MessageRange client_msg_ranges = 2;
+  repeated csgo.message.steam.CMsgGCMsgSetOptions.Option options = 1;
+  repeated csgo.message.steam.CMsgGCMsgSetOptions.MessageRange client_msg_ranges = 2;
 }
 
 message CMsgGCHUpdateSession {
@@ -521,7 +525,7 @@ message CMsgGCHUpdateSession {
   optional uint32 server_port = 6;
   optional uint32 os_type = 7;
   optional uint32 client_addr = 8;
-  repeated .CMsgGCHUpdateSession.ExtraField extra_fields = 9;
+  repeated csgo.message.steam.CMsgGCHUpdateSession.ExtraField extra_fields = 9;
   optional fixed64 owner_id = 10;
   optional uint32 cm_session_sysid = 11;
   optional uint32 cm_session_identifier = 12;
@@ -536,7 +540,7 @@ message CMsgNotificationOfSuspiciousActivity {
 
   optional fixed64 steamid = 1;
   optional uint32 appid = 2;
-  optional .CMsgNotificationOfSuspiciousActivity.MultipleGameInstances multiple_instances = 3;
+  optional csgo.message.steam.CMsgNotificationOfSuspiciousActivity.MultipleGameInstances multiple_instances = 3;
 }
 
 message CMsgDPPartnerMicroTxns {
@@ -569,8 +573,8 @@ message CMsgDPPartnerMicroTxns {
 
   optional uint32 appid = 1;
   optional string gc_name = 2;
-  optional .CMsgDPPartnerMicroTxns.PartnerInfo partner = 3;
-  repeated .CMsgDPPartnerMicroTxns.PartnerMicroTxn transactions = 4;
+  optional csgo.message.steam.CMsgDPPartnerMicroTxns.PartnerInfo partner = 3;
+  repeated csgo.message.steam.CMsgDPPartnerMicroTxns.PartnerMicroTxn transactions = 4;
 }
 
 message CMsgDPPartnerMicroTxnsResponse {
@@ -587,7 +591,7 @@ message CMsgDPPartnerMicroTxnsResponse {
   }
 
   optional uint32 eresult = 1 [default = 2];
-  optional .CMsgDPPartnerMicroTxnsResponse.EErrorCode eerrorcode = 2 [default = k_MsgValid];
+  optional csgo.message.steam.CMsgDPPartnerMicroTxnsResponse.EErrorCode eerrorcode = 2 [default = k_MsgValid];
 }
 
 message CChinaAgreementSessions_StartAgreementSessionInGame_Request {
