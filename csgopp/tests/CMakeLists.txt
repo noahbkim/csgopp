@@ -4,7 +4,7 @@ enable_testing()
 find_package(GTest REQUIRED)
 
 add_executable(csgopp.tests
-        demo_tests.cpp)
+        demo_tests.cpp common/reader_tests.cpp common/id_tests.cpp)
 target_link_libraries(csgopp.tests csgopp GTest::gtest_main)
 
 include(GoogleTest)

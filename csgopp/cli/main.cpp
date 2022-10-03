@@ -1,9 +1,21 @@
 #include <iostream>
 #include <fstream>
 
-#include "demo.hpp"
+#include <csgopp/demo.h>
+#include <csgopp/game.h>
 
 using namespace csgopp::demo;
+using csgopp::game::Game;
+using csgopp::common::reader::StreamReader;
+
+class CLIGame : public Game
+{
+public:
+    explicit CLIGame(Reader& reader) : Game(reader)
+    {
+
+    }
+};
 
 int main(int argc, char** argv)
 {
@@ -13,20 +25,18 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    std::ifstream input(argv[1]);
-    Header header = parse_header(input);
-
-    std::cout << header.magic << std::endl;
-    std::cout << header.demo_protocol << std::endl;
-    std::cout << header.network_protocol << std::endl;
-    std::cout << header.server_name << std::endl;
-    std::cout << header.client_name << std::endl;
-    std::cout << header.map_name << std::endl;
-    std::cout << header.game_directory << std::endl;
-    std::cout << header.playback_time << std::endl;
-    std::cout << header.tick_count << std::endl;
-    std::cout << header.frame_count << std::endl;
-    std::cout << header.sign_on_size << std::endl;
-
-    return -1;
+    try
+    {
+        StreamReader<std::ifstream> reader(argv[1]);
+        CLIGame game(reader);
+        game.advance(reader);
+        game.advance(reader);
+        game.advance(reader);
+        game.advance(reader);
+    }
+    catch (csgopp::error::Error& error)
+    {
+        std::cerr << "caught exception: " << error.message() << std::endl;
+        return -1;
+    }
 }

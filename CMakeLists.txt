@@ -9,7 +9,7 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
 # link compiled proto headers
-add_subdirectory(csgopp/lib/)
-add_subdirectory(csgopp/msg/)
+add_subdirectory(csgopp/csgopp/)
+add_subdirectory(csgopp/messages/)
 add_subdirectory(csgopp/cli/)
-add_subdirectory(csgopp/test/)
+add_subdirectory(csgopp/tests/)
