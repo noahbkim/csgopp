@@ -7,7 +7,13 @@ add_library(csgopp STATIC
         game/player.cpp game/player.h
         common/vector.h
         game/entity.cpp game/entity.h
-        common/id.h common/interface.h game/server_class.cpp game/server_class.h error.h game/send_table.cpp game/send_table.h)
+        common/id.h
+        common/interface.h
+        game/server_class.cpp game/server_class.h
+        error.h
+        game/send_table.cpp game/send_table.h)
+
+set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 include_directories(${PROTO_INCLUDE})
 

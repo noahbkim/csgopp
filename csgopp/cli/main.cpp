@@ -8,7 +8,7 @@ using namespace csgopp::demo;
 using csgopp::game::Game;
 using csgopp::common::reader::StreamReader;
 
-class CLIGame : public Game
+class CLIGame final : public Game
 {
 public:
     explicit CLIGame(Reader& reader) : Game(reader)
