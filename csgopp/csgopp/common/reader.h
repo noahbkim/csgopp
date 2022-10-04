@@ -4,6 +4,7 @@
 #include <string>
 #include <istream>
 #include <type_traits>
+#include <cstddef>
 
 #include "../error.h"
 
@@ -11,7 +12,7 @@ namespace csgopp::common::reader
 {
 
 using digit_t = uint32_t;
-using byte_t = uint8_t;
+using byte_t = std::byte;
 
 class ReadError : public csgopp::error::Error
 {
@@ -77,6 +78,7 @@ public:
     }
 
     virtual void skip(size_t size) = 0;
+    virtual size_t tell() { return -1; }
 
 protected:
     virtual void buffer(char* into, size_t size) = 0;
@@ -94,6 +96,11 @@ public:
     void skip(size_t size) override
     {
         this->stream.seekg(size, std::ios::cur);
+    }
+
+    [[nodiscard]] size_t tell() override
+    {
+        return this->stream.tellg();
     }
 
 private:

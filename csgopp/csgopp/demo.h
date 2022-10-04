@@ -5,6 +5,7 @@
 
 #include "error.h"
 #include "common/reader.h"
+#include "common/lookup.h"
 
 namespace csgopp::demo
 {
@@ -63,5 +64,16 @@ enum class Command : uint8_t
     CUSTOM_DATA = 8,
     STRING_TABLES = 9,
 };
+
+LOOKUP(describe, Command, const char*,
+    CASE(Command::SIGN_ON, "SIGN_ON")
+    CASE(Command::PACKET, "PACKET")
+    CASE(Command::SYNC_TICK, "SYNC_TICK")
+    CASE(Command::CONSOLE_COMMAND, "CONSOLE_COMMAND")
+    CASE(Command::USER_COMMAND, "USER_COMMAND")
+    CASE(Command::DATA_TABLES, "DATA_TABLES")
+    CASE(Command::STOP, "STOP")
+    CASE(Command::CUSTOM_DATA, "CUSTOM_DATA")
+    CASE(Command::STRING_TABLES, "STRING_TABLES"))
 
 }
