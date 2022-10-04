@@ -35,22 +35,34 @@ struct Header
     static Header deserialize(Reader& reader);
 };
 
-template<typename T>
-T parse_variable_size(Reader& reader)
+template <typename T, typename S = size_t>
+struct VariableSize
 {
     static_assert(sizeof(char) == sizeof(uint8_t));
     static_assert(sizeof(T) > 1);
 
-    T result{};
-    uint8_t cursor = 0x80;
-    for (uint32_t i{0}; (cursor & 0x80) != 0 && i < sizeof(T); ++i)
+    T value{0};
+    S size{0};
+
+    static constexpr size_t limit()
     {
-        reader.read(&cursor, 1);
-        result |= static_cast<T>(cursor & 0x7F) << (7 * i);
+        return (sizeof(T) * 8 + 6) / 7;
     }
 
-    return result;
-}
+    static VariableSize deserialize(Reader& reader)
+    {
+        VariableSize result;
+        std::byte cursor;
+
+        do
+        {
+            reader.read(&cursor, 1);
+            result.value |= static_cast<T>(cursor & std::byte{0x7F}) << (7 * result.size);
+            result.size += 1;
+        } while ((cursor & std::byte{0x80}) != std::byte{0x00} && result.size <= limit());
+        return result;
+    }
+};
 
 enum class Command : uint8_t
 {

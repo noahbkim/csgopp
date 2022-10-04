@@ -54,7 +54,7 @@ int main(int argc, char** argv)
         try
         {
             while (simulation.advance(reader));
-            std::cout << simulation.observer.frame_count << std::endl;
+            std::cout << "finished with frame_count: " << simulation.observer.frame_count << std::endl;
         }
         catch (csgopp::error::Error& error)
         {

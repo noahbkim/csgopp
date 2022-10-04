@@ -68,6 +68,7 @@ public:
 
     bool advance(Reader& reader);
     void advance_packets(Reader& reader);
+    int32_t advance_packet(Reader& reader);
 
     GET(header, const&);
     GET(state, const&);
@@ -98,10 +99,7 @@ struct ObserverBase
 using common::reader::LittleEndian;
 
 template<typename Observer>
-Simulation<Observer>::Simulation(demo::Header&& header) : _header(header)
-{
-
-}
+Simulation<Observer>::Simulation(demo::Header&& header) : _header(header) {}
 
 template<typename Observer>
 Simulation<Observer>::Simulation(Reader& reader) : Simulation(demo::Header::deserialize(reader)) {}
@@ -158,7 +156,26 @@ void Simulation<Observer>::advance_packets(Reader& reader)
 {
     reader.skip(152 + 4 + 4);
     int32_t size = reader.read<int32_t, LittleEndian>();
-    reader.skip(size);
+    int32_t cursor = 0;
+
+    while (cursor < size)
+    {
+        cursor += this->advance_packet(reader);
+    }
+
+    if (cursor != size)
+    {
+        throw std::runtime_error("failed to meet sized");
+    }
+}
+
+template<typename Observer>
+int32_t Simulation<Observer>::advance_packet(Reader& reader)
+{
+    demo::VariableSize<int32_t, int32_t> command = demo::VariableSize<int32_t, int32_t>::deserialize(reader);
+    int32_t size = reader.read<int32_t, LittleEndian>();
+
+    return command.size + size;
 }
 
 }
