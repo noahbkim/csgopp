@@ -20,6 +20,7 @@ namespace csgopp::game
 {
 
 using csgopp::common::reader::Reader;
+using csgopp::demo::VariableSize;
 
 template<typename Observer>
 class Simulation
@@ -165,17 +166,18 @@ void Simulation<Observer>::advance_packets(Reader& reader)
 
     if (cursor != size)
     {
-        throw std::runtime_error("failed to meet sized");
+        throw demo::ParseError("failed to meet sized " + std::to_string(cursor) + ", " + std::to_string(size));
     }
 }
 
 template<typename Observer>
 int32_t Simulation<Observer>::advance_packet(Reader& reader)
 {
-    demo::VariableSize<int32_t, int32_t> command = demo::VariableSize<int32_t, int32_t>::deserialize(reader);
-    int32_t size = reader.read<int32_t, LittleEndian>();
+    VariableSize<int32_t, int32_t> command = VariableSize<int32_t, int32_t>::deserialize(reader);
+    VariableSize<int32_t, int32_t> size = VariableSize<int32_t, int32_t>::deserialize(reader);
+    reader.skip(size.value);
 
-    return command.size + size;
+    return command.size + size.size + size.value;
 }
 
 }
