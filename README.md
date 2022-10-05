@@ -1,6 +1,6 @@
 # csgopp
 
-A generalized, high-performance library for working with CS:GO demos. All credit goes to [`markus-wa`'s `demoinfocs-golang`](https://github.com/markus-wa/demoinfocs-golang), without which all of this would have been impossible.
+A generalized, high-performance library for working with CS:GO demos. All credit goes to [`markus-wa`'s `demoinfocs-golang`](https://github.com/markus-wa/demoinfocs-golang), without which this would have been an impossible undertaking.
 
 This project provides a couple things:
 
