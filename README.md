@@ -6,4 +6,4 @@ This project provides a couple things:
 
 - An efficient C++ framework for simulating CS:GO demos and observing high-level events with zero overhead.
 - A CLI tool that serves as a proof of concept for the library.
-- Ergonomic Python bindings for this framework that facilitates observing events in Python callbacks.
+- Ergonomic Python bindings for the C++ framework that facilitate observing events in Python callbacks.
