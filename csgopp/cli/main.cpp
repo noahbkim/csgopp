@@ -13,7 +13,8 @@ using csgopp::game::ObserverBase;
 struct Observer : public ObserverBase<Observer>
 {
     size_t frame_count = 0;
-    Command last_command = Command::STOP;
+    std::map<Command, size_t> commands;
+    std::map<int32_t, size_t> net_messages;
 
     struct Frame final : public ObserverBase::Frame
     {
@@ -22,7 +23,17 @@ struct Observer : public ObserverBase<Observer>
         void handle(Simulation& simulation, Command command) override
         {
             simulation.observer.frame_count += 1;
-            simulation.observer.last_command = command;
+            simulation.observer.commands[command] += 1;
+        }
+    };
+
+    struct Packet final : public ObserverBase::Packet
+    {
+        using ObserverBase::Packet::Packet;
+
+        void handle(Simulation& simulation, int32_t net_message) override
+        {
+            simulation.observer.net_messages[net_message] += 1;
         }
     };
 };
@@ -56,11 +67,22 @@ int main(int argc, char** argv)
         {
             while (simulation.advance(reader));
             std::cout << "finished with frame_count: " << simulation.observer.frame_count << std::endl;
+
+            std::cout << std::endl << "frames:" << std::endl;
+            for (const auto& [command, count] : simulation.observer.commands)
+            {
+                std::cout << "- " << describe(command) << ": " << count << std::endl;
+            }
+
+            std::cout << std::endl << "net messages:" << std::endl;
+            for (const auto& [net_message, count] : simulation.observer.net_messages)
+            {
+                std::cout << "- " << describe_net_message(net_message) << ": " << count << std::endl;
+            }
         }
         catch (csgopp::error::Error& error)
         {
             std::cerr << "caught exception: " << error.message() << std::endl;
-            std::cerr << "last event: " << static_cast<int>(simulation.observer.last_command) << std::endl;
             return -1;
         }
     }

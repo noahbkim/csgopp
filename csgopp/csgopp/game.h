@@ -88,6 +88,15 @@ public:
     bool advance(Reader& reader);
         void advance_packets(Reader& reader);
             int32_t advance_packet(Reader& reader);
+                void advance_packet_set_con_var(Reader& reader);
+                void advance_packet_server_info(Reader& reader);
+                void advance_packet_create_string_table(Reader& reader);
+                void advance_packet_update_string_table(Reader& reader);
+                void advance_packet_sounds(Reader& reader);
+                void advance_packet_user_message(Reader& reader);
+                void advance_packet_game_event(Reader& reader);
+                void advance_packet_packet_entities(Reader& reader);
+                void advance_packet_game_event_list(Reader& reader);
         void advance_console_command(Reader& reader);
         void advance_user_command(Reader& reader);
         void advance_data_tables(Reader& reader);
@@ -117,6 +126,15 @@ struct ObserverBase
 
     NOOP(Frame, Simulation, demo::Command);
     NOOP(Packet, Simulation, int32_t);
+    NOOP(PacketSetConVar, Simulation, const csgo::message::net::CNETMsg_SetConVar&);
+    NOOP(PacketServerInfo, Simulation, const csgo::message::net::CSVCMsg_ServerInfo&);
+    NOOP(PacketCreateStringTable, Simulation, const csgo::message::net::CSVCMsg_CreateStringTable&);
+    NOOP(PacketUpdateStringTable, Simulation, const csgo::message::net::CSVCMsg_UpdateStringTable&);
+    NOOP(PacketSounds, Simulation, const csgo::message::net::CSVCMsg_Sounds&);
+    NOOP(PacketUserMessage, Simulation, const csgo::message::net::CSVCMsg_UserMessage&);
+    NOOP(PacketGameEvent, Simulation, const csgo::message::net::CSVCMsg_GameEvent&);
+    NOOP(PacketPacketEntities, Simulation, const csgo::message::net::CSVCMsg_PacketEntities&);
+    NOOP(PacketGameEventList, Simulation, const csgo::message::net::CSVCMsg_GameEventList&);
 };
 
 template<typename Observer>
@@ -253,6 +271,61 @@ int32_t Simulation<Observer>::advance_packet(Reader& reader)
     AFTER(Packet, command.value);
     return command.size + size.size + size.value;
 }
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_set_con_var(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_server_info(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_create_string_table(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_update_string_table(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_sounds(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_user_message(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_game_event(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_packet_entities(Reader& reader)
+{
+
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_game_event_list(Reader& reader)
+{
+
+}
+
 
 template<typename Observer>
 void Simulation<Observer>::advance_console_command(Reader& reader)
