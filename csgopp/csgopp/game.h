@@ -2,25 +2,43 @@
 
 #include "demo.h"
 #include "game/team.h"
+#include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
 #define BEFORE(OBSERVER, EVENT) typename OBSERVER::EVENT LOCAL(EVENT)(*this);
 #define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
 
-#define NOOP(NAME, SIMULATION, ...) struct NAME { \
+#define NOOP(NAME, SIMULATION, ...) struct NAME \
+{ \
     explicit NAME(SIMULATION&) {} \
     virtual void handle(SIMULATION&, __VA_ARGS__) {} \
 }
 
-#define DEBUG(FMT, ...) do { \
-    printf("(%s:%d) [%zd] " FMT "\n", __FILE__, __LINE__, reader.tell(), __VA_ARGS__); \
+#define DEBUG(FMT, ...) do \
+{ \
+    printf("[%s:%d] " FMT "\n", __FILE__, __LINE__, __VA_ARGS__); \
+} while (false)
+
+#define ASSERT(CONDITION, FMT, ...) do \
+{ \
+    if (!(CONDITION)) \
+    { \
+        fprintf(stderr, "[%s:%d] " FMT "\n", __FILE__, __LINE__, __VA_ARGS__); \
+        throw csgopp::game::GameError("failed assertion " #CONDITION); \
+    } \
 } while (false)
 
 namespace csgopp::game
 {
 
 using csgopp::common::reader::Reader;
+using csgopp::common::reader::LittleEndian;
 using csgopp::demo::VariableSize;
+
+class GameError : public csgopp::error::Error
+{
+    using Error::Error;
+};
 
 template<typename Observer>
 class Simulation
@@ -68,8 +86,12 @@ public:
     explicit Simulation(demo::Header&& header);
 
     bool advance(Reader& reader);
-    void advance_packets(Reader& reader);
-    int32_t advance_packet(Reader& reader);
+        void advance_packets(Reader& reader);
+            int32_t advance_packet(Reader& reader);
+        void advance_console_command(Reader& reader);
+        void advance_user_command(Reader& reader);
+        void advance_data_tables(Reader& reader);
+        void advance_string_tables(Reader& reader);
 
     GET(header, const&);
     GET(state, const&);
@@ -94,10 +116,8 @@ struct ObserverBase
     using Simulation = Simulation<Observer>;
 
     NOOP(Frame, Simulation, demo::Command);
+    NOOP(Packet, Simulation, int32_t);
 };
-
-
-using common::reader::LittleEndian;
 
 template<typename Observer>
 Simulation<Observer>::Simulation(demo::Header&& header) : _header(header) {}
@@ -115,6 +135,7 @@ bool Simulation<Observer>::advance(Reader& reader)
 
     switch (command)
     {
+        // Handle packets
         case static_cast<char>(demo::Command::SIGN_ON):
             this->advance_packets(reader);
             AFTER(Frame, demo::Command::SIGN_ON);
@@ -122,33 +143,43 @@ bool Simulation<Observer>::advance(Reader& reader)
         case static_cast<char>(demo::Command::PACKET):
             this->advance_packets(reader);
             AFTER(Frame, demo::Command::PACKET);
-            return true; // parse_packet(input);;
+            return true;
+
+        // Exists only to synchronize demo with current tick in absence of activity
         case static_cast<char>(demo::Command::SYNC_TICK):
             AFTER(Frame, demo::Command::SYNC_TICK);
             return true;
+
+        // We ignore these
         case static_cast<char>(demo::Command::CONSOLE_COMMAND):
-            reader.skip(reader.read<int32_t, LittleEndian>());
+            this->advance_console_command(reader);
             AFTER(Frame, demo::Command::CONSOLE_COMMAND);
-            return true; // parse_console_command(input);
+            return true;
         case static_cast<char>(demo::Command::USER_COMMAND):
-            reader.skip(4);
-            reader.skip(reader.read<int32_t, LittleEndian>());
-            return true; // parse_user_command(input);
+            this->advance_user_command(reader);
+            AFTER(Frame, demo::Command::CONSOLE_COMMAND);
+            return true;
+
+        // Update sendtables
         case static_cast<char>(demo::Command::DATA_TABLES):
-            reader.skip(reader.read<int32_t, LittleEndian>());
+            this->advance_data_tables(reader);
             AFTER(Frame, demo::Command::DATA_TABLES);
-            return true; // parse_data_tables(input);
+            return true;
+        case static_cast<char>(demo::Command::STRING_TABLES):
+            this->advance_string_tables(reader);
+            AFTER(Frame, demo::Command::STRING_TABLES);
+            return true;
+
+        // Indicate the end of the demo
         case static_cast<char>(demo::Command::STOP):
             AFTER(Frame, demo::Command::STOP);
             return false;
+
+        // Failure conditions
         case static_cast<char>(demo::Command::CUSTOM_DATA):
-            throw demo::ParseError("encountered unexpected CUSTOM_DATA event!");
-        case static_cast<char>(demo::Command::STRING_TABLES):
-            reader.skip(reader.read<int32_t, LittleEndian>());
-            AFTER(Frame, demo::Command::STRING_TABLES);
-            return true; // parse_string_tables(input);
+            throw GameError("encountered unexpected CUSTOM_DATA event!");
         default:
-            throw demo::ParseError("encountered unknown command " + std::to_string(command));
+            throw GameError("encountered unknown command " + std::to_string(command));
     }
 }
 
@@ -164,20 +195,88 @@ void Simulation<Observer>::advance_packets(Reader& reader)
         cursor += this->advance_packet(reader);
     }
 
-    if (cursor != size)
-    {
-        throw demo::ParseError("failed to meet sized " + std::to_string(cursor) + ", " + std::to_string(size));
-    }
+    ASSERT(cursor == size, "failed to read to expected packet alignment");
 }
 
 template<typename Observer>
 int32_t Simulation<Observer>::advance_packet(Reader& reader)
 {
+    BEFORE(Observer, Packet);
     VariableSize<int32_t, int32_t> command = VariableSize<int32_t, int32_t>::deserialize(reader);
     VariableSize<int32_t, int32_t> size = VariableSize<int32_t, int32_t>::deserialize(reader);
+
+    using namespace csgo::message::net;
+    switch (command.value)
+    {
+        case NET_Messages::net_Tick:
+            break;
+        case NET_Messages::net_StringCmd:
+            break;
+        case NET_Messages::net_SetConVar:
+            break;
+        case NET_Messages::net_SignonState:
+            break;
+        case SVC_Messages::svc_ServerInfo:
+            break;
+        case SVC_Messages::svc_ClassInfo:
+            break;
+        case SVC_Messages::svc_CreateStringTable:
+            break;
+        case SVC_Messages::svc_UpdateStringTable:
+            break;
+        case SVC_Messages::svc_VoiceInit:
+            break;
+        case SVC_Messages::svc_Sounds:
+            break;
+        case SVC_Messages::svc_SetView:
+            break;
+        case SVC_Messages::svc_BSPDecal:
+            break;
+        case SVC_Messages::svc_UserMessage:
+            break;
+        case SVC_Messages::svc_GameEvent:
+            break;
+        case SVC_Messages::svc_PacketEntities:
+            break;
+        case SVC_Messages::svc_TempEntities:
+            break;
+        case SVC_Messages::svc_Prefetch:
+            break;
+        case SVC_Messages::svc_GameEventList:
+            break;
+        default:
+            DEBUG("unrecognized message %s", demo::describe_net_message(command.value));
+    }
+
     reader.skip(size.value);
 
+    AFTER(Packet, command.value);
     return command.size + size.size + size.value;
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_console_command(Reader& reader)
+{
+    reader.skip(reader.read<int32_t, LittleEndian>());
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_user_command(Reader& reader)
+{
+    reader.skip(4);
+    reader.skip(reader.read<int32_t, LittleEndian>());
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_data_tables(Reader& reader)
+{
+    reader.skip(reader.read<int32_t, LittleEndian>());
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_string_tables(Reader& reader)
+{
+    reader.skip(reader.read<int32_t, LittleEndian>());
 }
 
 }

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <map>
 
 #include <csgopp/demo.h>
 #include <csgopp/game.h>
@@ -14,7 +15,7 @@ struct Observer : public ObserverBase<Observer>
     size_t frame_count = 0;
     Command last_command = Command::STOP;
 
-    struct Frame : public ObserverBase::Frame
+    struct Frame final : public ObserverBase::Frame
     {
         using ObserverBase::Frame::Frame;
 

@@ -75,7 +75,7 @@ public:
     }
 
     virtual void skip(size_t size) = 0;
-    virtual size_t tell() { return -1; }
+    virtual size_t tell() = 0;
 
 protected:
     virtual void consume(char* into, size_t size) = 0;

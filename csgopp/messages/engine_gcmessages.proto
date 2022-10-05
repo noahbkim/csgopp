@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package csgo.message.engine;
+package csgo.message.engine.gc;
 
 import "google/protobuf/descriptor.proto";
 

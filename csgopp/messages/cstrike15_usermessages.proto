@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package csgo.message.user;
+package csgo.message.cstrike15.user;
 
 import "google/protobuf/descriptor.proto";
 import "netmessages.proto";
@@ -99,7 +99,7 @@ message CCSUsrMsg_VGUIMenu {
 
   optional string name = 1;
   optional bool show = 2;
-  repeated csgo.message.user.CCSUsrMsg_VGUIMenu.Subkey subkeys = 3;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_VGUIMenu.Subkey subkeys = 3;
 }
 
 message CCSUsrMsg_Geiger {
@@ -197,7 +197,7 @@ message CCSUsrMsg_VoiceMask {
     optional int32 ban_masks = 2;
   }
 
-  repeated csgo.message.user.CCSUsrMsg_VoiceMask.PlayerMask player_masks = 1;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_VoiceMask.PlayerMask player_masks = 1;
   optional bool player_mod_enable = 2;
 }
 
@@ -236,15 +236,15 @@ message CCSUsrMsg_ProcessSpottedEntityUpdate {
   }
 
   optional bool new_update = 1;
-  repeated csgo.message.user.CCSUsrMsg_ProcessSpottedEntityUpdate.SpottedEntityUpdate entity_updates = 2;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_ProcessSpottedEntityUpdate.SpottedEntityUpdate entity_updates = 2;
 }
 
 message CCSUsrMsg_SendPlayerItemDrops {
-  repeated csgo.message.client.CEconItemPreviewDataBlock entity_updates = 1;
+  repeated csgo.message.cstrike15.gc.CEconItemPreviewDataBlock entity_updates = 1;
 }
 
 message CCSUsrMsg_SendPlayerItemFound {
-  optional csgo.message.client.CEconItemPreviewDataBlock iteminfo = 1;
+  optional csgo.message.cstrike15.gc.CEconItemPreviewDataBlock iteminfo = 1;
   optional int32 entindex = 2;
 }
 
@@ -325,7 +325,7 @@ message CCSUsrMsg_PlayerStatsUpdate {
   }
 
   optional int32 version = 1;
-  repeated csgo.message.user.CCSUsrMsg_PlayerStatsUpdate.Stat stats = 4;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_PlayerStatsUpdate.Stat stats = 4;
   optional int32 user_id = 5;
   optional int32 crc = 6;
 }
@@ -343,11 +343,11 @@ message CCSUsrMsg_QuestProgress {
 }
 
 message CCSUsrMsg_ScoreLeaderboardData {
-  optional csgo.message.client.ScoreLeaderboardData data = 1;
+  optional csgo.message.cstrike15.gc.ScoreLeaderboardData data = 1;
 }
 
 message CCSUsrMsg_PlayerDecalDigitalSignature {
-  optional csgo.message.client.PlayerDecalDigitalSignature data = 1;
+  optional csgo.message.cstrike15.gc.PlayerDecalDigitalSignature data = 1;
 }
 
 message CCSUsrMsg_XRankGet {
@@ -410,11 +410,11 @@ message CCSUsrMsg_ServerRankUpdate {
     optional int32 rank_type_id = 6;
   }
 
-  repeated csgo.message.user.CCSUsrMsg_ServerRankUpdate.RankUpdate rank_update = 1;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_ServerRankUpdate.RankUpdate rank_update = 1;
 }
 
 message CCSUsrMsg_XpUpdate {
-  optional csgo.message.client.CMsgGCCstrike15_v2_GC2ServerNotifyXPRewarded data = 1;
+  optional csgo.message.cstrike15.gc.CMsgGCCstrike15_v2_GC2ServerNotifyXPRewarded data = 1;
 }
 
 message CCSUsrMsg_ItemPickup {
@@ -488,9 +488,9 @@ message CCSUsrMsg_SurvivalStats {
   }
 
   optional uint64 xuid = 1;
-  repeated csgo.message.user.CCSUsrMsg_SurvivalStats.Fact facts = 2;
-  repeated csgo.message.user.CCSUsrMsg_SurvivalStats.Placement users = 3;
-  repeated csgo.message.user.CCSUsrMsg_SurvivalStats.Damage damages = 5;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_SurvivalStats.Fact facts = 2;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_SurvivalStats.Placement users = 3;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_SurvivalStats.Damage damages = 5;
   optional int32 ticknumber = 4;
 }
 
@@ -506,13 +506,13 @@ message CCSUsrMsg_EndOfMatchAllPlayersData {
     optional uint64 xuid = 2;
     optional string name = 3;
     optional int32 teamnumber = 4;
-    optional csgo.message.user.CCSUsrMsg_EndOfMatchAllPlayersData.Accolade nomination = 5;
-    repeated csgo.message.client.CEconItemPreviewDataBlock items = 6;
+    optional csgo.message.cstrike15.user.CCSUsrMsg_EndOfMatchAllPlayersData.Accolade nomination = 5;
+    repeated csgo.message.cstrike15.gc.CEconItemPreviewDataBlock items = 6;
     optional int32 playercolor = 7;
     optional bool isbot = 8;
   }
 
-  repeated csgo.message.user.CCSUsrMsg_EndOfMatchAllPlayersData.PlayerData allplayerdata = 1;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_EndOfMatchAllPlayersData.PlayerData allplayerdata = 1;
   optional int32 scene = 2;
 }
 
@@ -544,9 +544,9 @@ message CCSUsrMsg_RoundImpactScoreData {
     optional int32 terrorist_odds = 2;
     optional int32 ct_alive = 3;
     optional int32 t_alive = 4;
-    optional csgo.message.user.CCSUsrMsg_RoundImpactScoreData.RisEvent.Victim victim_data = 5;
-    optional csgo.message.user.CCSUsrMsg_RoundImpactScoreData.RisEvent.Objective objective_data = 6;
-    repeated csgo.message.user.CCSUsrMsg_RoundImpactScoreData.RisEvent.Damage all_damage_data = 7;
+    optional csgo.message.cstrike15.user.CCSUsrMsg_RoundImpactScoreData.RisEvent.Victim victim_data = 5;
+    optional csgo.message.cstrike15.user.CCSUsrMsg_RoundImpactScoreData.RisEvent.Objective objective_data = 6;
+    repeated csgo.message.cstrike15.user.CCSUsrMsg_RoundImpactScoreData.RisEvent.Damage all_damage_data = 7;
   }
 
   message InitialConditions {
@@ -555,8 +555,8 @@ message CCSUsrMsg_RoundImpactScoreData {
     optional int32 terrorist_odds = 3;
   }
 
-  optional csgo.message.user.CCSUsrMsg_RoundImpactScoreData.InitialConditions init_conditions = 1;
-  repeated csgo.message.user.CCSUsrMsg_RoundImpactScoreData.RisEvent all_ris_event_data = 2;
+  optional csgo.message.cstrike15.user.CCSUsrMsg_RoundImpactScoreData.InitialConditions init_conditions = 1;
+  repeated csgo.message.cstrike15.user.CCSUsrMsg_RoundImpactScoreData.RisEvent all_ris_event_data = 2;
 }
 
 message CCSUsrMsg_CurrentRoundOdds {
@@ -564,7 +564,7 @@ message CCSUsrMsg_CurrentRoundOdds {
 }
 
 message CCSUsrMsg_DeepStats {
-  optional csgo.message.client.CMsgGCCStrike15_ClientDeepStats stats = 1;
+  optional csgo.message.cstrike15.gc.CMsgGCCStrike15_ClientDeepStats stats = 1;
 }
 
 message CCSUsrMsg_ResetHud {
@@ -597,5 +597,5 @@ message CCSUsrMsg_ClientInfo {
 
 message CCSUsrMsg_ServerRankRevealAll {
   optional int32 seconds_till_shutdown = 1;
-  optional csgo.message.client.CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve reservation = 2;
+  optional csgo.message.cstrike15.gc.CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve reservation = 2;
 }
