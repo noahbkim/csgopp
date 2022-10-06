@@ -5,7 +5,6 @@
 constexpr VALUE_TYPE NAME(KEY_TYPE key) { \
   switch (key) { \
     CASES \
-    default: \
-      throw; \
   } \
 }
+#define DEFAULT(THEN) default: THEN;

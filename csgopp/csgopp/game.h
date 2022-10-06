@@ -4,6 +4,7 @@
 
 #include "demo.h"
 #include "game/team.h"
+#include "game/send_table.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -36,11 +37,7 @@ namespace csgopp::game
 using csgopp::common::reader::Reader;
 using csgopp::common::reader::LittleEndian;
 using csgopp::demo::VariableSize;
-
-class GameError : public csgopp::error::Error
-{
-    using Error::Error;
-};
+using csgopp::error::GameError;
 
 template<typename Observer>
 class Simulation
@@ -48,107 +45,78 @@ class Simulation
 public:
     struct State
     {
-//        ingameTick           int
-//        tState               common.TeamState
-//        ctState              common.TeamState
-//        playersByUserID      map[int]*common.Player            // Maps user-IDs to players
-//        playersByEntityID    map[int]*common.Player            // Maps entity-IDs to players
-//        playersBySteamID32   map[uint32]*common.Player         // Maps 32-bit-steam-IDs to players
-//        playerResourceEntity st.Entity                         // CCSPlayerResource entity instance, contains scoreboard info and more
-//        grenadeProjectiles   map[int]*common.GrenadeProjectile // Maps entity-IDs to active nade-projectiles. That's grenades that have been thrown, but have not yet detonated.
-//        infernos             map[int]*common.Inferno           // Maps entity-IDs to active infernos.
-//        weapons              map[int]*common.Equipment         // Maps entity IDs to weapons. Used to remember what a weapon is (p250 / cz etc.)
-//        hostages             map[int]*common.Hostage           // Maps entity-IDs to hostages.
-//        entities             map[int]st.Entity                 // Maps entity IDs to entities
-//        bomb                 common.Bomb
-//        totalRoundsPlayed    int
-//        gamePhase            common.GamePhase
-//        isWarmupPeriod       bool
-//        isMatchStarted       bool
-//        lastFlash            lastFlash                              // Information about the last flash that exploded, used to find the attacker and projectile for player_blind events
-//        currentDefuser       *common.Player                         // Player currently defusing the bomb, if any
-//        currentPlanter       *common.Player                         // Player currently planting the bomb, if any
-//        thrownGrenades       map[*common.Player][]*common.Equipment // Information about every player's thrown grenades (from the moment they are thrown to the moment their effect is ended)
-//        rules                gameRules
-//        demoInfo             demoInfoProvider
+
     };
 
-    // bombsiteA            bombsite
-    // bombsiteB            bombsite
-    // equipmentMapping     map[*st.ServerClass]common.EquipmentType        // Maps server classes to equipment-types
-    // rawPlayers           map[int]*common.PlayerInfo                      // Maps entity IDs to 'raw' player info
-    // modelPreCache        []string                                        // Used to find out whether a weapon is a p250 or cz for example (same id)
-    // triggers             map[int]*boundingBoxInformation                 // Maps entity IDs to triggers (used for bombsites)
-    // gameEventDescs       map[int32]*msg.CSVCMsg_GameEventListDescriptorT // Maps game-event IDs to descriptors
-    // grenadeModelIndices  map[int]common.EquipmentType                    // Used to map model indices to grenades (used for grenade projectiles)
-    // stringTables         []*msg.CSVCMsg_CreateStringTable                // Contains all created sendtables, needed when updating them
-    // delayedEventHandlers []func()
+    struct Data
+    {
+        std::vector<SendTable> send_tables;
+    };
 
     explicit Simulation(Reader& reader);
     explicit Simulation(demo::Header&& header);
 
-    bool advance(Reader& reader);
-        void advance_packets(Reader& reader);
-            int32_t advance_packet(Reader& reader);
-                int32_t advance_packet_nop(Reader& reader);
-                int32_t advance_packet_disconnect(Reader& reader);
-                int32_t advance_packet_file(Reader& reader);
-                int32_t advance_packet_split_screen_user(Reader& reader);
-                int32_t advance_packet_tick(Reader& reader);
-                int32_t advance_packet_string_command(Reader& reader);
-                int32_t advance_packet_set_console_variable(Reader& reader);
-                int32_t advance_packet_signon_state(Reader& reader);
-                int32_t advance_packet_server_info(Reader& reader);
-                int32_t advance_packet_send_table(Reader& reader);
-                int32_t advance_packet_class_info(Reader& reader);
-                int32_t advance_packet_set_pause(Reader& reader);
-                int32_t advance_packet_create_string_table(Reader& reader);
-                int32_t advance_packet_update_string_table(Reader& reader);
-                int32_t advance_packet_voice_initialization(Reader& reader);
-                int32_t advance_packet_voice_data(Reader& reader);
-                int32_t advance_packet_print(Reader& reader);
-                int32_t advance_packet_sounds(Reader& reader);
-                int32_t advance_packet_set_view(Reader& reader);
-                int32_t advance_packet_fix_angle(Reader& reader);
-                int32_t advance_packet_crosshair_angle(Reader& reader);
-                int32_t advance_packet_bsp_decal(Reader& reader);
-                int32_t advance_packet_split_screen(Reader& reader);
-                int32_t advance_packet_user_message(Reader& reader);
-                int32_t advance_packet_entity_message(Reader& reader);
-                int32_t advance_packet_game_event(Reader& reader);
-                int32_t advance_packet_packet_entities(Reader& reader);
-                int32_t advance_packet_temporary_entities(Reader& reader);
-                int32_t advance_packet_prefetch(Reader& reader);
-                int32_t advance_packet_menu(Reader& reader);
-                int32_t advance_packet_game_event_list(Reader& reader);
-                int32_t advance_packet_get_console_variable_value(Reader& reader);
-                int32_t advance_packet_paintmap_data(Reader& reader);
-                int32_t advance_packet_command_key_values(Reader& reader);
-                int32_t advance_packet_encrypted_data(Reader& reader);
-                int32_t advance_packet_hltv_replay(Reader& reader);
-                int32_t advance_packet_broadcast_command(Reader& reader);
-                int32_t advance_packet_player_avatar_data(Reader& reader);
-                int32_t advance_packet_unknown(Reader& reader, int32_t command);
-        void advance_console_command(Reader& reader);
-        void advance_user_command(Reader& reader);
-        void advance_data_tables(Reader& reader);
-        void advance_string_tables(Reader& reader);
-        void advance_custom_data(Reader& reader);
-        bool advance_unknown(Reader& reader, char command);
+    virtual bool advance(Reader& reader);
+        virtual void advance_packets(Reader& reader);
+            virtual int32_t advance_packet(Reader& reader);
+                virtual int32_t advance_packet_nop(Reader& reader);
+                virtual int32_t advance_packet_disconnect(Reader& reader);
+                virtual int32_t advance_packet_file(Reader& reader);
+                virtual int32_t advance_packet_split_screen_user(Reader& reader);
+                virtual int32_t advance_packet_tick(Reader& reader);
+                virtual int32_t advance_packet_string_command(Reader& reader);
+                virtual int32_t advance_packet_set_console_variable(Reader& reader);
+                virtual int32_t advance_packet_sign_on_state(Reader& reader);
+                virtual int32_t advance_packet_server_info(Reader& reader);
+                virtual int32_t advance_packet_send_table(Reader& reader);
+                virtual int32_t advance_packet_class_info(Reader& reader);
+                virtual int32_t advance_packet_set_pause(Reader& reader);
+                virtual int32_t advance_packet_create_string_table(Reader& reader);
+                virtual int32_t advance_packet_update_string_table(Reader& reader);
+                virtual int32_t advance_packet_voice_initialization(Reader& reader);
+                virtual int32_t advance_packet_voice_data(Reader& reader);
+                virtual int32_t advance_packet_print(Reader& reader);
+                virtual int32_t advance_packet_sounds(Reader& reader);
+                virtual int32_t advance_packet_set_view(Reader& reader);
+                virtual int32_t advance_packet_fix_angle(Reader& reader);
+                virtual int32_t advance_packet_crosshair_angle(Reader& reader);
+                virtual int32_t advance_packet_bsp_decal(Reader& reader);
+                virtual int32_t advance_packet_split_screen(Reader& reader);
+                virtual int32_t advance_packet_user_message(Reader& reader);
+                virtual int32_t advance_packet_entity_message(Reader& reader);
+                virtual int32_t advance_packet_game_event(Reader& reader);
+                virtual int32_t advance_packet_packet_entities(Reader& reader);
+                virtual int32_t advance_packet_temporary_entities(Reader& reader);
+                virtual int32_t advance_packet_prefetch(Reader& reader);
+                virtual int32_t advance_packet_menu(Reader& reader);
+                virtual int32_t advance_packet_game_event_list(Reader& reader);
+                virtual int32_t advance_packet_get_console_variable_value(Reader& reader);
+                virtual int32_t advance_packet_paintmap_data(Reader& reader);
+                virtual int32_t advance_packet_command_key_values(Reader& reader);
+                virtual int32_t advance_packet_encrypted_data(Reader& reader);
+                virtual int32_t advance_packet_hltv_replay(Reader& reader);
+                virtual int32_t advance_packet_broadcast_command(Reader& reader);
+                virtual int32_t advance_packet_player_avatar_data(Reader& reader);
+                virtual int32_t advance_packet_unknown(Reader& reader, int32_t command);
+        virtual void advance_console_command(Reader& reader);
+        virtual void advance_user_command(Reader& reader);
+        virtual void advance_data_tables(Reader& reader);
+        virtual void advance_string_tables(Reader& reader);
+        virtual void advance_custom_data(Reader& reader);
+        virtual bool advance_unknown(Reader& reader, char command);
 
     GET(header, const&);
     GET(state, const&);
+    GET(data, const&);
     GET(cursor);
     GET(tick);
 
     Observer observer;
 
 protected:
-
-
-private:
     demo::Header _header;
     State _state;
+    Data _data;
     size_t _cursor = 0;
     size_t _tick = 0;
 };
@@ -258,7 +226,7 @@ SIMULATION(int32_t, advance_packet, Reader& reader)
         PACKET(NET_Messages::net_Tick, this->advance_packet_tick);
         PACKET(NET_Messages::net_StringCmd, this->advance_packet_string_command);
         PACKET(NET_Messages::net_SetConVar, this->advance_packet_set_console_variable);
-        PACKET(NET_Messages::net_SignonState, this->advance_packet_signon_state);
+        PACKET(NET_Messages::net_SignonState, this->advance_packet_sign_on_state);
         PACKET(SVC_Messages::svc_ServerInfo, this->advance_packet_server_info);
         PACKET(SVC_Messages::svc_SendTable, this->advance_packet_send_table);
         PACKET(SVC_Messages::svc_ClassInfo, this->advance_packet_class_info);
@@ -309,7 +277,26 @@ SIMULATION(void, advance_user_command, Reader& reader)
 
 SIMULATION(void, advance_data_tables, Reader& reader)
 {
-    reader.skip(reader.read<int32_t, LittleEndian>());
+    int32_t size = reader.read<int32_t, LittleEndian>();
+//    size_t start = reader.tell();
+    reader.skip(size);
+
+//    VariableSize<int32_t, int32_t> type = VariableSize<int32_t, int32_t>::deserialize(reader);
+//    if (type.value != csgo::message::net::SVC_Messages::svc_SendTable)
+//    {
+//        throw GameError("got unexpected " + std::string(demo::describe_net_message(type.value)));
+//    }
+
+//    // Actual read the SendTable
+//    this->_data.send_tables.emplace_back(SendTable::deserialize(reader));
+//
+//    // REMOVE
+//    if (reader.tell() < start + size)
+//    {
+//        reader.skip(reader.tell() - (start + size));
+//    }
+
+//    ASSERT(reader.tell() == start + size, "cursor mismatch!");
 }
 
 SIMULATION(void, advance_string_tables, Reader& reader)
@@ -343,7 +330,7 @@ SIMULATION(int32_t, advance_packet_split_screen_user, Reader& reader) PACKET_SKI
 SIMULATION(int32_t, advance_packet_tick, Reader& reader) PACKET_SKIP()
 SIMULATION(int32_t, advance_packet_string_command, Reader& reader) PACKET_SKIP()
 SIMULATION(int32_t, advance_packet_set_console_variable, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_signon_state, Reader& reader) PACKET_SKIP()
+SIMULATION(int32_t, advance_packet_sign_on_state, Reader& reader) PACKET_SKIP()
 SIMULATION(int32_t, advance_packet_server_info, Reader& reader) PACKET_SKIP()
 SIMULATION(int32_t, advance_packet_send_table, Reader& reader) PACKET_SKIP()
 SIMULATION(int32_t, advance_packet_class_info, Reader& reader) PACKET_SKIP()

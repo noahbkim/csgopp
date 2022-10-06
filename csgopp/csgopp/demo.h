@@ -12,6 +12,7 @@ namespace csgopp::demo
 
 using csgopp::common::reader::Reader;
 using csgopp::common::reader::LittleEndian;
+using csgopp::error::GameError;
 
 struct Header
 {
@@ -121,6 +122,7 @@ LOOKUP(describe_net_message, int32_t, const char*,
     CASE(35, "svc_EncryptedData")
     CASE(36, "svc_HltvReplay")
     CASE(38, "svc_Broadcast_Command")
-    CASE(100, "net_PlayerAvatarData"));
+    CASE(100, "net_PlayerAvatarData")
+    DEFAULT(throw GameError("unknown net message: " + std::to_string(key))));
 
 }

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <chrono>
 
 #include <csgopp/demo.h>
 #include <csgopp/game.h>
@@ -65,8 +66,15 @@ int main(int argc, char** argv)
 
         try
         {
+            std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+
+            // Actually run
             while (simulation.advance(reader));
-            std::cout << "finished with frame_count: " << simulation.observer.frame_count << std::endl;
+
+            int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now() - start).count();
+            std::cout << "finished with frame_count: " << simulation.observer.frame_count;
+            std::cout << " in " << elapsed << " ms" << std::endl;
 
             std::cout << std::endl << "frames:" << std::endl;
             for (const auto& [command, count] : simulation.observer.commands)

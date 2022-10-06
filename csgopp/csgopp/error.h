@@ -20,4 +20,9 @@ namespace csgopp::error
     private:
         std::string _message;
     };
+
+    class GameError : public csgopp::error::Error
+    {
+        using Error::Error;
+    };
 }
