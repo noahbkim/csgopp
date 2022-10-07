@@ -1,78 +1,23 @@
 #include "send_table.h"
-#include "../common/macro.h"
 #include "../demo.h"
 
 namespace csgopp::network
 {
 
-SendTable::Value SendTable::Property::deserialize(CodedInputStream& stream)
+std::unique_ptr<SendTable::Property> SendTable::Property::deserialize(const CSVCMsg_SendTable_sendprop_t& data)
 {
-    switch (this->type)
+    switch (deserialize_send_table_property_type(data.type()))
     {
-        case Type::INT32:
-            return this->deserialize_int32(stream);
-        case Type::FLOAT:
-            return this->deserialize_float(stream);
-        case Type::VECTOR2:
-            return this->deserialize_vector2(stream);
-        case Type::VECTOR3:
-            return this->deserialize_vector3(stream);
-        case Type::STRING:
-            return this->deserialize_string(stream);
-        case Type::ARRAY:
-            return this->deserialize_array(stream);
-        default:
-            throw GameError("unexpected property type: " + std::string(describe_send_table_property_type(this->type)));
+        case Type::INT32: return std::make_unique<Int32Property>(data);
+        case Type::FLOAT: return std::make_unique<FloatProperty>(data);
+        case Type::VECTOR3: return std::make_unique<Vector3Property>(data);
+        case Type::VECTOR2: return std::make_unique<Vector2Property>(data);
+        case Type::STRING: return std::make_unique<StringProperty>(data);
+        case Type::ARRAY: return std::make_unique<ArrayProperty>(data);
+        case Type::DATA_TABLE: return std::make_unique<DataTableProperty>(data);
+        case Type::INT64: return std::make_unique<Int64Property>(data);
+        default: throw csgopp::error::GameError("unreachable");
     }
-}
-
-inline SendTable::Value SendTable::Property::deserialize_float(CodedInputStream& stream)
-{
-//    if ((this->flags & Flag::Special) == 0)
-//    {
-//
-//    }
-    return SendTable::Value(0.0f);
-}
-
-inline SendTable::Value SendTable::Property::deserialize_float_bit_coordinates(CodedInputStream& stream)
-{
-    return SendTable::Value(0.0f);
-}
-
-inline SendTable::Value SendTable::Property::deserialize_float_bit_normal(CodedInputStream& stream)
-{
-    return SendTable::Value(0.0f);
-}
-
-inline SendTable::Value SendTable::Property::deserialize_float_bit_cell_coordinates(CodedInputStream& stream)
-{
-    return SendTable::Value(0.0f);
-}
-
-inline SendTable::Value SendTable::Property::deserialize_int32(CodedInputStream& stream)
-{
-    return SendTable::Value(42);
-}
-
-inline SendTable::Value SendTable::Property::deserialize_vector2(CodedInputStream& stream)
-{
-    return SendTable::Value(Vector3 {0.0f, 0.0f, 0.0f});
-}
-
-inline SendTable::Value SendTable::Property::deserialize_vector3(CodedInputStream& stream)
-{
-    return SendTable::Value(Vector3 {0.0f, 0.0f, 0.0f});
-}
-
-inline SendTable::Value SendTable::Property::deserialize_array(CodedInputStream& stream)
-{
-    return SendTable::Value("");
-}
-
-inline SendTable::Value SendTable::Property::deserialize_string(CodedInputStream& stream)
-{
-    return SendTable::Value("");
 }
 
 SendTable::SendTable(CodedInputStream& stream)
@@ -102,14 +47,7 @@ void SendTable::deserialize(csgo::message::net::CSVCMsg_SendTable& data)
     using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
     for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
     {
-        SendTable::Property& property = this->properties.emplace_back();
-        property.type = property_data.type();
-        property.data_table_name = property_data.dt_name();
-        property.flags = property_data.flags();
-        property.elements_count = property_data.num_elements();
-        property.high_value = property_data.high_value();
-        property.low_value = property_data.low_value();
-        property.bits_count = property_data.num_bits();
+        this->properties.emplace_back(Property::deserialize(property_data));
     }
 }
 

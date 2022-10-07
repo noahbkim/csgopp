@@ -13,7 +13,6 @@ using google::protobuf::io::ZeroCopyInputStream;
 using google::protobuf::io::IstreamInputStream;
 using csgopp::game::Simulation;
 
-
 int main(int argc, char** argv)
 {
     if (argc < 2)

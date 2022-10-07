@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 #include <string>
-#include <variant>
 #include <google/protobuf/io/coded_stream.h>
 
 #include "csgopp/common/vector.h"
@@ -17,34 +17,40 @@ namespace csgopp::network
 
 using google::protobuf::io::CodedInputStream;
 using csgopp::common::vector::Vector3;
+using csgopp::common::vector::Vector2;
 using csgopp::error::GameError;
+using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 
-struct SendTablePropertyType
+struct SendTablePropertyFlags
 {
     using Type = int32_t;
     enum : Type
     {
-        INT32 = 0,
-        FLOAT = 1,
-        VECTOR3 = 2,
-        VECTOR2 = 3,
-        STRING = 4,
-        ARRAY = 5,
-        DATA_TABLE = 6,
-        INT64 = 7,
+        Unsigned = 1 << 0,
+        Coordinates = 1 << 1,
+        NoScale = 1 << 2,
+        RoundDown = 1 << 3,
+        RoundUp = 1 << 4,
+        Normal = 1 << 5,
+        Exclude = 1 << 6,
+        XYZ = 1 << 7,
+        InsideArray = 1 << 8,
+        ProxyAlwaysYes = 1 << 9,
+        IsVectorElement = 1 << 10,
+        Collapsible = 1 << 11,
+        CoordinateMap = 1 << 12,
+        CoordMpLowPrecision = 1 << 13,
+        CoordMpIntegral = 1 << 14,
+        CellCoord = 1 << 15,
+        CellCoordLowPrecision = 1 << 16,
+        CellCoordIntegral = 1 << 17,
+        ChangesOften = 1 << 18,
+        VarInt = 1 << 19,
+        Special = NoScale | Normal
+                  | Coordinates | CoordinateMap | CoordMpLowPrecision | CoordMpIntegral
+                  | CellCoord | CellCoordLowPrecision | CellCoordIntegral,
     };
 };
-
-LOOKUP(describe_send_table_property_type, SendTablePropertyType::Type, const char*,
-    CASE(SendTablePropertyType::INT32, "INT32")
-    CASE(SendTablePropertyType::FLOAT, "FLOAT")
-    CASE(SendTablePropertyType::VECTOR3, "VECTOR3")
-    CASE(SendTablePropertyType::VECTOR2, "VECTOR2")
-    CASE(SendTablePropertyType::STRING, "STRING")
-    CASE(SendTablePropertyType::ARRAY, "ARRAY")
-    CASE(SendTablePropertyType::DATA_TABLE, "DATA_TABLE")
-    CASE(SendTablePropertyType::INT64, "INT64")
-    DEFAULT(throw  GameError("unknown send table property type: " + std::to_string(key))));
 
 namespace coordinates
 {
@@ -73,90 +79,211 @@ namespace data_table
 
 struct SendTable
 {
-    struct Value
-    {
-        using Data = std::variant<
-                Vector3,
-                int32_t,
-                std::vector<Value>,
-                std::string,
-                float>;
-
-        Data data;
-
-        template<typename T>
-        explicit Value(T&& value) : data(value) {}
-
-        template<typename T>
-        T as() { static_assert(sizeof(T) == 0, "only specializations of as() may be used!"); }
-
-        template<> Vector3& as() { return std::get<Vector3>(this->data); }
-        template<> int32_t& as() { return std::get<int32_t>(this->data); }
-        template<> std::vector<Value>& as() { return std::get<std::vector<Value>>(this->data); }
-        template<> std::string& as() { return std::get<std::string>(this->data); }
-        template<> float& as() { return std::get<float>(this->data); }
-
-        template<> bool as() { return std::get<int32_t>(this->data) > 0; }
-    };
+    struct Value;
 
     struct Property
     {
-        // These have to be separate for us to do binary operations
-        using Flags = int32_t;
-        struct Flag
+        enum class Type : int32_t
         {
-            enum
-            {
-                Unsigned = 1 << 0,
-                Coordinates = 1 << 1,
-                NoScale = 1 << 2,
-                RoundDown = 1 << 3,
-                RoundUp = 1 << 4,
-                Normal = 1 << 5,
-                Exclude = 1 << 6,
-                XYZ = 1 << 7,
-                InsideArray = 1 << 8,
-                ProxyAlwaysYes = 1 << 9,
-                IsVectorElement = 1 << 10,
-                Collapsible = 1 << 11,
-                CoordinateMap = 1 << 12,
-                CoordMpLowPrecision = 1 << 13,
-                CoordMpIntegral = 1 << 14,
-                CellCoord = 1 << 15,
-                CellCoordLowPrecision = 1 << 16,
-                CellCoordIntegral = 1 << 17,
-                ChangesOften = 1 << 18,
-                VarInt = 1 << 19,
-                Special = NoScale | Normal
-                          | Coordinates | CoordinateMap | CoordMpLowPrecision | CoordMpIntegral
-                          | CellCoord | CellCoordLowPrecision | CellCoordIntegral,
-            };
+            INT32 = 0,
+            FLOAT = 1,
+            VECTOR3 = 2,
+            VECTOR2 = 3,
+            STRING = 4,
+            ARRAY = 5,
+            DATA_TABLE = 6,
+            INT64 = 7,
         };
 
-        using Type = SendTablePropertyType;
+        using Flags = SendTablePropertyFlags;
 
-        Type::Type type;
-        std::string data_table_name;
-        Flags flags;
-        int32_t elements_count;
+        std::string name;
+
+        explicit Property(const CSVCMsg_SendTable_sendprop_t& data) : name(data.var_name()) {}
+        virtual ~Property() = default;
+        [[nodiscard]] virtual Type type() const = 0;
+//        virtual Value* instantiate(CodedInputStream& stream) const = 0;
+
+        static std::unique_ptr<Property> deserialize(const CSVCMsg_SendTable_sendprop_t& data);
+    };
+
+    struct Value
+    {
+        virtual ~Value() = default;
+        [[nodiscard]] virtual Property* property() const = 0;
+//        virtual void update(CodedInputStream& stream) = 0;
+};
+
+    struct Int32Property final : public Property
+    {
+        int32_t bits;
+
+        explicit Int32Property(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data)
+            , bits(data.num_bits()) {}
+
+        [[nodiscard]] Type type() const override { return Type::INT32; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct Int32Value final : virtual public Value
+    {
+        Int32Property* origin;
+        int32_t value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct FloatProperty final : public Property
+    {
         float high_value;
         float low_value;
-        int32_t bits_count;
+        int32_t bits;
+        Flags::Type flags;
 
-        Value deserialize(CodedInputStream& stream);
-        inline Value deserialize_float(CodedInputStream& stream);
-        inline Value deserialize_float_bit_coordinates(CodedInputStream& stream);
-        inline Value deserialize_float_bit_normal(CodedInputStream& stream);
-        inline Value deserialize_float_bit_cell_coordinates(CodedInputStream& stream);
-        inline Value deserialize_int32(CodedInputStream& stream);
-        inline Value deserialize_vector2(CodedInputStream& stream);
-        inline Value deserialize_vector3(CodedInputStream& stream);
-        inline Value deserialize_array(CodedInputStream& stream);
-        inline Value deserialize_string(CodedInputStream& stream);
+        explicit FloatProperty(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data)
+            , high_value(data.high_value())
+            , low_value(data.low_value())
+            , bits(data.num_bits())
+            , flags(data.flags()) {}
+
+        [[nodiscard]] Type type() const override { return Type::FLOAT; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct FloatValue final : public Value
+    {
+        FloatProperty* origin;
+        float value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct Vector3Property final : public Property
+    {
+        Flags::Type flags;
+
+        explicit Vector3Property(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data)
+            , flags(data.flags()) {}
+
+        [[nodiscard]] Type type() const override { return Type::VECTOR3; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct Vector3Value final : public Value
+    {
+        Vector3Property* origin;
+        Vector3 value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct Vector2Property final : public Property
+    {
+        explicit Vector2Property(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data) {}
+
+        [[nodiscard]] Type type() const override { return Type::VECTOR2; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct Vector2Value final : public Value
+    {
+        Vector2Property* origin;
+        Vector2 value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct StringProperty final : public Property
+    {
+        explicit StringProperty(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data) {}
+
+        [[nodiscard]] Type type() const override { return Type::STRING; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct StringValue final : public Value
+    {
+        StringProperty* origin;
+        std::string value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct ArrayProperty final : public Property
+    {
+        int32_t size;
+
+        explicit ArrayProperty(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data)
+            , size(data.num_elements()) {}
+
+        [[nodiscard]] Type type() const override { return Type::ARRAY; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct ArrayValue final : public Value
+    {
+        Vector2Property* origin;
+        std::vector<Property*> value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct DataTableProperty final : public Property
+    {
+        std::string key;
+
+        explicit DataTableProperty(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data)
+            , key(data.dt_name()) {}
+
+        [[nodiscard]] Type type() const override { return Type::DATA_TABLE; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct DataTableValue final : public Value
+    {
+        DataTableProperty* origin;
+        // TODO: ??
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
+    };
+
+    struct Int64Property final : public Property
+    {
+        int32_t bits;
+
+        explicit Int64Property(const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(data)
+            , bits(data.num_bits()) {}
+
+        [[nodiscard]] Type type() const override { return Type::INT64; }
+//        Value* instantiate(CodedInputStream& stream) const override;
+    };
+
+    struct Int64Value final : public Value
+    {
+        Int64Property* origin;
+        int64_t value;
+
+        [[nodiscard]] Property* property() const override { return this->origin; }
+//        void update(CodedInputStream& stream) override;
     };
 
     std::string name;
-    std::vector<Property> properties;
+    std::vector<std::unique_ptr<Property>> properties;
 
     SendTable() = default;
     explicit SendTable(CodedInputStream& stream);
@@ -168,5 +295,27 @@ struct SendTable
     bool deserialize(CodedInputStream& stream);
     void deserialize(csgo::message::net::CSVCMsg_SendTable& data);
 };
+
+LOOKUP(describe_send_table_property_type, SendTable::Property::Type, const char*,
+       CASE(SendTable::Property::Type::INT32, "INT32")
+       CASE(SendTable::Property::Type::FLOAT, "FLOAT")
+       CASE(SendTable::Property::Type::VECTOR3, "VECTOR3")
+       CASE(SendTable::Property::Type::VECTOR2, "VECTOR2")
+       CASE(SendTable::Property::Type::STRING, "STRING")
+       CASE(SendTable::Property::Type::ARRAY, "ARRAY")
+       CASE(SendTable::Property::Type::DATA_TABLE, "DATA_TABLE")
+       CASE(SendTable::Property::Type::INT64, "INT64")
+       DEFAULT(throw));
+
+LOOKUP(deserialize_send_table_property_type, int32_t, SendTable::Property::Type,
+       ENUM(SendTable::Property::Type::INT32)
+       ENUM(SendTable::Property::Type::FLOAT)
+       ENUM(SendTable::Property::Type::VECTOR3)
+       ENUM(SendTable::Property::Type::VECTOR2)
+       ENUM(SendTable::Property::Type::STRING)
+       ENUM(SendTable::Property::Type::ARRAY)
+       ENUM(SendTable::Property::Type::DATA_TABLE)
+       ENUM(SendTable::Property::Type::INT64)
+       DEFAULT(throw GameError("unknown send table property type: " + std::to_string(key))));
 
 }

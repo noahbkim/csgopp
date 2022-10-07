@@ -11,4 +11,11 @@ public:
     double z;
 };
 
+class Vector2
+{
+public:
+    double x;
+    double y;
+};
+
 }

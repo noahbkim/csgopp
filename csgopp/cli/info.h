@@ -67,6 +67,11 @@ struct DataObserver : public ObserverBase<DataObserver>
         void handle(Simulation& simulation, const SendTable& send_table) override
         {
             std::cout << "send table: " << send_table.name << std::endl;
+            for (const std::unique_ptr<csgopp::network::SendTable::Property>& property : send_table.properties)
+            {
+                std::cout << "  - " << property->name << " "
+                    << csgopp::network::describe_send_table_property_type(property->type()) << std::endl;
+            }
         }
     };
 
