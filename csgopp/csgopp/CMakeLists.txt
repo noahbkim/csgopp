@@ -11,7 +11,7 @@ add_library(csgopp STATIC
         common/interface.h
         network/server_class.cpp network/server_class.h
         error.h
-        network/send_table.cpp network/send_table.h)
+        network/send_table.cpp network/send_table.h network.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

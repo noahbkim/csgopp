@@ -13,6 +13,7 @@ namespace csgopp::game
 
 using csgopp::common::id::IdBase;
 using csgopp::common::vector::Vector3;
+using csgopp::network::Entity;
 
 class Team;
 

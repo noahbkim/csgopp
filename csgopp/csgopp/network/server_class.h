@@ -5,6 +5,7 @@
 #include <vector>
 #include <absl/container/flat_hash_map.h>
 
+#include "../network.h"
 #include "send_table.h"
 
 namespace csgopp::network
@@ -14,24 +15,15 @@ using google::protobuf::io::CodedInputStream;
 
 struct ServerClass
 {
-    struct FlattenedPropertyEntry
-    {
-        SendTable::Property* property;
-        SendTable::Property* array_property;
-        std::string name;
-    };
-
     uint16_t id{};
     std::string name;
-    uint32_t data_table_id{};
-    std::string data_table_name;
+    SendTable* send_table{nullptr};
     std::vector<ServerClass*> base_classes;
-    std::vector<FlattenedPropertyEntry> flattened_property_entries;
-    absl::flat_hash_map<std::string, size_t> flattened_property_entry_lookup;
+    absl::flat_hash_map<std::string_view, SendTable::Property*> properties;
 
     ServerClass() = default;
-    explicit ServerClass(CodedInputStream& stream);
-    void deserialize(CodedInputStream& stream);
+    ServerClass(CodedInputStream& stream, const Database<SendTable>& database);
+    void deserialize(CodedInputStream& stream, const Database<SendTable>& database);
 };
 
 }

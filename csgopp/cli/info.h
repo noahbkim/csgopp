@@ -81,7 +81,7 @@ struct DataObserver : public ObserverBase<DataObserver>
 
         void handle(Simulation& simulation, const ServerClass& server_class) override
         {
-            std::cout << "server class: " << server_class.name << ": " << server_class.data_table_name << std::endl;
+            std::cout << "server class: " << server_class.name << ": " << server_class.send_table->name << std::endl;
         }
     };
 

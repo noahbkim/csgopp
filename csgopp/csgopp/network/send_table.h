@@ -97,41 +97,47 @@ struct SendTable
 
         using Flags = SendTablePropertyFlags;
 
+        SendTable* send_table;
         std::string name;
 
-        explicit Property(const CSVCMsg_SendTable_sendprop_t& data) : name(data.var_name()) {}
+        Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : send_table(send_table)
+            , name(data.var_name()) {}
+
         virtual ~Property() = default;
         [[nodiscard]] virtual Type type() const = 0;
-//        virtual Value* instantiate(CodedInputStream& stream) const = 0;
+//        [[nodiscard]] virtual Value* value() const = 0;
 
-        static std::unique_ptr<Property> deserialize(const CSVCMsg_SendTable_sendprop_t& data);
+        static std::unique_ptr<Property> deserialize(
+            SendTable* send_table,
+            const CSVCMsg_SendTable_sendprop_t& data);
     };
 
     struct Value
     {
         virtual ~Value() = default;
-        [[nodiscard]] virtual Property* property() const = 0;
-//        virtual void update(CodedInputStream& stream) = 0;
-};
+        [[nodiscard]] virtual Property* source() const = 0;
+//        virtual void deserialize(CodedInputStream& stream) = 0;
+    };
 
     struct Int32Property final : public Property
     {
         int32_t bits;
 
-        explicit Int32Property(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data)
+        explicit Int32Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data)
             , bits(data.num_bits()) {}
 
         [[nodiscard]] Type type() const override { return Type::INT32; }
 //        Value* instantiate(CodedInputStream& stream) const override;
     };
 
-    struct Int32Value final : virtual public Value
+    struct Int32Value final : public Value
     {
-        Int32Property* origin;
+        Int32Property* property;
         int32_t value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
@@ -142,8 +148,8 @@ struct SendTable
         int32_t bits;
         Flags::Type flags;
 
-        explicit FloatProperty(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data)
+        explicit FloatProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data)
             , high_value(data.high_value())
             , low_value(data.low_value())
             , bits(data.num_bits())
@@ -155,10 +161,10 @@ struct SendTable
 
     struct FloatValue final : public Value
     {
-        FloatProperty* origin;
+        FloatProperty* property;
         float value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
@@ -166,8 +172,8 @@ struct SendTable
     {
         Flags::Type flags;
 
-        explicit Vector3Property(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data)
+        explicit Vector3Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data)
             , flags(data.flags()) {}
 
         [[nodiscard]] Type type() const override { return Type::VECTOR3; }
@@ -176,17 +182,17 @@ struct SendTable
 
     struct Vector3Value final : public Value
     {
-        Vector3Property* origin;
+        Vector3Property* property;
         Vector3 value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
     struct Vector2Property final : public Property
     {
-        explicit Vector2Property(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data) {}
+        explicit Vector2Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data) {}
 
         [[nodiscard]] Type type() const override { return Type::VECTOR2; }
 //        Value* instantiate(CodedInputStream& stream) const override;
@@ -194,17 +200,17 @@ struct SendTable
 
     struct Vector2Value final : public Value
     {
-        Vector2Property* origin;
+        Vector2Property* property;
         Vector2 value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
     struct StringProperty final : public Property
     {
-        explicit StringProperty(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data) {}
+        explicit StringProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data) {}
 
         [[nodiscard]] Type type() const override { return Type::STRING; }
 //        Value* instantiate(CodedInputStream& stream) const override;
@@ -212,10 +218,10 @@ struct SendTable
 
     struct StringValue final : public Value
     {
-        StringProperty* origin;
+        StringProperty* property;
         std::string value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
@@ -223,8 +229,8 @@ struct SendTable
     {
         int32_t size;
 
-        explicit ArrayProperty(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data)
+        explicit ArrayProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data)
             , size(data.num_elements()) {}
 
         [[nodiscard]] Type type() const override { return Type::ARRAY; }
@@ -233,10 +239,10 @@ struct SendTable
 
     struct ArrayValue final : public Value
     {
-        Vector2Property* origin;
+        Vector2Property* property;
         std::vector<Property*> value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
@@ -244,8 +250,8 @@ struct SendTable
     {
         std::string key;
 
-        explicit DataTableProperty(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data)
+        explicit DataTableProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data)
             , key(data.dt_name()) {}
 
         [[nodiscard]] Type type() const override { return Type::DATA_TABLE; }
@@ -254,10 +260,10 @@ struct SendTable
 
     struct DataTableValue final : public Value
     {
-        DataTableProperty* origin;
+        DataTableProperty* property;
         // TODO: ??
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
@@ -265,8 +271,8 @@ struct SendTable
     {
         int32_t bits;
 
-        explicit Int64Property(const CSVCMsg_SendTable_sendprop_t& data)
-            : Property(data)
+        explicit Int64Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+            : Property(send_table, data)
             , bits(data.num_bits()) {}
 
         [[nodiscard]] Type type() const override { return Type::INT64; }
@@ -275,20 +281,21 @@ struct SendTable
 
     struct Int64Value final : public Value
     {
-        Int64Property* origin;
+        Int64Property* property;
         int64_t value;
 
-        [[nodiscard]] Property* property() const override { return this->origin; }
+        [[nodiscard]] Property* source() const override { return this->property; }
 //        void update(CodedInputStream& stream) override;
     };
 
+public:
     std::string name;
     std::vector<std::unique_ptr<Property>> properties;
 
     SendTable() = default;
     explicit SendTable(CodedInputStream& stream);
 
-    // Weird quirk: send_tables don't come with a count, the end is marked by an empty send_table with is_end(). This
+    // Weird quirk: send_tables doesn't come with a count, the end is marked by an empty send_table with is_end(). This
     // behavior is confirmed by Valve. For now, I'm gonna do deserialization by hand in the corresponding advance_*()
     // so there's no callback for this empty packet.
     // @see https://github.com/ValveSoftware/csgo-demoinfo/blob/master/demoinfogo/demofiledump.cpp#L1433

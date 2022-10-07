@@ -1,12 +1,14 @@
 #pragma once
 
 #include <string>
+#include <absl/container/flat_hash_map.h>
 #include <google/protobuf/io/coded_stream.h>
 
 #include "demo.h"
 #include "game/team.h"
-#include "csgopp/network/send_table.h"
-#include "csgopp/network/server_class.h"
+#include "network.h"
+#include "network/send_table.h"
+#include "network/server_class.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -24,6 +26,7 @@ namespace csgopp::game
 
 using google::protobuf::io::CodedInputStream;
 using csgopp::error::GameError;
+using csgopp::network::Database;
 using csgopp::network::SendTable;
 using csgopp::network::ServerClass;
 
@@ -36,10 +39,10 @@ public:
 
     };
 
-    struct Data
+    struct Network
     {
-        std::vector<SendTable> send_tables;
-        std::vector<ServerClass> server_classes;
+        Database<SendTable> send_tables;
+        Database<ServerClass> server_classes;
     };
 
     explicit Simulation(CodedInputStream& stream);
@@ -104,7 +107,7 @@ public:
 protected:
     demo::Header _header;
     State _state;
-    Data _data;
+    Network _network;
     uint32_t _cursor{0};
     uint32_t _tick{0};
 };
@@ -326,9 +329,11 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
         if (!data.is_end())
         {
             BEFORE(Observer, SendTableCreate);
-            SendTable& send_table = this->_data.send_tables.emplace_back();
-            send_table.deserialize(data);
-            AFTER(SendTableCreate, send_table);
+            std::unique_ptr<SendTable> send_table = std::make_unique<SendTable>();
+            send_table->deserialize(data);
+            const SendTable& reference = *send_table;
+            this->_network.send_tables.emplace(send_table->name, std::move(send_table));
+            AFTER(SendTableCreate, reference);
         }
 
         // Related to inline parsing at start of block
@@ -341,10 +346,12 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
 
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
-        BEFORE(Observer, ServerClassCreate)
-        ServerClass& server_class = this->_data.server_classes.emplace_back();
-        server_class.deserialize(stream);
-        AFTER(ServerClassCreate, server_class);
+        BEFORE(Observer, ServerClassCreate);
+        std::unique_ptr<ServerClass> server_class = std::make_unique<ServerClass>();
+        server_class->deserialize(stream, this->_network.send_tables);
+        const ServerClass& reference = *server_class;
+        this->_network.server_classes.emplace(server_class->name, std::move(server_class));
+        AFTER(ServerClassCreate, reference);
     }
 }
 

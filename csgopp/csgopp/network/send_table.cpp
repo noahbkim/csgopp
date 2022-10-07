@@ -4,18 +4,20 @@
 namespace csgopp::network
 {
 
-std::unique_ptr<SendTable::Property> SendTable::Property::deserialize(const CSVCMsg_SendTable_sendprop_t& data)
-{
+std::unique_ptr<SendTable::Property> SendTable::Property::deserialize(
+    SendTable* send_table,
+    const CSVCMsg_SendTable_sendprop_t& data
+) {
     switch (deserialize_send_table_property_type(data.type()))
     {
-        case Type::INT32: return std::make_unique<Int32Property>(data);
-        case Type::FLOAT: return std::make_unique<FloatProperty>(data);
-        case Type::VECTOR3: return std::make_unique<Vector3Property>(data);
-        case Type::VECTOR2: return std::make_unique<Vector2Property>(data);
-        case Type::STRING: return std::make_unique<StringProperty>(data);
-        case Type::ARRAY: return std::make_unique<ArrayProperty>(data);
-        case Type::DATA_TABLE: return std::make_unique<DataTableProperty>(data);
-        case Type::INT64: return std::make_unique<Int64Property>(data);
+        case Type::INT32: return std::make_unique<Int32Property>(send_table, data);
+        case Type::FLOAT: return std::make_unique<FloatProperty>(send_table, data);
+        case Type::VECTOR3: return std::make_unique<Vector3Property>(send_table, data);
+        case Type::VECTOR2: return std::make_unique<Vector2Property>(send_table, data);
+        case Type::STRING: return std::make_unique<StringProperty>(send_table, data);
+        case Type::ARRAY: return std::make_unique<ArrayProperty>(send_table, data);
+        case Type::DATA_TABLE: return std::make_unique<DataTableProperty>(send_table, data);
+        case Type::INT64: return std::make_unique<Int64Property>(send_table, data);
         default: throw csgopp::error::GameError("unreachable");
     }
 }
@@ -47,7 +49,7 @@ void SendTable::deserialize(csgo::message::net::CSVCMsg_SendTable& data)
     using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
     for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
     {
-        this->properties.emplace_back(Property::deserialize(property_data));
+        this->properties.emplace_back(Property::deserialize(this, property_data));
     }
 }
 
