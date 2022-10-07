@@ -2,78 +2,59 @@
 
 #include <istream>
 #include <cstdint>
+#include <google/protobuf/io/coded_stream.h>
 
 #include "error.h"
-#include "common/reader.h"
+#include "common/macro.h"
 #include "common/lookup.h"
 
 namespace csgopp::demo
 {
 
-using csgopp::common::reader::Reader;
-using csgopp::common::reader::LittleEndian;
+using google::protobuf::io::CodedInputStream;
 using csgopp::error::GameError;
+
+bool ReadLittleEndian16(CodedInputStream& stream, uint16_t* value);
+bool ReadCStyleString(CodedInputStream& stream, std::string* string);
 
 struct Header
 {
     char magic[8];
-    int demo_protocol;
-    int network_protocol;
+    uint32_t demo_protocol{};
+    uint32_t network_protocol{};
     char server_name[260];
     char client_name[260];
     char map_name[260];
     char game_directory[260];
-    float playback_time;
-    int tick_count;
-    int frame_count;
-    int sign_on_size;
+    float playback_time{};
+    uint32_t tick_count{};
+    uint32_t frame_count{};
+    uint32_t sign_on_size{};
 
-    static Header deserialize(Reader& reader);
+    Header() = default;
+    explicit Header(CodedInputStream& stream);
+    void deserialize(CodedInputStream& stream);
 };
 
-template <typename T, typename S = size_t>
-struct VariableSize
+struct Command
 {
-    static_assert(sizeof(char) == sizeof(uint8_t));
-    static_assert(sizeof(T) > 1);
+    using Type = uint8_t;
 
-    T value{0};
-    S size{0};
-
-    static constexpr size_t limit()
+    enum : Type
     {
-        return (sizeof(T) * 8 + 6) / 7;
-    }
-
-    static VariableSize deserialize(Reader& reader)
-    {
-        VariableSize result;
-        std::byte cursor;
-
-        do
-        {
-            reader.read(&cursor, 1);
-            result.value |= static_cast<T>(cursor & std::byte{0x7F}) << (7 * result.size);
-            result.size += 1;
-        } while ((cursor & std::byte{0x80}) != std::byte{0x00} && result.size <= limit());
-        return result;
-    }
+        SIGN_ON = 1,
+        PACKET = 2,
+        SYNC_TICK = 3,
+        CONSOLE_COMMAND = 4,
+        USER_COMMAND = 5,
+        DATA_TABLES = 6,
+        STOP = 7,
+        CUSTOM_DATA = 8,
+        STRING_TABLES = 9,
+    };
 };
 
-enum class Command : uint8_t
-{
-    SIGN_ON = 1,
-    PACKET = 2,
-    SYNC_TICK = 3,
-    CONSOLE_COMMAND = 4,
-    USER_COMMAND = 5,
-    DATA_TABLES = 6,
-    STOP = 7,
-    CUSTOM_DATA = 8,
-    STRING_TABLES = 9,
-};
-
-LOOKUP(describe, Command, const char*,
+LOOKUP(describe_command, Command::Type, const char*,
     CASE(Command::SIGN_ON, "SIGN_ON")
     CASE(Command::PACKET, "PACKET")
     CASE(Command::SYNC_TICK, "SYNC_TICK")
@@ -82,7 +63,8 @@ LOOKUP(describe, Command, const char*,
     CASE(Command::DATA_TABLES, "DATA_TABLES")
     CASE(Command::STOP, "STOP")
     CASE(Command::CUSTOM_DATA, "CUSTOM_DATA")
-    CASE(Command::STRING_TABLES, "STRING_TABLES"));
+    CASE(Command::STRING_TABLES, "STRING_TABLES")
+    DEFAULT(throw GameError("unknown command: " + std::to_string(key))));
 
 LOOKUP(describe_net_message, int32_t, const char*,
     CASE(0, "net_NOP")
@@ -124,5 +106,4 @@ LOOKUP(describe_net_message, int32_t, const char*,
     CASE(38, "svc_Broadcast_Command")
     CASE(100, "net_PlayerAvatarData")
     DEFAULT(throw GameError("unknown net message: " + std::to_string(key))));
-
 }

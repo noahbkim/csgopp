@@ -6,7 +6,7 @@
 #include "../common/vector.h"
 #include "../common/id.h"
 #include "../common/interface.h"
-#include "entity.h"
+#include "csgopp/network/entity.h"
 
 namespace csgopp::game
 {

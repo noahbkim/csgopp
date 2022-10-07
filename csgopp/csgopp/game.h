@@ -1,10 +1,12 @@
 #pragma once
 
 #include <string>
+#include <google/protobuf/io/coded_stream.h>
 
 #include "demo.h"
 #include "game/team.h"
-#include "game/send_table.h"
+#include "csgopp/network/send_table.h"
+#include "csgopp/network/server_class.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -17,27 +19,13 @@
     virtual void handle(SIMULATION&, __VA_ARGS__) {} \
 }
 
-#define DEBUG(FMT, ...) do \
-{ \
-    printf("[%s:%d] " FMT "\n", __FILE__, __LINE__, __VA_ARGS__); \
-} while (false)
-
-#define ASSERT(CONDITION, FMT, ...) do \
-{ \
-    if (!(CONDITION)) \
-    { \
-        fprintf(stderr, "[%s:%d] " FMT "\n", __FILE__, __LINE__, __VA_ARGS__); \
-        throw csgopp::game::GameError("failed assertion " #CONDITION); \
-    } \
-} while (false)
-
 namespace csgopp::game
 {
 
-using csgopp::common::reader::Reader;
-using csgopp::common::reader::LittleEndian;
-using csgopp::demo::VariableSize;
+using google::protobuf::io::CodedInputStream;
 using csgopp::error::GameError;
+using csgopp::network::SendTable;
+using csgopp::network::ServerClass;
 
 template<typename Observer>
 class Simulation
@@ -51,59 +39,59 @@ public:
     struct Data
     {
         std::vector<SendTable> send_tables;
+        std::vector<ServerClass> server_classes;
     };
 
-    explicit Simulation(Reader& reader);
-    explicit Simulation(demo::Header&& header);
+    explicit Simulation(CodedInputStream& stream);
 
-    virtual bool advance(Reader& reader);
-        virtual void advance_packets(Reader& reader);
-            virtual int32_t advance_packet(Reader& reader);
-                virtual int32_t advance_packet_nop(Reader& reader);
-                virtual int32_t advance_packet_disconnect(Reader& reader);
-                virtual int32_t advance_packet_file(Reader& reader);
-                virtual int32_t advance_packet_split_screen_user(Reader& reader);
-                virtual int32_t advance_packet_tick(Reader& reader);
-                virtual int32_t advance_packet_string_command(Reader& reader);
-                virtual int32_t advance_packet_set_console_variable(Reader& reader);
-                virtual int32_t advance_packet_sign_on_state(Reader& reader);
-                virtual int32_t advance_packet_server_info(Reader& reader);
-                virtual int32_t advance_packet_send_table(Reader& reader);
-                virtual int32_t advance_packet_class_info(Reader& reader);
-                virtual int32_t advance_packet_set_pause(Reader& reader);
-                virtual int32_t advance_packet_create_string_table(Reader& reader);
-                virtual int32_t advance_packet_update_string_table(Reader& reader);
-                virtual int32_t advance_packet_voice_initialization(Reader& reader);
-                virtual int32_t advance_packet_voice_data(Reader& reader);
-                virtual int32_t advance_packet_print(Reader& reader);
-                virtual int32_t advance_packet_sounds(Reader& reader);
-                virtual int32_t advance_packet_set_view(Reader& reader);
-                virtual int32_t advance_packet_fix_angle(Reader& reader);
-                virtual int32_t advance_packet_crosshair_angle(Reader& reader);
-                virtual int32_t advance_packet_bsp_decal(Reader& reader);
-                virtual int32_t advance_packet_split_screen(Reader& reader);
-                virtual int32_t advance_packet_user_message(Reader& reader);
-                virtual int32_t advance_packet_entity_message(Reader& reader);
-                virtual int32_t advance_packet_game_event(Reader& reader);
-                virtual int32_t advance_packet_packet_entities(Reader& reader);
-                virtual int32_t advance_packet_temporary_entities(Reader& reader);
-                virtual int32_t advance_packet_prefetch(Reader& reader);
-                virtual int32_t advance_packet_menu(Reader& reader);
-                virtual int32_t advance_packet_game_event_list(Reader& reader);
-                virtual int32_t advance_packet_get_console_variable_value(Reader& reader);
-                virtual int32_t advance_packet_paintmap_data(Reader& reader);
-                virtual int32_t advance_packet_command_key_values(Reader& reader);
-                virtual int32_t advance_packet_encrypted_data(Reader& reader);
-                virtual int32_t advance_packet_hltv_replay(Reader& reader);
-                virtual int32_t advance_packet_broadcast_command(Reader& reader);
-                virtual int32_t advance_packet_player_avatar_data(Reader& reader);
-                virtual int32_t advance_packet_unknown(Reader& reader, int32_t command);
-        virtual void advance_console_command(Reader& reader);
-        virtual void advance_user_command(Reader& reader);
-        virtual void advance_data_tables(Reader& reader);
-        virtual void advance_string_tables(Reader& reader);
-        virtual void advance_custom_data(Reader& reader);
-        virtual bool advance_unknown(Reader& reader, char command);
+    virtual bool advance(CodedInputStream& stream);
+        virtual void advance_packets(CodedInputStream& stream);
+            virtual void advance_packet(CodedInputStream& stream);
+                virtual void advance_packet_nop(CodedInputStream& stream);
+                virtual void advance_packet_disconnect(CodedInputStream& stream);
+                virtual void advance_packet_file(CodedInputStream& stream);
+                virtual void advance_packet_split_screen_user(CodedInputStream& stream);
+                virtual void advance_packet_tick(CodedInputStream& stream);
+                virtual void advance_packet_string_command(CodedInputStream& stream);
+                virtual void advance_packet_set_console_variable(CodedInputStream& stream);
+                virtual void advance_packet_sign_on_state(CodedInputStream& stream);
+                virtual void advance_packet_server_info(CodedInputStream& stream);
+                virtual void advance_packet_send_table(CodedInputStream& stream);
+                virtual void advance_packet_class_info(CodedInputStream& stream);
+                virtual void advance_packet_set_pause(CodedInputStream& stream);
+                virtual void advance_packet_create_string_table(CodedInputStream& stream);
+                virtual void advance_packet_update_string_table(CodedInputStream& stream);
+                virtual void advance_packet_voice_initialization(CodedInputStream& stream);
+                virtual void advance_packet_voice_data(CodedInputStream& stream);
+                virtual void advance_packet_print(CodedInputStream& stream);
+                virtual void advance_packet_sounds(CodedInputStream& stream);
+                virtual void advance_packet_set_view(CodedInputStream& stream);
+                virtual void advance_packet_fix_angle(CodedInputStream& stream);
+                virtual void advance_packet_crosshair_angle(CodedInputStream& stream);
+                virtual void advance_packet_bsp_decal(CodedInputStream& stream);
+                virtual void advance_packet_split_screen(CodedInputStream& stream);
+                virtual void advance_packet_user_message(CodedInputStream& stream);
+                virtual void advance_packet_entity_message(CodedInputStream& stream);
+                virtual void advance_packet_game_event(CodedInputStream& stream);
+                virtual void advance_packet_packet_entities(CodedInputStream& stream);
+                virtual void advance_packet_temporary_entities(CodedInputStream& stream);
+                virtual void advance_packet_prefetch(CodedInputStream& stream);
+                virtual void advance_packet_menu(CodedInputStream& stream);
+                virtual void advance_packet_game_event_list(CodedInputStream& stream);
+                virtual void advance_packet_get_console_variable_value(CodedInputStream& stream);
+                virtual void advance_packet_paintmap_data(CodedInputStream& stream);
+                virtual void advance_packet_command_key_values(CodedInputStream& stream);
+                virtual void advance_packet_encrypted_data(CodedInputStream& stream);
+                virtual void advance_packet_hltv_replay(CodedInputStream& stream);
+                virtual void advance_packet_broadcast_command(CodedInputStream& stream);
+                virtual void advance_packet_player_avatar_data(CodedInputStream& stream);
+                virtual void advance_packet_unknown(CodedInputStream& stream, int32_t command);
+        virtual void advance_console_command(CodedInputStream& stream);
+        virtual void advance_user_command(CodedInputStream& stream);
+        virtual void advance_data_tables(CodedInputStream& stream);
+        virtual void advance_string_tables(CodedInputStream& stream);
+        virtual void advance_custom_data(CodedInputStream& stream);
+        virtual bool advance_unknown(CodedInputStream& stream, char command);
 
     GET(header, const&);
     GET(state, const&);
@@ -117,8 +105,8 @@ protected:
     demo::Header _header;
     State _state;
     Data _data;
-    size_t _cursor = 0;
-    size_t _tick = 0;
+    uint32_t _cursor{0};
+    uint32_t _tick{0};
 };
 
 template<typename Observer>
@@ -126,99 +114,92 @@ struct ObserverBase
 {
     using Simulation = Simulation<Observer>;
 
-    NOOP(Frame, Simulation, demo::Command);
+    NOOP(Frame, Simulation, uint8_t);
     NOOP(Packet, Simulation, int32_t);
-    NOOP(PacketSetConVar, Simulation, const csgo::message::net::CNETMsg_SetConVar&);
-    NOOP(PacketServerInfo, Simulation, const csgo::message::net::CSVCMsg_ServerInfo&);
-    NOOP(PacketCreateStringTable, Simulation, const csgo::message::net::CSVCMsg_CreateStringTable&);
-    NOOP(PacketUpdateStringTable, Simulation, const csgo::message::net::CSVCMsg_UpdateStringTable&);
-    NOOP(PacketSounds, Simulation, const csgo::message::net::CSVCMsg_Sounds&);
-    NOOP(PacketUserMessage, Simulation, const csgo::message::net::CSVCMsg_UserMessage&);
-    NOOP(PacketGameEvent, Simulation, const csgo::message::net::CSVCMsg_GameEvent&);
-    NOOP(PacketPacketEntities, Simulation, const csgo::message::net::CSVCMsg_PacketEntities&);
-    NOOP(PacketGameEventList, Simulation, const csgo::message::net::CSVCMsg_GameEventList&);
+    NOOP(SendTableCreate, Simulation, const SendTable&);
+    NOOP(ServerClassCreate, Simulation, const ServerClass&);
 };
 
 #define SIMULATION(TYPE, NAME, ...) template<typename Observer> TYPE Simulation<Observer>::NAME(__VA_ARGS__)
 
 template<typename Observer>
-Simulation<Observer>::Simulation(demo::Header&& header) : _header(header) {}
+Simulation<Observer>::Simulation(CodedInputStream& stream) : _header(stream) {}
 
-template<typename Observer>
-Simulation<Observer>::Simulation(Reader& reader) : Simulation(demo::Header::deserialize(reader)) {}
-
-SIMULATION(bool, advance, Reader& reader)
+SIMULATION(bool, advance, CodedInputStream& stream)
 {
+    bool ok = true;
     BEFORE(Observer, Frame);
-    char command = reader.read<char>();
-    this->_tick = reader.read<int32_t, LittleEndian>();
-    reader.skip(1);  // player slot
+
+    char command;
+    OK(stream.ReadRaw(&command, 1));
+    OK(stream.ReadLittleEndian32(&this->_tick));
+    OK(stream.Skip(1));  // player slot
 
     switch (command)
     {
-        case static_cast<char>(demo::Command::SIGN_ON):
-            this->advance_packets(reader);
-            AFTER(Frame, demo::Command::SIGN_ON);
-            return true;
-        case static_cast<char>(demo::Command::PACKET):
-            this->advance_packets(reader);
-            AFTER(Frame, demo::Command::PACKET);
-            return true;
-        case static_cast<char>(demo::Command::SYNC_TICK):
-            AFTER(Frame, demo::Command::SYNC_TICK);
-            return true;
-        case static_cast<char>(demo::Command::CONSOLE_COMMAND):
-            this->advance_console_command(reader);
-            AFTER(Frame, demo::Command::CONSOLE_COMMAND);
-            return true;
-        case static_cast<char>(demo::Command::USER_COMMAND):
-            this->advance_user_command(reader);
-            AFTER(Frame, demo::Command::CONSOLE_COMMAND);
-            return true;
-        case static_cast<char>(demo::Command::DATA_TABLES):
-            this->advance_data_tables(reader);
-            AFTER(Frame, demo::Command::DATA_TABLES);
-            return true;
-        case static_cast<char>(demo::Command::STOP):
-            AFTER(Frame, demo::Command::STOP);
-            return false;
-        case static_cast<char>(demo::Command::CUSTOM_DATA):
-            this->advance_custom_data(reader);
-            AFTER(Frame, demo::Command::CUSTOM_DATA);
-            return true;
-        case static_cast<char>(demo::Command::STRING_TABLES):
-            this->advance_string_tables(reader);
-            AFTER(Frame, demo::Command::STRING_TABLES);
-            return true;
+        case demo::Command::SIGN_ON:
+            this->advance_packets(stream);
+            break;
+        case demo::Command::PACKET:
+            this->advance_packets(stream);
+            break;
+        case demo::Command::SYNC_TICK:
+            break;
+        case demo::Command::CONSOLE_COMMAND:
+            this->advance_console_command(stream);
+            break;
+        case demo::Command::USER_COMMAND:
+            this->advance_user_command(stream);
+            break;
+        case demo::Command::DATA_TABLES:
+            this->advance_data_tables(stream);
+            break;
+        case demo::Command::STOP:
+            ok = false;
+            break;
+        case demo::Command::CUSTOM_DATA:
+            this->advance_custom_data(stream);
+            break;
+        case demo::Command::STRING_TABLES:
+            this->advance_string_tables(stream);
+            break;
         default:
-            return this->advance_unknown(reader, command);
+            this->advance_unknown(stream, command);
     }
+
+    this->_cursor += 1;
+    AFTER(Frame, command);
+    return ok;
 }
 
-SIMULATION(void, advance_packets, Reader& reader)
+SIMULATION(void, advance_packets, CodedInputStream& stream)
 {
-    reader.skip(152 + 4 + 4);
-    int32_t size = reader.read<int32_t, LittleEndian>();
-    int32_t cursor = 0;
+    // Arbitrary player data, seems useless
+    OK(stream.Skip(152 + 4 + 4));
 
-    while (cursor < size)
+    uint32_t size;
+    OK(stream.ReadLittleEndian32(&size));
+    CodedInputStream::Limit limit = stream.PushLimit(size);
+
+    while (stream.BytesUntilLimit() > 0)
     {
-        cursor += this->advance_packet(reader);
+        this->advance_packet(stream);
     }
 
-    ASSERT(cursor == size, "failed to read to expected packet alignment");
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
 }
 
-#define PACKET(COMMAND, CALLBACK) case COMMAND: size += CALLBACK(reader); break;
+#define PACKET(COMMAND, CALLBACK) case COMMAND: CALLBACK(stream); break;
 
-SIMULATION(int32_t, advance_packet, Reader& reader)
+SIMULATION(void, advance_packet, CodedInputStream& stream)
 {
     BEFORE(Observer, Packet);
-    auto [command, size] = VariableSize<int32_t, int32_t>::deserialize(reader);
+    uint32_t command = stream.ReadTag();
 
-    using namespace csgo::message::net;
     switch (command)
     {
+        using namespace csgo::message::net;
         PACKET(NET_Messages::net_NOP, this->advance_packet_nop);
         PACKET(NET_Messages::net_Disconnect, this->advance_packet_disconnect);
         PACKET(NET_Messages::net_File, this->advance_packet_file);
@@ -257,112 +238,146 @@ SIMULATION(int32_t, advance_packet, Reader& reader)
         PACKET(SVC_Messages::svc_HltvReplay, this->advance_packet_hltv_replay);
         PACKET(SVC_Messages::svc_Broadcast_Command, this->advance_packet_broadcast_command);
         PACKET(NET_Messages::net_PlayerAvatarData, this->advance_packet_player_avatar_data);
-        default: size += this->advance_packet_unknown(reader, command);
+        default: this->advance_packet_unknown(stream, command);
     }
 
     AFTER(Packet, command);
-    return size;
 }
 
-SIMULATION(void, advance_console_command, Reader& reader)
+SIMULATION(void, advance_console_command, CodedInputStream& stream)
 {
-    reader.skip(reader.read<int32_t, LittleEndian>());
+    uint32_t size;
+    OK(stream.ReadLittleEndian32(&size));
+    OK(stream.Skip(size));
 }
 
-SIMULATION(void, advance_user_command, Reader& reader)
+SIMULATION(void, advance_user_command, CodedInputStream& stream)
 {
-    reader.skip(4);
-    reader.skip(reader.read<int32_t, LittleEndian>());
+    OK(stream.Skip(4));
+    uint32_t size;
+    OK(stream.ReadLittleEndian32(&size));
+    OK(stream.Skip(size));
 }
 
-SIMULATION(void, advance_data_tables, Reader& reader)
+SIMULATION(void, advance_data_tables, CodedInputStream& stream)
 {
-    int32_t size = reader.read<int32_t, LittleEndian>();
-//    size_t start = reader.tell();
-    reader.skip(size);
+    uint32_t size;
+    OK(stream.ReadLittleEndian32(&size));
+    CodedInputStream::Limit limit = stream.PushLimit(size);
 
-//    VariableSize<int32_t, int32_t> type = VariableSize<int32_t, int32_t>::deserialize(reader);
-//    if (type.value != csgo::message::net::SVC_Messages::svc_SendTable)
-//    {
-//        throw GameError("got unexpected " + std::string(demo::describe_net_message(type.value)));
-//    }
+    this->advance_packet_send_table(stream);
 
-//    // Actual read the SendTable
-//    this->_data.send_tables.emplace_back(SendTable::deserialize(reader));
-//
-//    // REMOVE
-//    if (reader.tell() < start + size)
-//    {
-//        reader.skip(reader.tell() - (start + size));
-//    }
-
-//    ASSERT(reader.tell() == start + size, "cursor mismatch!");
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
 }
 
-SIMULATION(void, advance_string_tables, Reader& reader)
+SIMULATION(void, advance_string_tables, CodedInputStream& stream)
 {
-    reader.skip(reader.read<int32_t, LittleEndian>());
+    uint32_t size;
+    OK(stream.ReadLittleEndian32(&size));
+    OK(stream.Skip(size));
 }
 
-SIMULATION(void, advance_custom_data, Reader& reader)
+SIMULATION(void, advance_custom_data, CodedInputStream& stream)
 {
     throw GameError("encountered unexpected CUSTOM_DATA event!");
 }
 
-SIMULATION(bool, advance_unknown, Reader& reader, char command)
+SIMULATION(bool, advance_unknown, CodedInputStream& stream, char command)
 {
     throw GameError("encountered unknown command " + std::to_string(command));
 }
 
-inline int32_t advance_packet_skip(Reader& reader)
+inline void advance_packet_skip(CodedInputStream& stream)
 {
-    VariableSize<int32_t, int32_t> size = VariableSize<int32_t, int32_t>::deserialize(reader);
-    reader.skip(size.value);
-    return size.size + size.value;
+    uint32_t size;
+    OK(stream.ReadVarint32(&size));
+    OK(stream.Skip(static_cast<int32_t>(size)));
 }
 
-#define PACKET_SKIP() { return advance_packet_skip(reader); }
+#define PACKET_SKIP() { advance_packet_skip(stream); }
 
-SIMULATION(int32_t, advance_packet_nop, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_disconnect, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_file, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_split_screen_user, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_tick, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_string_command, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_set_console_variable, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_sign_on_state, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_server_info, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_send_table, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_class_info, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_set_pause, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_create_string_table, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_update_string_table, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_voice_initialization, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_voice_data, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_print, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_sounds, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_set_view, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_fix_angle, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_crosshair_angle, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_bsp_decal, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_split_screen, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_user_message, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_entity_message, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_game_event, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_packet_entities, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_temporary_entities, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_prefetch, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_menu, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_game_event_list, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_get_console_variable_value, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_paintmap_data, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_command_key_values, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_encrypted_data, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_hltv_replay, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_broadcast_command, Reader& reader) PACKET_SKIP()
-SIMULATION(int32_t, advance_packet_player_avatar_data, Reader& reader) PACKET_SKIP()
+SIMULATION(void, advance_packet_nop, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_disconnect, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_file, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_split_screen_user, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_tick, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_string_command, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_set_console_variable, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_sign_on_state, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_server_info, CodedInputStream& stream) PACKET_SKIP()
 
-SIMULATION(int32_t, advance_packet_unknown, Reader& reader, int32_t command)
+SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
+{
+    csgo::message::net::CSVCMsg_SendTable data;
+    do
+    {
+        // We're gonna manually pull the protobuf here in order to determine whether it's the terminator. This deviates
+        // from my general rule of opening the event before absolutely any handling, but it's better than firing on the
+        // empty terminator event.
+        OK(stream.ExpectTag(csgo::message::net::SVC_Messages::svc_SendTable));
+        CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+        OK(limit > 0);
+
+        // Break if we're at the end of the send_table.
+        data.ParseFromCodedStream(&stream);
+
+        // Actually do event handling if we're not at the terminator.
+        if (!data.is_end())
+        {
+            BEFORE(Observer, SendTableCreate);
+            SendTable& send_table = this->_data.send_tables.emplace_back();
+            send_table.deserialize(data);
+            AFTER(SendTableCreate, send_table);
+        }
+
+        // Related to inline parsing at start of block
+        OK(stream.BytesUntilLimit() == 0);
+        stream.PopLimit(limit);
+    } while (!data.is_end());
+
+    uint16_t server_class_count;
+    OK(demo::ReadLittleEndian16(stream, &server_class_count));
+
+    for (uint16_t i = 0; i < server_class_count; ++i)
+    {
+        BEFORE(Observer, ServerClassCreate)
+        ServerClass& server_class = this->_data.server_classes.emplace_back();
+        server_class.deserialize(stream);
+        AFTER(ServerClassCreate, server_class);
+    }
+}
+
+SIMULATION(void, advance_packet_class_info, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_set_pause, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_update_string_table, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_voice_initialization, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_voice_data, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_print, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_sounds, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_set_view, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_fix_angle, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_crosshair_angle, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_bsp_decal, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_split_screen, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_user_message, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_entity_message, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_game_event, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_packet_entities, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_temporary_entities, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_prefetch, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_menu, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_game_event_list, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_get_console_variable_value, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_paintmap_data, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_command_key_values, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_encrypted_data, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_hltv_replay, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_broadcast_command, CodedInputStream& stream) PACKET_SKIP()
+SIMULATION(void, advance_packet_player_avatar_data, CodedInputStream& stream) PACKET_SKIP()
+
+SIMULATION(void, advance_packet_unknown, CodedInputStream& stream, int32_t command)
 {
     throw GameError("unrecognized message " + std::string(demo::describe_net_message(command)));
 }

@@ -7,8 +7,10 @@
 
 #include "send_table.h"
 
-namespace csgopp::game
+namespace csgopp::network
 {
+
+using google::protobuf::io::CodedInputStream;
 
 struct ServerClass
 {
@@ -19,13 +21,17 @@ struct ServerClass
         std::string name;
     };
 
-    int32_t id;
+    uint16_t id{};
     std::string name;
-    int32_t data_table_id;
+    uint32_t data_table_id{};
     std::string data_table_name;
     std::vector<ServerClass*> base_classes;
     std::vector<FlattenedPropertyEntry> flattened_property_entries;
     absl::flat_hash_map<std::string, size_t> flattened_property_entry_lookup;
+
+    ServerClass() = default;
+    explicit ServerClass(CodedInputStream& stream);
+    void deserialize(CodedInputStream& stream);
 };
 
 }

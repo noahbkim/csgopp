@@ -2,16 +2,16 @@ add_library(csgopp STATIC
         demo.cpp demo.h
         common/lookup.h
         game.cpp game.h
-        common/reader.h
+        common/macro.h
         game/team.cpp game/team.h
         game/player.cpp game/player.h
         common/vector.h
-        game/entity.cpp game/entity.h
+        network/entity.cpp network/entity.h
         common/id.h
         common/interface.h
-        game/server_class.cpp game/server_class.h
+        network/server_class.cpp network/server_class.h
         error.h
-        game/send_table.cpp game/send_table.h)
+        network/send_table.cpp network/send_table.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

@@ -4,32 +4,38 @@
 #include <vector>
 #include <string>
 #include <variant>
+#include <google/protobuf/io/coded_stream.h>
 
-#include "../common/vector.h"
-#include "../common/reader.h"
-#include "../common/lookup.h"
-#include "../error.h"
+#include "csgopp/common/vector.h"
+#include "csgopp/common/macro.h"
+#include "csgopp/common/lookup.h"
+#include "csgopp/error.h"
+#include "netmessages.pb.h"
 
-namespace csgopp::game
+namespace csgopp::network
 {
 
+using google::protobuf::io::CodedInputStream;
 using csgopp::common::vector::Vector3;
-using csgopp::common::reader::Reader;
 using csgopp::error::GameError;
 
-enum class SendTablePropertyType : int32_t
+struct SendTablePropertyType
 {
-    INT32 = 0,
-    FLOAT = 1,
-    VECTOR3 = 2,
-    VECTOR2 = 3,
-    STRING = 4,
-    ARRAY = 5,
-    DATA_TABLE = 6,
-    INT64 = 7,
+    using Type = int32_t;
+    enum : Type
+    {
+        INT32 = 0,
+        FLOAT = 1,
+        VECTOR3 = 2,
+        VECTOR2 = 3,
+        STRING = 4,
+        ARRAY = 5,
+        DATA_TABLE = 6,
+        INT64 = 7,
+    };
 };
 
-LOOKUP(describe, SendTablePropertyType, const char*,
+LOOKUP(describe_send_table_property_type, SendTablePropertyType::Type, const char*,
     CASE(SendTablePropertyType::INT32, "INT32")
     CASE(SendTablePropertyType::FLOAT, "FLOAT")
     CASE(SendTablePropertyType::VECTOR3, "VECTOR3")
@@ -38,7 +44,7 @@ LOOKUP(describe, SendTablePropertyType, const char*,
     CASE(SendTablePropertyType::ARRAY, "ARRAY")
     CASE(SendTablePropertyType::DATA_TABLE, "DATA_TABLE")
     CASE(SendTablePropertyType::INT64, "INT64")
-    DEFAULT(throw));
+    DEFAULT(throw  GameError("unknown send table property type: " + std::to_string(key))));
 
 namespace coordinates
 {
@@ -129,30 +135,38 @@ struct SendTable
 
         using Type = SendTablePropertyType;
 
-        Type type;
-        std::string name;
+        Type::Type type;
+        std::string data_table_name;
         Flags flags;
         int32_t elements_count;
         float high_value;
         float low_value;
         int32_t bits_count;
 
-        Value deserialize(Reader& reader);
-        inline Value deserialize_float(Reader& reader);
-        inline Value deserialize_float_bit_coordinates(Reader& reader);
-        inline Value deserialize_float_bit_normal(Reader& reader);
-        inline Value deserialize_float_bit_cell_coordinates(Reader& reader);
-        inline Value deserialize_int32(Reader& reader);
-        inline Value deserialize_vector2(Reader& reader);
-        inline Value deserialize_vector3(Reader& reader);
-        inline Value deserialize_array(Reader& reader);
-        inline Value deserialize_string(Reader& reader);
+        Value deserialize(CodedInputStream& stream);
+        inline Value deserialize_float(CodedInputStream& stream);
+        inline Value deserialize_float_bit_coordinates(CodedInputStream& stream);
+        inline Value deserialize_float_bit_normal(CodedInputStream& stream);
+        inline Value deserialize_float_bit_cell_coordinates(CodedInputStream& stream);
+        inline Value deserialize_int32(CodedInputStream& stream);
+        inline Value deserialize_vector2(CodedInputStream& stream);
+        inline Value deserialize_vector3(CodedInputStream& stream);
+        inline Value deserialize_array(CodedInputStream& stream);
+        inline Value deserialize_string(CodedInputStream& stream);
     };
 
     std::string name;
     std::vector<Property> properties;
 
-    static SendTable deserialize(Reader& reader);
+    SendTable() = default;
+    explicit SendTable(CodedInputStream& stream);
+
+    // Weird quirk: send_tables don't come with a count, the end is marked by an empty send_table with is_end(). This
+    // behavior is confirmed by Valve. For now, I'm gonna do deserialization by hand in the corresponding advance_*()
+    // so there's no callback for this empty packet.
+    // @see https://github.com/ValveSoftware/csgo-demoinfo/blob/master/demoinfogo/demofiledump.cpp#L1433
+    bool deserialize(CodedInputStream& stream);
+    void deserialize(csgo::message::net::CSVCMsg_SendTable& data);
 };
 
 }

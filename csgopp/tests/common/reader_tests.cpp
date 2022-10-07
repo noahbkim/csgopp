@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <csgopp/common/reader.h>
+#include <csgopp/common/macro.h>
 #include <string>
 #include <sstream>
 

@@ -1,43 +1,18 @@
 #include <iostream>
 #include <fstream>
-#include <map>
 #include <chrono>
+#include <google/protobuf/io/coded_stream.h>
 
 #include <csgopp/demo.h>
 #include <csgopp/game.h>
 
-using namespace csgopp::demo;
+#include "info.h"
+
+using google::protobuf::io::CodedInputStream;
+using google::protobuf::io::ZeroCopyInputStream;
+using google::protobuf::io::IstreamInputStream;
 using csgopp::game::Simulation;
-using csgopp::common::reader::StreamReader;
-using csgopp::game::ObserverBase;
 
-struct Observer : public ObserverBase<Observer>
-{
-    size_t frame_count = 0;
-    std::map<Command, size_t> commands;
-    std::map<int32_t, size_t> net_messages;
-
-    struct Frame final : public ObserverBase::Frame
-    {
-        using ObserverBase::Frame::Frame;
-
-        void handle(Simulation& simulation, Command command) override
-        {
-            simulation.observer.frame_count += 1;
-            simulation.observer.commands[command] += 1;
-        }
-    };
-
-    struct Packet final : public ObserverBase::Packet
-    {
-        using ObserverBase::Packet::Packet;
-
-        void handle(Simulation& simulation, int32_t net_message) override
-        {
-            simulation.observer.net_messages[net_message] += 1;
-        }
-    };
-};
 
 int main(int argc, char** argv)
 {
@@ -49,8 +24,10 @@ int main(int argc, char** argv)
 
     try
     {
-        StreamReader<std::ifstream> reader(argv[1], std::ios::binary);
-        Simulation<Observer> simulation(reader);
+        std::ifstream file_stream(argv[1], std::ios::binary);
+        IstreamInputStream file_input_stream(&file_stream);
+        CodedInputStream coded_input_stream(&file_input_stream);
+        Simulation<DataObserver> simulation(coded_input_stream);
 
         std::cout << "magic: " << simulation.header().magic << std::endl;
         std::cout << "demo_protocol: " << simulation.header().demo_protocol << std::endl;
@@ -69,28 +46,17 @@ int main(int argc, char** argv)
             std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
             // Actually run
-            while (simulation.advance(reader));
+            while (simulation.advance(coded_input_stream));
+            // for (size_t i = 0; i < 100; ++i) simulation.advance(coded_input_stream);
 
             int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::system_clock::now() - start).count();
-            std::cout << "finished with frame_count: " << simulation.observer.frame_count;
-            std::cout << " in " << elapsed << " ms" << std::endl;
-
-            std::cout << std::endl << "frames:" << std::endl;
-            for (const auto& [command, count] : simulation.observer.commands)
-            {
-                std::cout << "- " << describe(command) << ": " << count << std::endl;
-            }
-
-            std::cout << std::endl << "net messages:" << std::endl;
-            for (const auto& [net_message, count] : simulation.observer.net_messages)
-            {
-                std::cout << "- " << describe_net_message(net_message) << ": " << count << std::endl;
-            }
+            std::cout << "finished in " << elapsed << " ms" << std::endl;
+            simulation.observer.report();
         }
         catch (csgopp::error::Error& error)
         {
-            std::cerr << "caught exception: " << error.message() << std::endl;
+            std::cerr << "[" << simulation.cursor() << "] caught exception: " << error.message() << std::endl;
             return -1;
         }
     }
