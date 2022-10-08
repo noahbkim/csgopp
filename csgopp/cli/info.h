@@ -64,13 +64,12 @@ struct DataObserver : public ObserverBase<DataObserver>
     {
         using ObserverBase::SendTableCreate::SendTableCreate;
 
-        void handle(Simulation& simulation, const SendTable& send_table) override
+        void handle(Simulation& simulation, const SendTable* send_table) override
         {
-            std::cout << "send table: " << send_table.name << std::endl;
-            for (const std::unique_ptr<csgopp::network::SendTable::Property>& property : send_table.properties)
+            std::cout << "send table: " << send_table->name << std::endl;
+            for (const auto& [name, property] : send_table->properties)
             {
-                std::cout << "  - " << property->name << " "
-                    << csgopp::network::describe_send_table_property_type(property->type()) << std::endl;
+                std::cout << "  - " << name << " " << csgopp::network::describe(property->type) << std::endl;
             }
         }
     };
@@ -79,12 +78,11 @@ struct DataObserver : public ObserverBase<DataObserver>
     {
         using ObserverBase::ServerClassCreate::ServerClassCreate;
 
-        void handle(Simulation& simulation, const ServerClass& server_class) override
+        void handle(Simulation& simulation, const ServerClass* server_class) override
         {
-            std::cout << "server class: " << server_class.name << ": " << server_class.send_table->name << std::endl;
+            std::cout << "server class: " << server_class->name << ": " << server_class->send_table->name << std::endl;
         }
     };
 
     void report() const {}
 };
-

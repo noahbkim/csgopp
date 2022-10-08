@@ -11,6 +11,7 @@ constexpr VALUE_TYPE NAME(KEY_TYPE key) {         \
   } \
 }
 
-#define ENUM(KEY) case static_cast<typename std::underlying_type<_value_type>::type>(KEY): return KEY;
+#define E(KEY) static_cast<typename std::underlying_type<_value_type>::type>(KEY)
+#define ENUM(KEY) case E(KEY): return KEY;
 #define CASE(KEY, VALUE) case KEY: return VALUE;
 #define DEFAULT(THEN) default: THEN;

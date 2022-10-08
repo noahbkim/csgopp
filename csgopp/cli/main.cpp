@@ -26,7 +26,7 @@ int main(int argc, char** argv)
         std::ifstream file_stream(argv[1], std::ios::binary);
         IstreamInputStream file_input_stream(&file_stream);
         CodedInputStream coded_input_stream(&file_input_stream);
-        Simulation<DataObserver> simulation(coded_input_stream);
+        Simulation<StructureObserver> simulation(coded_input_stream);
 
         std::cout << "magic: " << simulation.header().magic << std::endl;
         std::cout << "demo_protocol: " << simulation.header().demo_protocol << std::endl;
