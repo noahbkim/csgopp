@@ -5,7 +5,7 @@ namespace csgopp::network
 {
 
 //template<>
-//SendTable* Network::deserialize(CodedInputStream& stream)
+//DataTable* Network::deserialize(CodedInputStream& stream)
 //{
 //    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
 //    OK(limit > 0);

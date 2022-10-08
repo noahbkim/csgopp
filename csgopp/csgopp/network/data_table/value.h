@@ -5,7 +5,7 @@
 #include "../../common/vector.h"
 #include "property.h"
 
-namespace csgopp::network::send_table
+namespace csgopp::network::data_table
 {
 
 using csgopp::common::vector::Vector2;

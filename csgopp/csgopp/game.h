@@ -5,9 +5,12 @@
 #include <google/protobuf/io/coded_stream.h>
 
 #include "common/lookup.h"
+#include "common/bits.h"
+#include "common/interface.h"
 #include "demo.h"
-#include "game/team.h"
-#include "network.h"
+#include "network/data_table.h"
+#include "network/server_class.h"
+#include "network/string_table.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -24,10 +27,11 @@ namespace csgopp::game
 {
 
 using google::protobuf::io::CodedInputStream;
+using csgopp::common::bits::BitStream;
 using csgopp::error::GameError;
-using csgopp::network::Network;
-using csgopp::network::SendTable;
+using csgopp::network::DataTable;
 using csgopp::network::ServerClass;
+using csgopp::network::StringTable;
 
 template<typename Observer>
 class Simulation
@@ -46,23 +50,29 @@ public:
     private:
         friend Simulation;
 
-        std::vector<std::unique_ptr<SendTable>> _send_tables;
-        std::vector<std::unique_ptr<SendTable::Property>> _send_table_properties;
-        absl::flat_hash_map<std::string_view, SendTable*> _send_tables_by_name;
+        std::vector<std::unique_ptr<DataTable>> _data_tables;
+        std::vector<std::unique_ptr<DataTable::Property>> _data_table_properties;
+        absl::flat_hash_map<std::string_view, DataTable*> _data_tables_by_name;
 
         std::vector<std::unique_ptr<ServerClass>> _server_classes;
         absl::flat_hash_map<std::string_view, ServerClass*> _server_classes_by_name;
         absl::flat_hash_map<ServerClass::Id, ServerClass*> _server_classes_by_id;
 
-        template<typename... Args> SendTable* allocate_send_table(Args... args);
-        template<typename T, typename... Args> SendTable::Property* allocate_send_table_property(Args... args);
-        template<typename... Args> SendTable::Property* allocate_send_table_property(
-            SendTable::Property::Type::T type,
+        std::vector<std::unique_ptr<StringTable>> _string_tables;
+        absl::flat_hash_map<std::string_view, StringTable*> _string_tables_by_name;
+
+        template<typename... Args> DataTable* allocate_data_table(Args... args);
+        template<typename T, typename... Args> DataTable::Property* allocate_data_table_property(Args... args);
+        template<typename... Args> DataTable::Property* allocate_data_table_property(
+            DataTable::Property::Type::T type,
             Args... args);
-        void publish_send_table(SendTable* send_table);
+        void publish_data_table(DataTable* data_table);
 
         template<typename... Args> ServerClass* allocate_server_class(Args... args);
         void publish_server_class(ServerClass* server_class);
+
+        template<typename... Args> StringTable* allocate_string_table(Args... args);
+        void publish_string_table(StringTable* string_table);
     };
 
     explicit Simulation(CodedInputStream& stream);
@@ -113,6 +123,7 @@ public:
     virtual void advance_user_command(CodedInputStream& stream);
     virtual void advance_data_tables(CodedInputStream& stream);
     virtual void advance_string_tables(CodedInputStream& stream);
+    virtual void advance_string_table(CodedInputStream& stream);
     virtual void advance_custom_data(CodedInputStream& stream);
     virtual bool advance_unknown(CodedInputStream& stream, char command);
 
@@ -139,62 +150,63 @@ struct ObserverBase
 
     NOOP(Frame, Simulation, uint8_t);
     NOOP(Packet, Simulation, int32_t);
-    NOOP(SendTableCreate, Simulation, const SendTable*);
+    NOOP(SendTableCreate, Simulation, const DataTable*);
     NOOP(ServerClassCreate, Simulation, const ServerClass*);
+    NOOP(StringTableCreate, Simulation, const StringTable*);
 };
 
 #define SIMULATION(TYPE, NAME, ...) template<typename Observer> TYPE Simulation<Observer>::NAME(__VA_ARGS__)
 
 template<typename Observer>
 template<typename... Args>
-SendTable* Simulation<Observer>::Network::allocate_send_table(Args... args)
+DataTable* Simulation<Observer>::Network::allocate_data_table(Args... args)
 {
-    std::unique_ptr<SendTable> storage = std::make_unique<SendTable>(args...);
-    return this->_send_tables.emplace_back(std::move(storage)).get();
+    std::unique_ptr<DataTable> storage = std::make_unique<DataTable>(args...);
+    return this->_data_tables.emplace_back(std::move(storage)).get();
 }
 
 template<typename Observer>
 template<typename T, typename... Args>
-SendTable::Property* Simulation<Observer>::Network::allocate_send_table_property(Args... args)
+DataTable::Property* Simulation<Observer>::Network::allocate_data_table_property(Args... args)
 {
     std::unique_ptr<T> storage = std::make_unique<T>(args...);
-    return this->_send_table_properties.emplace_back(std::move(storage)).get();
+    return this->_data_table_properties.emplace_back(std::move(storage)).get();
 }
 
 template<typename Observer>
 template<typename... Args>
-SendTable::Property* Simulation<Observer>::Network::allocate_send_table_property(
-    SendTable::Property::Type::T type,
+DataTable::Property* Simulation<Observer>::Network::allocate_data_table_property(
+    DataTable::Property::Type::T type,
     Args... args
 ) {
     switch (type)
     {
-        using Type = SendTable::Property::Type;
+        using Type = DataTable::Property::Type;
         case Type::INT32:
-            return this->template allocate_send_table_property<SendTable::Int32Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Int32Property>(args...);
         case Type::FLOAT:
-            return this->template allocate_send_table_property<SendTable::FloatProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::FloatProperty>(args...);
         case Type::VECTOR3:
-            return this->template allocate_send_table_property<SendTable::Vector3Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Vector3Property>(args...);
         case Type::VECTOR2:
-            return this->template allocate_send_table_property<SendTable::Vector2Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Vector2Property>(args...);
         case Type::STRING:
-            return this->template allocate_send_table_property<SendTable::StringProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::StringProperty>(args...);
         case Type::ARRAY:
-            return this->template allocate_send_table_property<SendTable::ArrayProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::ArrayProperty>(args...);
         case Type::DATA_TABLE:
-            return this->template allocate_send_table_property<SendTable::DataTableProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::DataTableProperty>(args...);
         case Type::INT64:
-            return this->template allocate_send_table_property<SendTable::Int64Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Int64Property>(args...);
         default:
             throw csgopp::error::GameError("unreachable");
     }
 }
 
 template<typename Observer>
-void Simulation<Observer>::Network::publish_send_table(SendTable* send_table)
+void Simulation<Observer>::Network::publish_data_table(DataTable* data_table)
 {
-    this->_send_tables_by_name.emplace(send_table->name, send_table);
+    this->_data_tables_by_name.emplace(data_table->name, data_table);
 }
 
 template<typename Observer>
@@ -210,6 +222,20 @@ void Simulation<Observer>::Network::publish_server_class(ServerClass* server_cla
 {
     this->_server_classes_by_name.emplace(server_class->name, server_class);
     this->_server_classes_by_id.emplace(server_class->id, server_class);
+}
+
+template<typename Observer>
+template<typename... Args>
+StringTable* Simulation<Observer>::Network::allocate_string_table(Args... args)
+{
+    std::unique_ptr<StringTable> storage = std::make_unique<StringTable>(args...);
+    return this->_string_tables.emplace_back(std::move(storage)).get();
+}
+
+template<typename Observer>
+void Simulation<Observer>::Network::publish_string_table(StringTable* string_table)
+{
+    this->_string_tables_by_name.emplace(string_table->name, string_table);
 }
 
 template<typename Observer>
@@ -363,7 +389,35 @@ SIMULATION(void, advance_string_tables, CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
-    OK(stream.Skip(size));
+    CodedInputStream::Limit limit = stream.PushLimit(size);
+
+    uint8_t count;
+    stream.ReadRaw(&count, 1);
+    for (uint8_t i = 0; i < count; ++i)
+    {
+        this->advance_string_table(stream);
+    }
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
+}
+
+SIMULATION(void, advance_string_table, CodedInputStream& stream)
+{
+    std::string name;
+    OK(demo::ReadCStyleString(stream, &name));
+
+    uint16_t count;
+    OK(demo::ReadLittleEndian16(stream, &count));
+
+    printf("%d\n", stream.CurrentPosition());
+
+//    for (uint16_t i = 0; i < count; ++i)
+//    {
+//
+//    }
+
+    throw GameError("stop");
 }
 
 SIMULATION(void, advance_custom_data, CodedInputStream& stream)
@@ -400,31 +454,31 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
     csgo::message::net::CSVCMsg_SendTable data;
     do
     {
-        // This code isn't encapsulated because the final SendTable, which returns true from data.is_end(), is always
+        // This code isn't encapsulated because the final DataTable, which returns true from data.is_end(), is always
         // empty besides that flag; we don't want to bother initializing a bunch of resources for that.
         OK(stream.ExpectTag(csgo::message::net::SVC_Messages::svc_SendTable));
         CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
         OK(limit > 0);
 
-        // Break if we're at the end of the send_table.
+        // Break if we're at the end of the data_table.
         data.ParseFromCodedStream(&stream);
 
         // Actually do event handling if we're not at the terminator.
         if (!data.is_end())
         {
             BEFORE(Observer, SendTableCreate);
-            SendTable* send_table = this->_network.allocate_send_table(data);
+            DataTable* data_table = this->_network.allocate_data_table(data);
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
             for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
             {
-                SendTable::Property* property = this->_network.allocate_send_table_property(
+                DataTable::Property* property = this->_network.allocate_data_table_property(
                     property_data.type(),
-                    send_table,
+                    data_table,
                     property_data);
-                send_table->properties.emplace(property->name, property);
+                data_table->properties.emplace(property->name, property);
             }
-            this->_network.publish_send_table(send_table);
-            AFTER(SendTableCreate, send_table);
+            this->_network.publish_data_table(data_table);
+            AFTER(SendTableCreate, data_table);
         }
 
         // Related to inline parsing at start of block
@@ -441,22 +495,22 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
         OK(csgopp::demo::ReadLittleEndian16(stream, &server_class->id));
         OK(csgopp::demo::ReadCStyleString(stream, &server_class->name));
 
-        std::string send_table_name;
-        OK(csgopp::demo::ReadCStyleString(stream, &send_table_name));
-        server_class->send_table = this->_network._send_tables_by_name.at(send_table_name);
-        server_class->send_table->server_class = server_class;
+        std::string data_table_name;
+        OK(csgopp::demo::ReadCStyleString(stream, &data_table_name));
+        server_class->data_table = this->_network._data_tables_by_name.at(data_table_name);
+        server_class->data_table->server_class = server_class;
         temporary_server_class_lookup.emplace(server_class->name, server_class);
     }
 
     for (auto [_, server_class] : temporary_server_class_lookup)
     {
-        for (const auto& [name, property] : server_class->send_table->properties)
+        for (const auto& [name, property] : server_class->data_table->properties)
         {
-            if (property->type == SendTable::Property::Type::DATA_TABLE && name == "baseclass")
+            if (property->type == DataTable::Property::Type::DATA_TABLE && name == "baseclass")
             {
-                const auto& actual = property->as<const SendTable::DataTableProperty>();
-                SendTable* base_send_table = this->_network._send_tables_by_name.at(actual.key);
-                server_class->base_classes.push_back(base_send_table->server_class);
+                const auto& actual = property->as<const DataTable::DataTableProperty>();
+                DataTable* base_data_table = this->_network._data_tables_by_name.at(actual.key);
+                server_class->base_classes.push_back(base_data_table->server_class);
             }
             else
             {
@@ -472,8 +526,56 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
 
 SIMULATION(void, advance_packet_class_info, CodedInputStream& stream) PACKET_SKIP()
 SIMULATION(void, advance_packet_set_pause, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream) PACKET_SKIP()
+
+SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
+{
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit > 0);
+
+    BEFORE(Observer, StringTableCreate);
+    csgo::message::net::CSVCMsg_CreateStringTable data;
+    OK(data.ParseFromCodedStream(&stream));
+
+    StringTable* string_table = this->_network.allocate_string_table(data);
+    BitStream contents(data.string_data());
+    size_t index_size = csgopp::common::bits::width(data.max_entries());
+    StringTable::Index auto_increment = 0;
+
+    for (int32_t i = 0; i < data.num_entries(); ++i)
+    {
+        uint8_t new_auto_increment;
+        OK(contents.read(&new_auto_increment, 1));
+        if (new_auto_increment != 0) {
+            OK(contents.read(&auto_increment, index_size));
+        }
+
+        std::string string;
+
+        uint8_t has_string;
+        OK(contents.read(&has_string, 1));
+        if (has_string)
+        {
+            uint8_t append;
+            OK(contents.read(&append, 1));
+            if (append)
+            {
+
+            }
+
+        }
+
+        auto_increment += 1;
+    }
+
+    this->_network.publish_string_table(string_table);
+    AFTER(StringTableCreate, string_table);
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
+}
+
 SIMULATION(void, advance_packet_update_string_table, CodedInputStream& stream) PACKET_SKIP()
+
 SIMULATION(void, advance_packet_voice_initialization, CodedInputStream& stream) PACKET_SKIP()
 SIMULATION(void, advance_packet_voice_data, CodedInputStream& stream) PACKET_SKIP()
 SIMULATION(void, advance_packet_print, CodedInputStream& stream) PACKET_SKIP()

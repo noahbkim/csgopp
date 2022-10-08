@@ -3,13 +3,13 @@
 #include <iostream>
 #include <map>
 
-#include <csgopp/network/send_table.h>
+#include <csgopp/network/data_table.h>
 #include <csgopp/network/server_class.h>
 #include <csgopp/demo.h>
 #include <csgopp/game.h>
 
 using csgopp::network::ServerClass;
-using csgopp::network::SendTable;
+using csgopp::network::DataTable;
 using csgopp::game::ObserverBase;
 using csgopp::demo::Command;
 
@@ -64,7 +64,7 @@ struct DataObserver : public ObserverBase<DataObserver>
     {
         using ObserverBase::SendTableCreate::SendTableCreate;
 
-        void handle(Simulation& simulation, const SendTable* send_table) override
+        void handle(Simulation& simulation, const DataTable* send_table) override
         {
             std::cout << "send table: " << send_table->name << std::endl;
             for (const auto& [name, property] : send_table->properties)
@@ -80,7 +80,7 @@ struct DataObserver : public ObserverBase<DataObserver>
 
         void handle(Simulation& simulation, const ServerClass* server_class) override
         {
-            std::cout << "server class: " << server_class->name << ": " << server_class->send_table->name << std::endl;
+            std::cout << "server class: " << server_class->name << ": " << server_class->data_table->name << std::endl;
         }
     };
 

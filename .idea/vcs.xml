@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/libraries/nanobind" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/libraries/nanobind/ext/robin_map" vcs="Git" />
   </component>
 </project>

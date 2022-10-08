@@ -5,14 +5,14 @@
 #include <vector>
 #include <absl/container/flat_hash_map.h>
 
-#include "send_table.h"
+#include "data_table.h"
 
 namespace csgopp::network
 {
 
 using google::protobuf::io::CodedInputStream;
 
-struct SendTable;
+struct DataTable;
 
 struct ServerClass
 {
@@ -20,9 +20,9 @@ struct ServerClass
 
     Id id{};
     std::string name;
-    SendTable* send_table{nullptr};
+    DataTable* data_table{nullptr};
     std::vector<ServerClass*> base_classes;
-    absl::flat_hash_map<std::string_view, SendTable::Property*> properties;
+    absl::flat_hash_map<std::string_view, DataTable::Property*> properties;
 };
 
 }

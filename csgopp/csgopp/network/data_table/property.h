@@ -7,7 +7,7 @@
 #include "../declare.h"
 #include "netmessages.pb.h"
 
-namespace csgopp::network::send_table
+namespace csgopp::network::data_table
 {
 
 using csgopp::error::GameError;
@@ -96,11 +96,11 @@ struct Property
     using Type = PropertyType;
     using Flags = PropertyFlags;
 
-    SendTable* send_table;
+    DataTable* send_table;
     std::string name;
     Type::T type;
 
-    Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    Property(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : send_table(send_table)
         , name(data.var_name())
         , type(data.type()) {}
@@ -116,7 +116,7 @@ struct Int32Property final : public Property
 {
     int32_t bits;
 
-    explicit Int32Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit Int32Property(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data)
         , bits(data.num_bits()) {}
 
@@ -130,7 +130,7 @@ struct FloatProperty final : public Property
     int32_t bits;
     Flags::Type flags;
 
-    explicit FloatProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit FloatProperty(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data)
         , high_value(data.high_value())
         , low_value(data.low_value())
@@ -144,7 +144,7 @@ struct Vector3Property final : public Property
 {
     Flags::Type flags;
 
-    explicit Vector3Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit Vector3Property(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data)
         , flags(data.flags()) {}
 
@@ -153,7 +153,7 @@ struct Vector3Property final : public Property
 
 struct Vector2Property final : public Property
 {
-    explicit Vector2Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit Vector2Property(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data) {}
 
 //        Value* instantiate(CodedInputStream& stream) const override;
@@ -161,7 +161,7 @@ struct Vector2Property final : public Property
 
 struct StringProperty final : public Property
 {
-    explicit StringProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit StringProperty(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data) {}
 
 //        Value* instantiate(CodedInputStream& stream) const override;
@@ -171,7 +171,7 @@ struct ArrayProperty final : public Property
 {
     int32_t size;
 
-    explicit ArrayProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit ArrayProperty(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data)
         , size(data.num_elements()) {}
 
@@ -182,7 +182,7 @@ struct DataTableProperty final : public Property
 {
     std::string key;
 
-    explicit DataTableProperty(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit DataTableProperty(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data)
         , key(data.dt_name()) {}
 
@@ -193,7 +193,7 @@ struct Int64Property final : public Property
 {
     int32_t bits;
 
-    explicit Int64Property(SendTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit Int64Property(DataTable* send_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(send_table, data)
         , bits(data.num_bits()) {}
 

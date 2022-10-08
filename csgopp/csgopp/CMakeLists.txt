@@ -11,7 +11,7 @@ add_library(csgopp STATIC
         common/interface.h
         network/server_class.cpp network/server_class.h
         error.h
-        network/send_table.cpp network/send_table.h network.h network/declare.h network/send_table/property.h network/send_table/property.cpp network/send_table/value.cpp network/send_table/value.h network.cpp common/magic.h)
+        network/data_table.cpp network/data_table.h network.h network/declare.h network/data_table/property.h network/data_table/property.cpp network/data_table/value.cpp network/data_table/value.h network.cpp common/magic.h common/bits.h network/string_table.cpp network/string_table.h common/ring.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

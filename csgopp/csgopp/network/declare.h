@@ -5,7 +5,7 @@
 // Forward declarations; there are a lot of circular references
 namespace csgopp::network
 {
-    struct SendTable;
+    struct DataTable;
     struct ServerClass;
     struct Network;
 }

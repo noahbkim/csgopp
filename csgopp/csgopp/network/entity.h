@@ -6,7 +6,7 @@
 #include <absl/container/flat_hash_map.h>
 
 #include "../common/vector.h"
-#include "send_table.h"
+#include "data_table.h"
 #include "server_class.h"
 
 namespace csgopp::network
@@ -19,7 +19,7 @@ struct Entity
     int32_t id;
     Vector3 position;
     ServerClass* server_class;
-    absl::flat_hash_map<std::string_view, std::unique_ptr<SendTable::Value>> members;
+    absl::flat_hash_map<std::string_view, std::unique_ptr<DataTable::Value>> members;
 };
 
 }
