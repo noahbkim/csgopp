@@ -61,6 +61,7 @@ public:
         absl::flat_hash_map<ServerClass::Id, ServerClass*> _server_classes_by_id;
 
         std::vector<std::unique_ptr<StringTable>> _string_tables;
+        std::vector<std::unique_ptr<StringTable::Entry>> _string_table_entries;
         absl::flat_hash_map<std::string_view, StringTable*> _string_tables_by_name;
 
         template<typename... Args> DataTable* allocate_data_table(Args... args);
@@ -74,6 +75,7 @@ public:
         void publish_server_class(ServerClass* server_class);
 
         template<typename... Args> StringTable* allocate_string_table(Args... args);
+        template<typename... Args> StringTable::Entry* allocate_string_table_entry(Args... args);
         void publish_string_table(StringTable* string_table);
     };
 
@@ -232,6 +234,13 @@ StringTable* Simulation<Observer>::Network::allocate_string_table(Args... args)
 {
     std::unique_ptr<StringTable> storage = std::make_unique<StringTable>(args...);
     return this->_string_tables.emplace_back(std::move(storage)).get();
+}
+
+template<typename Observer>
+template<typename... Args> StringTable::Entry* Simulation<Observer>::Network::allocate_string_table_entry(Args... args)
+{
+    std::unique_ptr<StringTable::Entry> storage = std::make_unique<StringTable::Entry>(args...);
+    return this->_string_table_entries.emplace_back(std::move(storage)).get();
 }
 
 template<typename Observer>
@@ -559,57 +568,56 @@ SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
             OK(string_data.read(&auto_increment, index_size));
         }
 
-        std::string string;
+        StringTable::Entry* entry = this->_network.allocate_string_table_entry();
 
         uint8_t has_string;
         OK(string_data.read(&has_string, 1));
         if (has_string)
         {
-            uint8_t append;
-            OK(string_data.read(&append, 1));
-            if (append)
+            uint8_t append_to_existing;
+            OK(string_data.read(&append_to_existing, 1));
+            if (append_to_existing)
             {
                 uint8_t history_index;
                 OK(string_data.read(&history_index, 5));
                 uint8_t bytes_to_copy;
                 OK(string_data.read(&bytes_to_copy, 5));
-                string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
+                entry->string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
             }
 
             // Read a c-style string; take until null
             do
             {
-                string.push_back(0);
-                OK(string_data.read(&string.back(), 8));
-            } while (string.back() != 0);
-            string.pop_back();
+                entry->string.push_back(0);
+                OK(string_data.read(&entry->string.back(), 8));
+            } while (entry->string.back() != 0);
+            entry->string.pop_back();
         }
 
-        string_table_entry_history.push_back_overwrite(string);
-        uint8_t has_user_data;
-        OK(string_data.read(&has_user_data, 1));
-        if (has_user_data)
+        string_table_entry_history.push_back_overwrite(entry->string);
+        uint8_t has_data;
+        OK(string_data.read(&has_data, 1));
+        if (has_data)
         {
-            std::vector<uint8_t> user_data;
             if (data.user_data_fixed_size())  // < 8 bits
             {
                 OK(data.user_data_size_bits() <= 8);
-                user_data.push_back(0);
-                string_data.read(&user_data.back(), data.user_data_size_bits());
+                entry->data.push_back(0);
+                string_data.read(&entry->data.back(), data.user_data_size_bits());
             }
             else
             {
-                uint16_t user_data_size;
-                OK(string_data.read(&user_data_size, 14));
-                user_data.resize(user_data_size);
-                for (uint16_t j = 0; j < user_data_size; ++j)
+                uint16_t data_size;
+                OK(string_data.read(&data_size, 14));
+                entry->data.resize(data_size);
+                for (uint16_t j = 0; j < data_size; ++j)
                 {
-                    OK(string_data.read(&user_data.at(j), 8));
+                    OK(string_data.read(&entry->data.at(j), 8));
                 }
             }
         }
 
-        string_table->strings.emplace(auto_increment, std::move(string));
+        string_table->entries.emplace(auto_increment, entry);
         auto_increment += 1;
     }
 
