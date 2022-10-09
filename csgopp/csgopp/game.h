@@ -24,6 +24,7 @@
     virtual void handle(SIMULATION&, __VA_ARGS__) {} \
 }
 
+/// The `csgopp::game` namespace contains the bulk of demo-parsing and game simulation.
 namespace csgopp::game
 {
 
