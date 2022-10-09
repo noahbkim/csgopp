@@ -11,15 +11,20 @@ namespace csgopp::common::bits
 
 using google::protobuf::io::CodedInputStream;
 
-constexpr uint8_t mask(uint8_t skip)
+constexpr uint8_t left(uint8_t n)
 {
-    return 0xFF >> skip;
+    return 0xFF << n;
+}
+
+constexpr uint8_t right(uint8_t n)
+{
+    return 0xFF >> n;
 }
 
 template<typename T, typename S = uint8_t>
 constexpr S width(T t)
 {
-    S width;
+    S width{0};
     while (t > 0)
     {
         t >>= 1;
@@ -27,7 +32,7 @@ constexpr S width(T t)
     }
 
     // 1 -> 0, width = 1, zero bits needed
-    if (width > 1)
+    if (width > 0)
     {
         width -= 1;
     }
@@ -82,28 +87,28 @@ public:
         // Short case: smaller than remaining window
         if (8 - this->bit_index > bits)
         {
-            *value |= (this->data.at(this->byte_index) & mask(this->bit_index)) >> ((8 - bits) - this->bit_index);
+            *value |= (this->data.at(this->byte_index) & right(8 - bits - this->bit_index)) >> this->bit_index;
             this->bit_index += bits;
             return true;
         }
 
         // Take window
-        *value |= (this->data.at(this->byte_index) & mask(this->bit_index)) << (bits - (8 - this->bit_index));
-        bits -= (8 - this->bit_index);
+        *value |= this->data.at(this->byte_index) >> this->bit_index;
+        size_t cursor = 8 - this->bit_index;
         this->bit_index = 0;
         this->byte_index += 1;
 
-        while (bits > 8)
+        while (bits - cursor > 8)
         {
-            *value |= this->data.at(this->byte_index) << (bits - 8);
+            *value |= static_cast<T>(this->data.at(this->byte_index)) << cursor;
             this->byte_index += 1;
-            bits -= 8;
+            cursor += 8;
         }
 
-        if (bits > 0)
+        if (bits - cursor > 0)
         {
-            *value |= this->data.at(this->byte_index) >> (8 - bits);
-            this->bit_index = bits;
+            *value |= static_cast<T>(this->data.at(this->byte_index) & right(8 - (bits - cursor))) << cursor;
+            this->bit_index = bits - cursor;
         }
 
         return true;

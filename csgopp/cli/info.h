@@ -47,13 +47,13 @@ struct StructureObserver : public ObserverBase<StructureObserver>
         std::cout << std::endl << "frames (" << this->frame_count << "):" << std::endl;
         for (const auto& [command, count] : this->commands)
         {
-            std::cout << "- " << csgopp::demo::describe_command(command) << ": " << count << std::endl;
+            std::cout << "  - " << csgopp::demo::describe_command(command) << ": " << count << std::endl;
         }
 
         std::cout << std::endl << "net messages (" << this->packet_count << "):" << std::endl;
         for (const auto& [net_message, count] : this->net_messages)
         {
-            std::cout << "- " << csgopp::demo::describe_net_message(net_message) << ": " << count << std::endl;
+            std::cout << "  - " << csgopp::demo::describe_net_message(net_message) << ": " << count << std::endl;
         }
     }
 };

@@ -7,6 +7,7 @@
 #include "common/lookup.h"
 #include "common/bits.h"
 #include "common/interface.h"
+#include "common/ring.h"
 #include "demo.h"
 #include "network/data_table.h"
 #include "network/server_class.h"
@@ -28,6 +29,7 @@ namespace csgopp::game
 
 using google::protobuf::io::CodedInputStream;
 using csgopp::common::bits::BitStream;
+using csgopp::common::ring::Ring;
 using csgopp::error::GameError;
 using csgopp::network::DataTable;
 using csgopp::network::ServerClass;
@@ -537,33 +539,77 @@ SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
     OK(data.ParseFromCodedStream(&stream));
 
     StringTable* string_table = this->_network.allocate_string_table(data);
-    BitStream contents(data.string_data());
+    BitStream string_data(data.string_data());
+
+    uint8_t verification_bit;
+    string_data.read(&verification_bit, 1);
+    OK(verification_bit == 0);
+
+    Ring<std::string_view, 32> string_table_entry_history;  // 31 appears to be constant
+
     size_t index_size = csgopp::common::bits::width(data.max_entries());
     StringTable::Index auto_increment = 0;
 
     for (int32_t i = 0; i < data.num_entries(); ++i)
     {
-        uint8_t new_auto_increment;
-        OK(contents.read(&new_auto_increment, 1));
-        if (new_auto_increment != 0) {
-            OK(contents.read(&auto_increment, index_size));
+        uint8_t use_auto_increment;
+        OK(string_data.read(&use_auto_increment, 1));
+        if (!use_auto_increment)
+        {
+            OK(string_data.read(&auto_increment, index_size));
         }
 
         std::string string;
 
         uint8_t has_string;
-        OK(contents.read(&has_string, 1));
+        OK(string_data.read(&has_string, 1));
         if (has_string)
         {
             uint8_t append;
-            OK(contents.read(&append, 1));
+            OK(string_data.read(&append, 1));
             if (append)
             {
-
+                uint8_t history_index;
+                OK(string_data.read(&history_index, 5));
+                uint8_t bytes_to_copy;
+                OK(string_data.read(&bytes_to_copy, 5));
+                string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
             }
 
+            // Read a c-style string; take until null
+            do
+            {
+                string.push_back(0);
+                OK(string_data.read(&string.back(), 8));
+            } while (string.back() != 0);
+            string.pop_back();
         }
 
+        string_table_entry_history.push_back_overwrite(string);
+        uint8_t has_user_data;
+        OK(string_data.read(&has_user_data, 1));
+        if (has_user_data)
+        {
+            std::vector<uint8_t> user_data;
+            if (data.user_data_fixed_size())  // < 8 bits
+            {
+                OK(data.user_data_size_bits() <= 8);
+                user_data.push_back(0);
+                string_data.read(&user_data.back(), data.user_data_size_bits());
+            }
+            else
+            {
+                uint16_t user_data_size;
+                OK(string_data.read(&user_data_size, 14));
+                user_data.resize(user_data_size);
+                for (uint16_t j = 0; j < user_data_size; ++j)
+                {
+                    OK(string_data.read(&user_data.at(j), 8));
+                }
+            }
+        }
+
+        string_table->strings.emplace(auto_increment, std::move(string));
         auto_increment += 1;
     }
 
