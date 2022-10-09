@@ -13,8 +13,9 @@ set(NB_SHARED OFF CACHE INTERNAL "")
 add_subdirectory(libraries/nanobind)
 
 # link compiled proto headers
-add_subdirectory(csgopp/csgopp/)
 add_subdirectory(csgopp/messages/)
-add_subdirectory(csgopp/cli/)
-add_subdirectory(csgopp/tests/)
+add_subdirectory(csgopp/csgopp/)
 add_subdirectory(csgopp/csgopy)
+add_subdirectory(csgopp/tests/)
+add_subdirectory(csgopp/cli/)
+add_subdirectory(csgopp/docs)

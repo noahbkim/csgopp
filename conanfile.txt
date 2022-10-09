@@ -1,7 +1,10 @@
 [requires]
 protobuf/3.21.4
 abseil/20220623.0
+
+[build_requires]
 gtest/1.12.1
+doxygen/1.9.4
 
 [generators]
 cmake

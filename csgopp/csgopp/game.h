@@ -628,6 +628,13 @@ SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
+//https://developer.valvesoftware.com/wiki/Networking_Events_%26_Messages
+//https://developer.valvesoftware.com/wiki/Networking_Entities
+//https://gist.github.com/jboner/2841832#file-latency-txt-L12
+///https://github.com/markus-wa/gobitread/blob/a316e052584a5cb5f7a6a6285d3636d62146b5aa/bitread.go#L155
+//https://github.com/markus-wa/demoinfocs-golang/blob/master/pkg/demoinfocs/stringtables.go
+//https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/parsing.go
+
 SIMULATION(void, advance_packet_update_string_table, CodedInputStream& stream) PACKET_SKIP()
 
 SIMULATION(void, advance_packet_voice_initialization, CodedInputStream& stream) PACKET_SKIP()

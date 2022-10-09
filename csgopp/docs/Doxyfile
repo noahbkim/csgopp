@@ -1,0 +1,2 @@
+OUTPUT_DIRECTORY = @CMAKE_SOURCE_DIR@/docs/
+INPUT = @CMAKE_SOURCE_DIR@/csgopp/csgopp/
