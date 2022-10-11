@@ -10,19 +10,19 @@
 
 using csgopp::network::ServerClass;
 using csgopp::network::DataTable;
-using csgopp::game::ObserverBase;
+using csgopp::game::SimulationObserverBase;
 using csgopp::demo::Command;
 
-struct StructureObserver : public ObserverBase<StructureObserver>
+struct StructureObserver : public SimulationObserverBase<StructureObserver>
 {
     size_t frame_count = 0;
     std::map<Command::Type, size_t> commands;
     size_t packet_count = 0;
     std::map<int32_t, size_t> net_messages;
 
-    struct Frame final : public ObserverBase::Frame
+    struct FrameObserver final : public SimulationObserverBase::FrameObserver
     {
-        using ObserverBase::Frame::Frame;
+        using SimulationObserverBase::FrameObserver::FrameObserver;
 
         void handle(Simulation& simulation, Command::Type command) override
         {
@@ -31,9 +31,9 @@ struct StructureObserver : public ObserverBase<StructureObserver>
         }
     };
 
-    struct Packet final : public ObserverBase::Packet
+    struct PacketObserver final : public SimulationObserverBase::PacketObserver
     {
-        using ObserverBase::Packet::Packet;
+        using SimulationObserverBase::PacketObserver::PacketObserver;
 
         void handle(Simulation& simulation, int32_t net_message) override
         {
@@ -58,11 +58,11 @@ struct StructureObserver : public ObserverBase<StructureObserver>
     }
 };
 
-struct DataObserver : public ObserverBase<DataObserver>
+struct DataObserver : public SimulationObserverBase<DataObserver>
 {
-    struct SendTableCreate final : public ObserverBase::SendTableCreate
+    struct DataTableCreationObserver final : public SimulationObserverBase::DataTableCreationObserver
     {
-        using ObserverBase::SendTableCreate::SendTableCreate;
+        using SimulationObserverBase::DataTableCreationObserver::DataTableCreationObserver;
 
         void handle(Simulation& simulation, const DataTable* send_table) override
         {
@@ -74,9 +74,9 @@ struct DataObserver : public ObserverBase<DataObserver>
         }
     };
 
-    struct ServerClassCreate final : public ObserverBase::ServerClassCreate
+    struct ServerClassCreationObserver final : public SimulationObserverBase::ServerClassCreationObserver
     {
-        using ObserverBase::ServerClassCreate::ServerClassCreate;
+        using SimulationObserverBase::ServerClassCreationObserver::ServerClassCreationObserver;
 
         void handle(Simulation& simulation, const ServerClass* server_class) override
         {

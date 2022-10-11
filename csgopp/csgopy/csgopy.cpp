@@ -6,7 +6,7 @@
 
 using namespace nanobind::literals;
 
-class PythonObserver : csgopp::game::ObserverBase<PythonObserver>
+class PythonObserver : csgopp::game::SimulationObserverBase<PythonObserver>
 {
 public:
     explicit PythonObserver(nanobind::object observer) : observer(std::move(observer)) {}

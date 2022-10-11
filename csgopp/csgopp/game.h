@@ -15,14 +15,8 @@
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
-#define BEFORE(OBSERVER, EVENT) typename OBSERVER::EVENT LOCAL(EVENT)(*this);
+#define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, __VA_ARGS__);
 #define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
-
-#define NOOP(NAME, SIMULATION, ...) struct NAME \
-{ \
-    explicit NAME(SIMULATION&) {} \
-    virtual void handle(SIMULATION&, __VA_ARGS__) {} \
-}
 
 /// The `csgopp::game` namespace contains the bulk of demo-parsing and game simulation.
 namespace csgopp::game
@@ -148,19 +142,41 @@ protected:
     uint32_t _tick{0};
 };
 
-template<typename Observer>
-struct ObserverBase
+template<typename SimulationObserver>
+struct SimulationObserverBase
 {
-    using Simulation = Simulation<Observer>;
+    using Simulation = Simulation<SimulationObserver>;
 
-    NOOP(Frame, Simulation, uint8_t);
-    NOOP(Packet, Simulation, int32_t);
-    NOOP(SendTableCreate, Simulation, const DataTable*);
-    NOOP(ServerClassCreate, Simulation, const ServerClass*);
-    NOOP(StringTableCreate, Simulation, const StringTable*);
+    struct FrameObserver
+    {
+        explicit FrameObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, demo::Command::Type type) {}
+    };
+
+    struct PacketObserver
+    {
+        explicit PacketObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, int32_t packet) {}
+    };
+
+    struct DataTableCreationObserver
+    {
+        explicit DataTableCreationObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, const DataTable* data_table) {}
+    };
+
+    struct ServerClassCreationObserver
+    {
+        explicit ServerClassCreationObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, const ServerClass* server_class) {}
+    };
+
+    struct StringTableCreationObserver
+    {
+        explicit StringTableCreationObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, const StringTable* string_table) {}
+    };
 };
-
-#define SIMULATION(TYPE, NAME, ...) template<typename Observer> TYPE Simulation<Observer>::NAME(__VA_ARGS__)
 
 template<typename Observer>
 template<typename... Args>
@@ -253,10 +269,11 @@ void Simulation<Observer>::Network::publish_string_table(StringTable* string_tab
 template<typename Observer>
 Simulation<Observer>::Simulation(CodedInputStream& stream) : _header(stream) {}
 
-SIMULATION(bool, advance, CodedInputStream& stream)
+template<typename Observer>
+bool Simulation<Observer>::advance(CodedInputStream& stream)
 {
     bool ok = true;
-    BEFORE(Observer, Frame);
+    BEFORE(Observer, FrameObserver);
 
     char command;
     OK(stream.ReadRaw(&command, 1));
@@ -296,11 +313,12 @@ SIMULATION(bool, advance, CodedInputStream& stream)
     }
 
     this->_cursor += 1;
-    AFTER(Frame, command);
+    AFTER(FrameObserver, command);
     return ok;
 }
 
-SIMULATION(void, advance_packets, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_packets(CodedInputStream& stream)
 {
     // Arbitrary player data, seems useless
     OK(stream.Skip(152 + 4 + 4));
@@ -318,9 +336,10 @@ SIMULATION(void, advance_packets, CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
-SIMULATION(void, advance_packet, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_packet(CodedInputStream& stream)
 {
-    BEFORE(Observer, Packet);
+    BEFORE(Observer, PacketObserver);
     uint32_t command = stream.ReadTag();
 
     switch (command)
@@ -367,17 +386,19 @@ SIMULATION(void, advance_packet, CodedInputStream& stream)
         default: this->advance_packet_unknown(stream, command);
     }
 
-    AFTER(Packet, command);
+    AFTER(PacketObserver, command);
 }
 
-SIMULATION(void, advance_console_command, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_console_command(CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
     OK(stream.Skip(size));
 }
 
-SIMULATION(void, advance_user_command, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_user_command(CodedInputStream& stream)
 {
     OK(stream.Skip(4));
     uint32_t size;
@@ -385,7 +406,8 @@ SIMULATION(void, advance_user_command, CodedInputStream& stream)
     OK(stream.Skip(size));
 }
 
-SIMULATION(void, advance_data_tables, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_data_tables(CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
@@ -397,7 +419,8 @@ SIMULATION(void, advance_data_tables, CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
-SIMULATION(void, advance_string_tables, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
@@ -414,7 +437,8 @@ SIMULATION(void, advance_string_tables, CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
-SIMULATION(void, advance_string_table, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_string_table(CodedInputStream& stream)
 {
     std::string name;
     OK(demo::ReadCStyleString(stream, &name));
@@ -432,12 +456,14 @@ SIMULATION(void, advance_string_table, CodedInputStream& stream)
     throw GameError("stop");
 }
 
-SIMULATION(void, advance_custom_data, CodedInputStream& stream)
+template<typename Observer>
+void Simulation<Observer>::advance_custom_data(CodedInputStream& stream)
 {
     throw GameError("encountered unexpected CUSTOM_DATA event!");
 }
 
-SIMULATION(bool, advance_unknown, CodedInputStream& stream, char command)
+template<typename Observer>
+bool Simulation<Observer>::advance_unknown(CodedInputStream& stream, char command)
 {
     throw GameError("encountered unknown command " + std::to_string(command));
 }
@@ -449,19 +475,53 @@ inline void advance_packet_skip(CodedInputStream& stream)
     OK(stream.Skip(static_cast<int32_t>(size)));
 }
 
-#define PACKET_SKIP() { advance_packet_skip(stream); }
+template<typename Observer> void Simulation<Observer>::advance_packet_nop(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
 
-SIMULATION(void, advance_packet_nop, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_disconnect, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_file, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_split_screen_user, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_tick, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_string_command, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_set_console_variable, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_sign_on_state, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_server_info, CodedInputStream& stream) PACKET_SKIP()
+template<typename Observer> void Simulation<Observer>::advance_packet_disconnect(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
 
-SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
+template<typename Observer> void Simulation<Observer>::advance_packet_file(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_split_screen_user(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_tick(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_string_command(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_set_console_variable(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_sign_on_state(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_server_info(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_send_table(CodedInputStream& stream)
 {
     csgo::message::net::CSVCMsg_SendTable data;
     do
@@ -478,7 +538,7 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
         // Actually do event handling if we're not at the terminator.
         if (!data.is_end())
         {
-            BEFORE(Observer, SendTableCreate);
+            BEFORE(Observer, DataTableCreationObserver);
             DataTable* data_table = this->_network.allocate_data_table(data);
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
             for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
@@ -490,7 +550,7 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
                 data_table->properties.emplace(property->name, property);
             }
             this->_network.publish_data_table(data_table);
-            AFTER(SendTableCreate, data_table);
+            AFTER(DataTableCreationObserver, data_table);
         }
 
         // Related to inline parsing at start of block
@@ -530,21 +590,29 @@ SIMULATION(void, advance_packet_send_table, CodedInputStream& stream)
             }
         }
 
-        BEFORE(Observer, ServerClassCreate);
+        BEFORE(Observer, ServerClassCreationObserver);
         this->_network.publish_server_class(server_class);
-        AFTER(ServerClassCreate, server_class);
+        AFTER(ServerClassCreationObserver, server_class);
     }
 }
 
-SIMULATION(void, advance_packet_class_info, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_set_pause, CodedInputStream& stream) PACKET_SKIP()
+template<typename Observer> void Simulation<Observer>::advance_packet_class_info(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
 
-SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
+template<typename Observer> void Simulation<Observer>::advance_packet_set_pause(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
 {
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     OK(limit > 0);
 
-    BEFORE(Observer, StringTableCreate);
+    BEFORE(Observer, StringTableCreationObserver);
     csgo::message::net::CSVCMsg_CreateStringTable data;
     OK(data.ParseFromCodedStream(&stream));
 
@@ -623,7 +691,7 @@ SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
     }
 
     this->_network.publish_string_table(string_table);
-    AFTER(StringTableCreate, string_table);
+    AFTER(StringTableCreationObserver, string_table);
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
@@ -636,34 +704,134 @@ SIMULATION(void, advance_packet_create_string_table, CodedInputStream& stream)
 //https://github.com/markus-wa/demoinfocs-golang/blob/master/pkg/demoinfocs/stringtables.go
 //https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/parsing.go
 
-SIMULATION(void, advance_packet_update_string_table, CodedInputStream& stream) PACKET_SKIP()
+template<typename Observer>
+void Simulation<Observer>::advance_packet_update_string_table(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
 
-SIMULATION(void, advance_packet_voice_initialization, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_voice_data, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_print, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_sounds, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_set_view, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_fix_angle, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_crosshair_angle, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_bsp_decal, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_split_screen, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_user_message, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_entity_message, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_game_event, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_packet_entities, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_temporary_entities, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_prefetch, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_menu, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_game_event_list, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_get_console_variable_value, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_paintmap_data, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_command_key_values, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_encrypted_data, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_hltv_replay, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_broadcast_command, CodedInputStream& stream) PACKET_SKIP()
-SIMULATION(void, advance_packet_player_avatar_data, CodedInputStream& stream) PACKET_SKIP()
+template<typename Observer> void Simulation<Observer>::advance_packet_voice_initialization(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
 
-SIMULATION(void, advance_packet_unknown, CodedInputStream& stream, int32_t command)
+template<typename Observer> void Simulation<Observer>::advance_packet_voice_data(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_print(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_sounds(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_set_view(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_fix_angle(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_crosshair_angle(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_bsp_decal(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_split_screen(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_user_message(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_entity_message(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_game_event(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_packet_entities(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_temporary_entities(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_prefetch(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_menu(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_game_event_list(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_get_console_variable_value(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_paintmap_data(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_command_key_values(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_encrypted_data(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_hltv_replay(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_broadcast_command(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer> void Simulation<Observer>::advance_packet_player_avatar_data(CodedInputStream& stream) 
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Simulation<Observer>::advance_packet_unknown(CodedInputStream& stream, int32_t command)
 {
     throw GameError("unrecognized message " + std::string(demo::describe_net_message(command)));
 }
