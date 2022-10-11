@@ -6,6 +6,9 @@
 
 #include "./macro.h"
 
+/// Bitstseam namapscae
+/// asdf
+/// @brief hello world
 namespace csgopp::common::bits
 {
 

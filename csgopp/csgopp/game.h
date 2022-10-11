@@ -18,7 +18,11 @@
 #define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, __VA_ARGS__);
 #define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
 
-/// The `csgopp::game` namespace contains the bulk of demo-parsing and game simulation.
+/// Most notably, this namespace defines the `SimulationObserverBase` and
+/// `Simulation`, which together form the basis of csgopp's demo parsing and
+/// game simulation framework.
+///
+/// @brief Demo parsing and game simulation.
 namespace csgopp::game
 {
 
@@ -29,6 +33,71 @@ using csgopp::error::GameError;
 using csgopp::network::DataTable;
 using csgopp::network::ServerClass;
 using csgopp::network::StringTable;
+
+// Forward declaration for use in `SimulationObserverBase`.
+template<typename Observer>
+class Simulation;
+
+/// \brief This class serves as a base-class for `Simulation` observers.
+///
+/// In order to efficiently handle events emitted by the simulation, we
+/// template an overarching observer and its various nested event observers
+/// directly into the simulation.
+///
+/// This class provides empty implementations for every event observer used by
+/// the simulation. It therefore serves as a convenient base class for custom
+/// observers that might not need to explicitly implement every event--the
+/// simulation just instantiates `Observer::EventObserver`, so if the subclass
+/// provides no override, the base's is used.
+///
+/// \tparam SimulationObserver should be the subclass type, e.g.
+///     `struct CustomObserver : SimulationObserverBase<CustomObserver> {}`.
+///     This is necessary to properly type the `Simulation` reference that's
+///     passed to both the constructor and `handle` method.
+template<typename SimulationObserver>
+struct SimulationObserverBase
+{
+    /// Convenience; avoids having to rewrite the full type.
+    using Simulation = Simulation<SimulationObserver>;
+
+    /// \brief This event is emitted when a DEMO frame is parsed.
+    struct FrameObserver
+    {
+        explicit FrameObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, demo::Command::Type type) {}
+    };
+
+    /// \brief This event is emitted when a game packet is parsed.
+    struct PacketObserver
+    {
+        explicit PacketObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, int32_t packet) {}
+    };
+
+    /// \brief This event is emitted when a network data table is created.
+    /// \see `csgopp::network::DataTable`
+    struct DataTableCreationObserver
+    {
+        explicit DataTableCreationObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, const DataTable* data_table) {}
+    };
+
+    /// \brief This event is emitted when a network server class is created.
+    /// \see `csgopp::network::ServerClass`
+    struct ServerClassCreationObserver
+    {
+        explicit ServerClassCreationObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, const ServerClass* server_class) {}
+    };
+
+    /// \brief This event is emitted when a network string table is created.
+    /// \see `csgopp::network::StringTable`
+    struct StringTableCreationObserver
+    {
+        explicit StringTableCreationObserver(Simulation& simulation) {}
+        virtual void handle(Simulation& simulation, const StringTable* string_table) {}
+    };
+};
 
 template<typename Observer>
 class Simulation
@@ -126,11 +195,11 @@ public:
     virtual void advance_custom_data(CodedInputStream& stream);
     virtual bool advance_unknown(CodedInputStream& stream, char command);
 
-    GET(header, const&);
-    GET(state, const&);
-    GET(network, const&);
-    GET(cursor);
-    GET(tick);
+    [[nodiscard]] const demo::Header& header() { return this->_header; }
+    [[nodiscard]] const State& state() { return this->_state; }
+    [[nodiscard]] const Network& network() { return this->_network; }
+    [[nodiscard]] uint32_t cursor() { return this->_cursor; }
+    [[nodiscard]] uint32_t tick() { return this->_tick; }
 
     Observer observer;
 
@@ -140,42 +209,6 @@ protected:
     Network _network;
     uint32_t _cursor{0};
     uint32_t _tick{0};
-};
-
-template<typename SimulationObserver>
-struct SimulationObserverBase
-{
-    using Simulation = Simulation<SimulationObserver>;
-
-    struct FrameObserver
-    {
-        explicit FrameObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, demo::Command::Type type) {}
-    };
-
-    struct PacketObserver
-    {
-        explicit PacketObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, int32_t packet) {}
-    };
-
-    struct DataTableCreationObserver
-    {
-        explicit DataTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const DataTable* data_table) {}
-    };
-
-    struct ServerClassCreationObserver
-    {
-        explicit ServerClassCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const ServerClass* server_class) {}
-    };
-
-    struct StringTableCreationObserver
-    {
-        explicit StringTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const StringTable* string_table) {}
-    };
 };
 
 template<typename Observer>
@@ -715,117 +748,117 @@ template<typename Observer> void Simulation<Observer>::advance_packet_voice_init
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_voice_data(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_voice_data(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_print(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_print(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_sounds(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_sounds(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_set_view(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_set_view(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_fix_angle(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_fix_angle(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_crosshair_angle(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_crosshair_angle(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_bsp_decal(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_bsp_decal(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_split_screen(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_split_screen(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_user_message(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_user_message(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_entity_message(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_entity_message(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_game_event(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_game_event(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_packet_entities(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_temporary_entities(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_temporary_entities(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_prefetch(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_prefetch(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_menu(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_menu(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_game_event_list(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_get_console_variable_value(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_get_console_variable_value(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_paintmap_data(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_paintmap_data(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_command_key_values(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_command_key_values(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_encrypted_data(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_encrypted_data(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_hltv_replay(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_hltv_replay(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_broadcast_command(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_broadcast_command(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_player_avatar_data(CodedInputStream& stream) 
+template<typename Observer> void Simulation<Observer>::advance_packet_player_avatar_data(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
