@@ -6,8 +6,8 @@
 
 #include "./macro.h"
 
-/// Bitstseam namapscae
-/// asdf
+/// Defines tools for manipulating compressed bit streams.
+///
 /// @brief hello world
 namespace csgopp::common::bits
 {
@@ -90,29 +90,45 @@ public:
         // Short case: smaller than remaining window
         if (8 - this->bit_index > bits)
         {
-            *value |= (this->data.at(this->byte_index) & right(8 - bits - this->bit_index)) >> this->bit_index;
+            *value |= (this->data[this->byte_index] & right(8 - bits - this->bit_index)) >> this->bit_index;
             this->bit_index += bits;
             return true;
         }
 
         // Take window
-        *value |= this->data.at(this->byte_index) >> this->bit_index;
+        *value |= this->data[this->byte_index] >> this->bit_index;
         size_t cursor = 8 - this->bit_index;
         this->bit_index = 0;
         this->byte_index += 1;
 
         while (bits - cursor > 8)
         {
-            *value |= static_cast<T>(this->data.at(this->byte_index)) << cursor;
+            *value |= static_cast<T>(this->data[this->byte_index]) << cursor;
             this->byte_index += 1;
             cursor += 8;
         }
 
         if (bits - cursor > 0)
         {
-            *value |= static_cast<T>(this->data.at(this->byte_index) & right(8 - (bits - cursor))) << cursor;
+            *value |= static_cast<T>(this->data[this->byte_index] & right(8 - (bits - cursor))) << cursor;
             this->bit_index = bits - cursor;
         }
+
+        return true;
+    }
+
+    /// Read a C-style string into the given container.
+    bool read_string(std::string& string)
+    {
+        do
+        {
+            string.push_back(0);
+            if (!this->read(&string.back(), 8))
+            {
+                return false;
+            }
+        } while (string.back() != 0);
+        string.pop_back();
 
         return true;
     }

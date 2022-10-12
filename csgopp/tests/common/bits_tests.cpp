@@ -62,3 +62,35 @@ TEST(BitStream, bounds)
     EXPECT_FALSE(stream.skip(17));
     EXPECT_FALSE(stream.skip(32));
 }
+
+TEST(BitStream, string)
+{
+    BitStream stream(std::vector<uint8_t>{'a', 'b', 'c', 0});
+    std::string value;
+    EXPECT_TRUE(stream.read_string(value));
+    EXPECT_EQ(value, "abc");
+}
+
+TEST(BitStream, string_unterminated)
+{
+    BitStream stream(std::vector<uint8_t>{'a', 'b', 'c'});
+    std::string value;
+    EXPECT_FALSE(stream.read_string(value));
+}
+
+// def offset(s, b):
+//	for c in s:
+//		b = bin(ord(c))[2:].rjust(8, "0") + b
+//		print("0b" + b[-8:])
+//		b = b[:-8]
+
+TEST(BitStream, string_offset)
+{
+    BitStream stream(std::vector<uint8_t>{0b11000011, 0b11000100, 0b11000110, 0b00000000, 0b00000000});
+    std::uint8_t offset;
+    std::string value;
+    EXPECT_TRUE(stream.read(&offset, 1));
+    EXPECT_EQ(offset, 1);
+    EXPECT_TRUE(stream.read_string(value));
+    EXPECT_EQ(value, "abc");
+}

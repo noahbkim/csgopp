@@ -14,14 +14,13 @@ struct StringTable
 
     struct Entry
     {
+        /// Sometimes a key, sometimes the actual data
         std::string string;
         std::vector<uint8_t> data;
     };
 
     std::string name;
     absl::flat_hash_map<Index, Entry*> entries;
-
-    explicit StringTable(const csgo::message::net::CSVCMsg_CreateStringTable& data);
 };
 
 }

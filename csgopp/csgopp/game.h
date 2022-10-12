@@ -189,16 +189,11 @@ public:
     virtual void advance_packet_broadcast_command(CodedInputStream& stream);
     virtual void advance_packet_player_avatar_data(CodedInputStream& stream);
     virtual void advance_packet_unknown(CodedInputStream& stream, int32_t command);
-
     virtual void advance_console_command(CodedInputStream& stream);
     virtual void advance_user_command(CodedInputStream& stream);
     virtual void advance_data_tables(CodedInputStream& stream);
-
     virtual void advance_string_tables(CodedInputStream& stream);
-    virtual void advance_string_table(CodedInputStream& stream);
-
     virtual void advance_custom_data(CodedInputStream& stream);
-
     virtual bool advance_unknown(CodedInputStream& stream, char command);
 
     [[nodiscard]] const demo::Header& header() { return this->_header; }
@@ -377,6 +372,7 @@ void Simulation<Observer>::advance_data_tables(CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
+// TODO untested
 template<typename Observer>
 void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
 {
@@ -384,34 +380,46 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
     OK(stream.ReadLittleEndian32(&size));
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
+    BitStream data(stream, size);
+
     uint8_t count;
-    stream.ReadRaw(&count, 1);
+    OK(data.read(&count, 8));
     for (uint8_t i = 0; i < count; ++i)
     {
-        this->advance_string_table(stream);
+        BEFORE(Observer, StringTableCreationObserver);
+        StringTable* string_table = this->_network.allocate_string_table();
+        OK(data.read_string(string_table->name));
+
+        uint16_t entry_count;
+        OK(data.read(&entry_count, 16));
+        for (uint16_t j = 0; j < entry_count; ++j)
+        {
+            StringTable::Entry* entry = this->_network.allocate_string_table_entry();
+            OK(data.read_string(entry->string));
+
+            uint8_t has_data;
+            OK(data.read(&has_data, 1));
+            if (has_data)
+            {
+                uint16_t data_size;
+                OK(data.read(&data_size, 16));
+
+                entry->data.resize(data_size);
+                for (uint16_t k = 0; k < data_size; ++k)
+                {
+                    OK(data.read(&entry->data.at(j), 8));
+                }
+            }
+
+            string_table->entries.emplace(j, entry);
+        }
+
+        this->_network.publish_string_table(string_table);
+        AFTER(StringTableCreationObserver, string_table);
     }
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
-}
-
-template<typename Observer>
-void Simulation<Observer>::advance_string_table(CodedInputStream& stream)
-{
-    std::string name;
-    OK(demo::ReadCStyleString(stream, &name));
-
-    uint16_t count;
-    OK(demo::ReadLittleEndian16(stream, &count));
-
-    printf("%d\n", stream.CurrentPosition());
-
-//    for (uint16_t i = 0; i < count; ++i)
-//    {
-//
-//    }
-
-    throw GameError("stop");
 }
 
 template<typename Observer>
@@ -574,7 +582,8 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
     csgo::message::net::CSVCMsg_CreateStringTable data;
     OK(data.ParseFromCodedStream(&stream));
 
-    StringTable* string_table = this->_network.allocate_string_table(data);
+    StringTable* string_table = this->_network.allocate_string_table();
+    string_table->name = data.name();
     BitStream string_data(data.string_data());
 
     uint8_t verification_bit;
@@ -613,12 +622,7 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
             }
 
             // Read a c-style string; take until null
-            do
-            {
-                entry->string.push_back(0);
-                OK(string_data.read(&entry->string.back(), 8));
-            } while (entry->string.back() != 0);
-            entry->string.pop_back();
+            OK(string_data.read_string(entry->string));
         }
 
         string_table_entry_history.push_back_overwrite(entry->string);
@@ -658,7 +662,7 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
 //https://developer.valvesoftware.com/wiki/Networking_Events_%26_Messages
 //https://developer.valvesoftware.com/wiki/Networking_Entities
 //https://gist.github.com/jboner/2841832#file-latency-txt-L12
-///https://github.com/markus-wa/gobitread/blob/a316e052584a5cb5f7a6a6285d3636d62146b5aa/bitread.go#L155
+//https://github.com/markus-wa/gobitread/blob/a316e052584a5cb5f7a6a6285d3636d62146b5aa/bitread.go#L155
 //https://github.com/markus-wa/demoinfocs-golang/blob/master/pkg/demoinfocs/stringtables.go
 //https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/parsing.go
 
