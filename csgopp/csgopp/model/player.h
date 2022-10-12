@@ -8,7 +8,7 @@
 #include "../common/interface.h"
 #include "csgopp/network/entity.h"
 
-namespace csgopp::game
+namespace csgopp::model
 {
 
 using csgopp::common::id::IdBase;

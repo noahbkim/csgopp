@@ -1,9 +1,10 @@
 #pragma once
 
 #include <vector>
+#include "../common/id.h"
 #include "player.h"
 
-namespace csgopp::game
+namespace csgopp::model
 {
 
 class Team

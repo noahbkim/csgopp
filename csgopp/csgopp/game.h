@@ -114,7 +114,7 @@ struct SimulationObserverBase
     struct StringTableCreationObserver
     {
         explicit StringTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const StringTable* string_table) {}
+        virtual void handle(Simulation& simulation, StringTable&& string_table) {}
     };
 };
 
@@ -372,7 +372,8 @@ void Simulation<Observer>::advance_data_tables(CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
-// TODO untested
+/// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L66
+/// \todo actually test this method
 template<typename Observer>
 void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
 {
@@ -387,15 +388,18 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
     for (uint8_t i = 0; i < count; ++i)
     {
         BEFORE(Observer, StringTableCreationObserver);
-        StringTable* string_table = this->_network.allocate_string_table();
-        OK(data.read_string(string_table->name));
 
+        std::string name;
+        OK(data.read_string(name));
         uint16_t entry_count;
         OK(data.read(&entry_count, 16));
+
+        StringTable string_table(std::move(name), entry_count);
+
         for (uint16_t j = 0; j < entry_count; ++j)
         {
-            StringTable::Entry* entry = this->_network.allocate_string_table_entry();
-            OK(data.read_string(entry->string));
+            StringTable::Entry& entry = string_table.entries.at(j);
+            OK(data.read_string(entry.string));
 
             uint8_t has_data;
             OK(data.read(&has_data, 1));
@@ -404,18 +408,15 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
                 uint16_t data_size;
                 OK(data.read(&data_size, 16));
 
-                entry->data.resize(data_size);
+                entry.data.resize(data_size);
                 for (uint16_t k = 0; k < data_size; ++k)
                 {
-                    OK(data.read(&entry->data.at(j), 8));
+                    OK(data.read(&entry.data.at(j), 8));
                 }
             }
-
-            string_table->entries.emplace(j, entry);
         }
 
-        this->_network.publish_string_table(string_table);
-        AFTER(StringTableCreationObserver, string_table);
+        AFTER(StringTableCreationObserver, std::move(string_table));
     }
 
     OK(stream.BytesUntilLimit() == 0);
@@ -572,6 +573,7 @@ template<typename Observer> void Simulation<Observer>::advance_packet_set_pause(
     advance_packet_skip(stream);
 }
 
+/// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L163
 template<typename Observer>
 void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
 {
@@ -582,8 +584,7 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
     csgo::message::net::CSVCMsg_CreateStringTable data;
     OK(data.ParseFromCodedStream(&stream));
 
-    StringTable* string_table = this->_network.allocate_string_table();
-    string_table->name = data.name();
+    StringTable string_table(data.name(), data.num_entries());
     BitStream string_data(data.string_data());
 
     uint8_t verification_bit;
@@ -604,7 +605,8 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
             OK(string_data.read(&auto_increment, index_size));
         }
 
-        StringTable::Entry* entry = this->_network.allocate_string_table_entry();
+        StringTable::Entry& entry = string_table.entries.at(i);
+        entry.index.emplace(auto_increment);
 
         uint8_t has_string;
         OK(string_data.read(&has_string, 1));
@@ -618,14 +620,14 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
                 OK(string_data.read(&history_index, 5));
                 uint8_t bytes_to_copy;
                 OK(string_data.read(&bytes_to_copy, 5));
-                entry->string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
+                entry.string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
             }
 
             // Read a c-style string; take until null
-            OK(string_data.read_string(entry->string));
+            OK(string_data.read_string(entry.string));
         }
 
-        string_table_entry_history.push_back_overwrite(entry->string);
+        string_table_entry_history.push_back_overwrite(entry.string);
         uint8_t has_data;
         OK(string_data.read(&has_data, 1));
         if (has_data)
@@ -633,27 +635,25 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
             if (data.user_data_fixed_size())  // < 8 bits
             {
                 OK(data.user_data_size_bits() <= 8);
-                entry->data.push_back(0);
-                string_data.read(&entry->data.back(), data.user_data_size_bits());
+                entry.data.push_back(0);
+                string_data.read(&entry.data.back(), data.user_data_size_bits());
             }
             else
             {
                 uint16_t data_size;
                 OK(string_data.read(&data_size, 14));
-                entry->data.resize(data_size);
+                entry.data.resize(data_size);
                 for (uint16_t j = 0; j < data_size; ++j)
                 {
-                    OK(string_data.read(&entry->data.at(j), 8));
+                    OK(string_data.read(&entry.data.at(j), 8));
                 }
             }
         }
 
-        string_table->entries.emplace(auto_increment, entry);
         auto_increment += 1;
     }
 
-    this->_network.publish_string_table(string_table);
-    AFTER(StringTableCreationObserver, string_table);
+    AFTER(StringTableCreationObserver, std::move(string_table));
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);

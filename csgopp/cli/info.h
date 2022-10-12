@@ -7,9 +7,12 @@
 #include <csgopp/network/server_class.h>
 #include <csgopp/demo.h>
 #include <csgopp/game.h>
+#include <csgopp/model/user.h>
 
 using csgopp::network::ServerClass;
 using csgopp::network::DataTable;
+using csgopp::network::StringTable;
+using csgopp::model::user::User;
 using csgopp::game::SimulationObserverBase;
 using csgopp::demo::Command;
 
@@ -89,4 +92,60 @@ struct DataObserver : public SimulationObserverBase<DataObserver>
     };
 
     void report() const {}
+};
+
+struct PlayersObserver : public SimulationObserverBase<PlayersObserver>
+{
+    std::vector<std::pair<size_t, User>> users;
+
+    using SimulationObserverBase::SimulationObserverBase;
+
+    struct StringTableCreationObserver final : public SimulationObserverBase::StringTableCreationObserver
+    {
+        using SimulationObserverBase::StringTableCreationObserver::StringTableCreationObserver;
+
+        void handle(Simulation& simulation, StringTable&& string_table) override
+        {
+            if (string_table.name == "userinfo")
+            {
+                for (StringTable::Entry& entry : string_table.entries)
+                {
+                    size_t player_index;
+                    if (entry.index.has_value())
+                    {
+                        player_index = entry.index.value();
+                    }
+                    else
+                    {
+                        player_index = std::stoull(entry.string);
+                    }
+
+                    if (!entry.data.empty())
+                    {
+                        auto& [index, user] = simulation.observer.users.emplace_back();
+                        index = player_index;
+                        user.deserialize(entry.data);
+                    }
+                }
+            }
+        }
+    };
+
+    void report() const
+    {
+        std::cout << std::endl;
+        for (const auto& [index, user] : this->users)
+        {
+            std::cout << user.name << std::endl;
+            std::cout << "  index: " << index << std::endl;
+            std::cout << "  version: " << user.version << std::endl;
+            std::cout << "  xuid: " << user.xuid << std::endl;
+            std::cout << "  user_id: " << user.user_id << std::endl;
+            std::cout << "  guid: " << user.guid << std::endl;
+            std::cout << "  friends_id: " << user.friends_id << std::endl;
+            std::cout << "  friends_name: " << user.friends_name << std::endl;
+            std::cout << "  is_fake: " << user.is_fake << std::endl;
+            std::cout << "  is_hltv: " << user.is_hltv << std::endl;
+        }
+    }
 };

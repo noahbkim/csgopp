@@ -3,8 +3,8 @@ add_library(csgopp STATIC
         common/lookup.h
         game.cpp game.h
         common/macro.h
-        game/team.cpp game/team.h
-        game/player.cpp game/player.h
+        model/team.cpp model/team.h
+        model/player.cpp model/player.h
         common/vector.h
         network/entity.cpp network/entity.h
         common/id.h
@@ -19,7 +19,8 @@ add_library(csgopp STATIC
         network.cpp
         common/magic.h common/bits.h
         network/string_table.cpp network/string_table.h
-        common/ring.h)
+        common/ring.h model/user.cpp model/user.h
+        common/reader.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

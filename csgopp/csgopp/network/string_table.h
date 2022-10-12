@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <optional>
 #include <absl/container/flat_hash_map.h>
 
 #include "netmessages.pb.h"
@@ -14,13 +15,18 @@ struct StringTable
 
     struct Entry
     {
-        /// Sometimes a key, sometimes the actual data
+        using Data = std::vector<uint8_t>;
+
+        std::optional<Index> index;
         std::string string;
-        std::vector<uint8_t> data;
+        Data data;
     };
 
     std::string name;
-    absl::flat_hash_map<Index, Entry*> entries;
+    std::vector<Entry> entries;
+
+    StringTable(const std::string& name, size_t entry_count);
+    StringTable(std::string&& name, size_t entry_count);
 };
 
 }
