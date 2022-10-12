@@ -9,9 +9,7 @@
 #include "common/interface.h"
 #include "common/ring.h"
 #include "demo.h"
-#include "network/data_table.h"
-#include "network/server_class.h"
-#include "network/string_table.h"
+#include "network.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -50,6 +48,28 @@ class Simulation;
 /// simulation just instantiates `Observer::EventObserver`, so if the subclass
 /// provides no override, the base's is used.
 ///
+/// An example observer that counts the frame in a demo as well as the
+/// frequency of each frame command might look something like the following:
+///
+/// \code
+/// struct StructureObserver : public SimulationObserverBase<StructureObserver>
+/// {
+///     size_t frame_count = 0;
+///     std::map<csgopp::demo::Command::Type, size_t> commands;
+///
+///     struct FrameObserver final : public SimulationObserverBase::FrameObserver
+///     {
+///         using SimulationObserverBase::FrameObserver::FrameObserver;
+///
+///         void handle(Simulation& simulation, csgopp::demo::Command::Type command) override
+///         {
+///             simulation.observer.frame_count += 1;
+///             simulation.observer.commands[command] += 1;
+///         }
+///     };
+/// };
+/// \endcode
+///
 /// \tparam SimulationObserver should be the subclass type, e.g.
 ///     `struct CustomObserver : SimulationObserverBase<CustomObserver> {}`.
 ///     This is necessary to properly type the `Simulation` reference that's
@@ -59,6 +79,8 @@ struct SimulationObserverBase
 {
     /// Convenience; avoids having to rewrite the full type.
     using Simulation = Simulation<SimulationObserver>;
+
+    explicit SimulationObserverBase(Simulation& simulation) {}
 
     /// \brief This event is emitted when a DEMO frame is parsed.
     struct FrameObserver
@@ -75,7 +97,6 @@ struct SimulationObserverBase
     };
 
     /// \brief This event is emitted when a network data table is created.
-    /// \see `csgopp::network::DataTable`
     struct DataTableCreationObserver
     {
         explicit DataTableCreationObserver(Simulation& simulation) {}
@@ -83,7 +104,6 @@ struct SimulationObserverBase
     };
 
     /// \brief This event is emitted when a network server class is created.
-    /// \see `csgopp::network::ServerClass`
     struct ServerClassCreationObserver
     {
         explicit ServerClassCreationObserver(Simulation& simulation) {}
@@ -91,7 +111,6 @@ struct SimulationObserverBase
     };
 
     /// \brief This event is emitted when a network string table is created.
-    /// \see `csgopp::network::StringTable`
     struct StringTableCreationObserver
     {
         explicit StringTableCreationObserver(Simulation& simulation) {}
@@ -99,52 +118,35 @@ struct SimulationObserverBase
     };
 };
 
+/// \brief The core DEMO parser and game simulation.
+///
+/// This is where the magic happens! The Simulation object is responsible for
+/// consuming frames from the input stream, parsing them, and mutating the
+/// simulation state correspondingly.
+///
+/// \tparam Observer The templated observer is instantiated as a class member
+///     by the constructor and its nested event observers are compiled directly
+///     into the simulation runtime where events are emitted. While this system
+///     incurs longer compile times, it's also zero-cost. The optimizer should
+///     have no problem remove empty observer calls.
 template<typename Observer>
 class Simulation
 {
 public:
-    struct State
-    {
+    using Network = csgopp::network::Network;
 
-    private:
-        friend Simulation;
-    };
+    /// Instantiate a new simulation with an observer.
+    ///
+    /// Arguments are passed directly to the observer preceded by a reference
+    /// to the simulation once the header has been parser.
+    ///
+    /// \tparam Args observer constructor arguments.
+    /// \param stream a stream to read a DEMO header from.
+    /// \param args observer constructor arguments.
+    template<typename... Args>
+    explicit Simulation(CodedInputStream& stream, Args... args);
 
-    struct Network
-    {
-
-    private:
-        friend Simulation;
-
-        std::vector<std::unique_ptr<DataTable>> _data_tables;
-        std::vector<std::unique_ptr<DataTable::Property>> _data_table_properties;
-        absl::flat_hash_map<std::string_view, DataTable*> _data_tables_by_name;
-
-        std::vector<std::unique_ptr<ServerClass>> _server_classes;
-        absl::flat_hash_map<std::string_view, ServerClass*> _server_classes_by_name;
-        absl::flat_hash_map<ServerClass::Id, ServerClass*> _server_classes_by_id;
-
-        std::vector<std::unique_ptr<StringTable>> _string_tables;
-        std::vector<std::unique_ptr<StringTable::Entry>> _string_table_entries;
-        absl::flat_hash_map<std::string_view, StringTable*> _string_tables_by_name;
-
-        template<typename... Args> DataTable* allocate_data_table(Args... args);
-        template<typename T, typename... Args> DataTable::Property* allocate_data_table_property(Args... args);
-        template<typename... Args> DataTable::Property* allocate_data_table_property(
-            DataTable::Property::Type::T type,
-            Args... args);
-        void publish_data_table(DataTable* data_table);
-
-        template<typename... Args> ServerClass* allocate_server_class(Args... args);
-        void publish_server_class(ServerClass* server_class);
-
-        template<typename... Args> StringTable* allocate_string_table(Args... args);
-        template<typename... Args> StringTable::Entry* allocate_string_table_entry(Args... args);
-        void publish_string_table(StringTable* string_table);
-    };
-
-    explicit Simulation(CodedInputStream& stream);
-
+    /// How about now? Is the issue any better?
     virtual bool advance(CodedInputStream& stream);
     virtual void advance_packets(CodedInputStream& stream);
     virtual void advance_packet(CodedInputStream& stream);
@@ -187,16 +189,19 @@ public:
     virtual void advance_packet_broadcast_command(CodedInputStream& stream);
     virtual void advance_packet_player_avatar_data(CodedInputStream& stream);
     virtual void advance_packet_unknown(CodedInputStream& stream, int32_t command);
+
     virtual void advance_console_command(CodedInputStream& stream);
     virtual void advance_user_command(CodedInputStream& stream);
     virtual void advance_data_tables(CodedInputStream& stream);
+
     virtual void advance_string_tables(CodedInputStream& stream);
     virtual void advance_string_table(CodedInputStream& stream);
+
     virtual void advance_custom_data(CodedInputStream& stream);
+
     virtual bool advance_unknown(CodedInputStream& stream, char command);
 
     [[nodiscard]] const demo::Header& header() { return this->_header; }
-    [[nodiscard]] const State& state() { return this->_state; }
     [[nodiscard]] const Network& network() { return this->_network; }
     [[nodiscard]] uint32_t cursor() { return this->_cursor; }
     [[nodiscard]] uint32_t tick() { return this->_tick; }
@@ -205,102 +210,22 @@ public:
 
 protected:
     demo::Header _header;
-    State _state;
     Network _network;
     uint32_t _cursor{0};
     uint32_t _tick{0};
+
+private:
+    /// Cast this as a const reference for template constructors.
+    ///
+    /// \todo Figure out how to avoid this.
+    [[nodiscard]] inline Simulation& self() { return *this; }
 };
 
 template<typename Observer>
 template<typename... Args>
-DataTable* Simulation<Observer>::Network::allocate_data_table(Args... args)
-{
-    std::unique_ptr<DataTable> storage = std::make_unique<DataTable>(args...);
-    return this->_data_tables.emplace_back(std::move(storage)).get();
-}
-
-template<typename Observer>
-template<typename T, typename... Args>
-DataTable::Property* Simulation<Observer>::Network::allocate_data_table_property(Args... args)
-{
-    std::unique_ptr<T> storage = std::make_unique<T>(args...);
-    return this->_data_table_properties.emplace_back(std::move(storage)).get();
-}
-
-template<typename Observer>
-template<typename... Args>
-DataTable::Property* Simulation<Observer>::Network::allocate_data_table_property(
-    DataTable::Property::Type::T type,
-    Args... args
-) {
-    switch (type)
-    {
-        using Type = DataTable::Property::Type;
-        case Type::INT32:
-            return this->template allocate_data_table_property<DataTable::Int32Property>(args...);
-        case Type::FLOAT:
-            return this->template allocate_data_table_property<DataTable::FloatProperty>(args...);
-        case Type::VECTOR3:
-            return this->template allocate_data_table_property<DataTable::Vector3Property>(args...);
-        case Type::VECTOR2:
-            return this->template allocate_data_table_property<DataTable::Vector2Property>(args...);
-        case Type::STRING:
-            return this->template allocate_data_table_property<DataTable::StringProperty>(args...);
-        case Type::ARRAY:
-            return this->template allocate_data_table_property<DataTable::ArrayProperty>(args...);
-        case Type::DATA_TABLE:
-            return this->template allocate_data_table_property<DataTable::DataTableProperty>(args...);
-        case Type::INT64:
-            return this->template allocate_data_table_property<DataTable::Int64Property>(args...);
-        default:
-            throw csgopp::error::GameError("unreachable");
-    }
-}
-
-template<typename Observer>
-void Simulation<Observer>::Network::publish_data_table(DataTable* data_table)
-{
-    this->_data_tables_by_name.emplace(data_table->name, data_table);
-}
-
-template<typename Observer>
-template<typename... Args>
-ServerClass* Simulation<Observer>::Network::allocate_server_class(Args... args)
-{
-    std::unique_ptr<ServerClass> storage = std::make_unique<ServerClass>(args...);
-    return this->_server_classes.emplace_back(std::move(storage)).get();
-}
-
-template<typename Observer>
-void Simulation<Observer>::Network::publish_server_class(ServerClass* server_class)
-{
-    this->_server_classes_by_name.emplace(server_class->name, server_class);
-    this->_server_classes_by_id.emplace(server_class->id, server_class);
-}
-
-template<typename Observer>
-template<typename... Args>
-StringTable* Simulation<Observer>::Network::allocate_string_table(Args... args)
-{
-    std::unique_ptr<StringTable> storage = std::make_unique<StringTable>(args...);
-    return this->_string_tables.emplace_back(std::move(storage)).get();
-}
-
-template<typename Observer>
-template<typename... Args> StringTable::Entry* Simulation<Observer>::Network::allocate_string_table_entry(Args... args)
-{
-    std::unique_ptr<StringTable::Entry> storage = std::make_unique<StringTable::Entry>(args...);
-    return this->_string_table_entries.emplace_back(std::move(storage)).get();
-}
-
-template<typename Observer>
-void Simulation<Observer>::Network::publish_string_table(StringTable* string_table)
-{
-    this->_string_tables_by_name.emplace(string_table->name, string_table);
-}
-
-template<typename Observer>
-Simulation<Observer>::Simulation(CodedInputStream& stream) : _header(stream) {}
+Simulation<Observer>::Simulation(CodedInputStream& stream, Args... args)
+    : _header(stream)
+    , observer(self(), args...) {}
 
 template<typename Observer>
 bool Simulation<Observer>::advance(CodedInputStream& stream)

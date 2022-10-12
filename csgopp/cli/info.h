@@ -15,6 +15,8 @@ using csgopp::demo::Command;
 
 struct StructureObserver : public SimulationObserverBase<StructureObserver>
 {
+    using SimulationObserverBase::SimulationObserverBase;
+
     size_t frame_count = 0;
     std::map<Command::Type, size_t> commands;
     size_t packet_count = 0;
@@ -60,6 +62,8 @@ struct StructureObserver : public SimulationObserverBase<StructureObserver>
 
 struct DataObserver : public SimulationObserverBase<DataObserver>
 {
+    using SimulationObserverBase::SimulationObserverBase;
+
     struct DataTableCreationObserver final : public SimulationObserverBase::DataTableCreationObserver
     {
         using SimulationObserverBase::DataTableCreationObserver::DataTableCreationObserver;
