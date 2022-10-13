@@ -24,8 +24,13 @@ struct StringTable
     std::string name;
     std::vector<Entry*> entries;
 
-    StringTable(const std::string& name, size_t entry_count);
-    StringTable(std::string&& name, size_t entry_count);
+    // Deserialization details that need to persist for updates
+    size_t capacity;
+    bool data_fixed;
+    size_t data_size_bits;
+
+    explicit StringTable(const csgo::message::net::CSVCMsg_CreateStringTable& data);
+    StringTable(std::string&& name, size_t size);
 };
 
 }

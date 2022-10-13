@@ -94,7 +94,7 @@ private:
     /// \return A pointer to the datatable.
     /// \note The returned pointer has the same lifetime as the `Network`.
     template<typename... Args>
-    DataTable* allocate_data_table(Args... args);
+    DataTable* allocate_data_table(Args&&... args);
 
     /// Allocate a new data table property T and return its stable pointer.
     ///
@@ -104,7 +104,7 @@ private:
     /// \return A pointer to the property.
     /// \note The returned pointer has the same lifetime as the `Network`.
     template<typename T, typename... Args>
-    DataTable::Property* allocate_data_table_property(Args... args);
+    DataTable::Property* allocate_data_table_property(Args&&... args);
 
     /// Allocate a data table property by type with the given args.
     ///
@@ -116,7 +116,7 @@ private:
     template<typename... Args>
     DataTable::Property* allocate_data_table_property(
         DataTable::Property::Type::T type,
-        Args... args);
+        Args&&... args);
 
     /// Make an allocated data table available for external use.
     void publish_data_table(DataTable* data_table);
@@ -146,7 +146,7 @@ private:
     /// \return A pointer to the server class.
     /// \note The returned pointer has the same lifetime as the `Network`.
     template<typename... Args>
-    ServerClass* allocate_server_class(Args... args);
+    ServerClass* allocate_server_class(Args&&... args);
 
     /// Publish a server class.
     ///
@@ -178,7 +178,7 @@ private:
     /// \return A pointer to the string table.
     /// \note The returned pointer has the same lifetime as the `Network`.
     template<typename... Args>
-    StringTable* allocate_string_table(Args... args);
+    StringTable* allocate_string_table(Args&&... args);
 
     /// Allocate a new string table entry.
     ///
@@ -187,7 +187,7 @@ private:
     /// \return A pointer to the string table entry.
     /// \note The returned pointer has the same lifetime as the `Network`.
     template<typename... Args>
-    StringTable::Entry* allocate_string_table_entry(Args... args);
+    StringTable::Entry* allocate_string_table_entry(Args&&... args);
 
     /// Publish a string table.
     ///
@@ -198,67 +198,67 @@ private:
 };
 
 template<typename... Args>
-DataTable* Network::allocate_data_table(Args... args)
+DataTable* Network::allocate_data_table(Args&&... args)
 {
-    std::unique_ptr<DataTable> storage = std::make_unique<DataTable>(args...);
+    std::unique_ptr<DataTable> storage = std::make_unique<DataTable>(std::forward<Args>(args)...);
     return this->_data_table_manager.emplace_back(std::move(storage)).get();
 }
 
 template<typename T, typename... Args>
-DataTable::Property* Network::allocate_data_table_property(Args... args)
+DataTable::Property* Network::allocate_data_table_property(Args&&... args)
 {
-    std::unique_ptr<DataTable::Property> storage = std::make_unique<T>(args...);
+    std::unique_ptr<DataTable::Property> storage = std::make_unique<T>(std::forward<Args>(args)...);
     return this->_data_table_property_manager.emplace_back(std::move(storage)).get();
 }
 
 template<typename... Args>
 DataTable::Property* Network::allocate_data_table_property(
     DataTable::Property::Type::T type,
-    Args... args
+    Args&&... args
 ) {
     switch (type)
     {
         using Type = DataTable::Property::Type;
         case Type::INT32:
-            return this->template allocate_data_table_property<DataTable::Int32Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Int32Property>(std::forward<Args>(args)...);
         case Type::FLOAT:
-            return this->template allocate_data_table_property<DataTable::FloatProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::FloatProperty>(std::forward<Args>(args)...);
         case Type::VECTOR3:
-            return this->template allocate_data_table_property<DataTable::Vector3Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Vector3Property>(std::forward<Args>(args)...);
         case Type::VECTOR2:
-            return this->template allocate_data_table_property<DataTable::Vector2Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Vector2Property>(std::forward<Args>(args)...);
         case Type::STRING:
-            return this->template allocate_data_table_property<DataTable::StringProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::StringProperty>(std::forward<Args>(args)...);
         case Type::ARRAY:
-            return this->template allocate_data_table_property<DataTable::ArrayProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::ArrayProperty>(std::forward<Args>(args)...);
         case Type::DATA_TABLE:
-            return this->template allocate_data_table_property<DataTable::DataTableProperty>(args...);
+            return this->template allocate_data_table_property<DataTable::DataTableProperty>(std::forward<Args>(args)...);
         case Type::INT64:
-            return this->template allocate_data_table_property<DataTable::Int64Property>(args...);
+            return this->template allocate_data_table_property<DataTable::Int64Property>(std::forward<Args>(args)...);
         default:
             throw csgopp::error::GameError("unreachable");
     }
 }
 
 template<typename... Args>
-ServerClass* Network::allocate_server_class(Args... args)
+ServerClass* Network::allocate_server_class(Args&&... args)
 {
-    std::unique_ptr<ServerClass> storage = std::make_unique<ServerClass>(args...);
+    std::unique_ptr<ServerClass> storage = std::make_unique<ServerClass>(std::forward<Args>(args)...);
     return this->_server_class_manager.emplace_back(std::move(storage)).get();
 }
 
 
 template<typename... Args>
-StringTable* Network::allocate_string_table(Args... args)
+StringTable* Network::allocate_string_table(Args&&... args)
 {
-    std::unique_ptr<StringTable> storage = std::make_unique<StringTable>(args...);
+    std::unique_ptr<StringTable> storage = std::make_unique<StringTable>(std::forward<Args>(args)...);
     return this->_string_table_manager.emplace_back(std::move(storage)).get();
 }
 
 template<typename... Args>
-StringTable::Entry* Network::allocate_string_table_entry(Args... args)
+StringTable::Entry* Network::allocate_string_table_entry(Args&&... args)
 {
-    std::unique_ptr<StringTable::Entry> storage = std::make_unique<StringTable::Entry>(args...);
+    std::unique_ptr<StringTable::Entry> storage = std::make_unique<StringTable::Entry>(std::forward<Args>(args)...);
     return this->_string_table_entry_manager.emplace_back(std::move(storage)).get();
 }
 

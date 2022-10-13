@@ -152,6 +152,20 @@ struct SimulationObserverBase
             simulation.observer.on_string_table_creation(simulation, string_table);
         }
     };
+
+    /// Called by the default server class update observer.
+    virtual void on_string_table_update(Simulation& simulation, const StringTable* string_table) {}
+
+    /// \brief This event is emitted when a network string table is created.
+    struct StringTableUpdateObserver
+    {
+        StringTableUpdateObserver() = default;
+        explicit StringTableUpdateObserver(Simulation& simulation, const StringTable* string_table) {}
+        virtual void handle(Simulation& simulation, const StringTable* string_table)
+        {
+            simulation.observer.on_string_table_update(simulation, string_table);
+        }
+    };
 };
 
 /// \brief The core DEMO parser and game simulation.
@@ -232,6 +246,7 @@ public:
     virtual void advance_custom_data(CodedInputStream& stream);
     virtual bool advance_unknown(CodedInputStream& stream, char command);
 
+    /// Interface
     [[nodiscard]] const demo::Header& header() { return this->_header; }
     [[nodiscard]] const Network& network() { return this->_network; }
     [[nodiscard]] uint32_t cursor() { return this->_cursor; }
@@ -244,6 +259,9 @@ protected:
     Network _network;
     uint32_t _cursor{0};
     uint32_t _tick{0};
+
+    /// Helpers
+    void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
 
 private:
     /// Cast this as a const reference for template constructors.
@@ -453,7 +471,7 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
             }
         }
 
-        AFTER(StringTableCreationObserver, std::move(string_table));
+        AFTER(StringTableCreationObserver, string_table);
     }
 
     OK(stream.BytesUntilLimit() == 0);
@@ -610,30 +628,19 @@ template<typename Observer> void Simulation<Observer>::advance_packet_set_pause(
     advance_packet_skip(stream);
 }
 
-/// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L163
 template<typename Observer>
-void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
+void Simulation<Observer>::populate_string_table(StringTable* string_table, const std::string& blob, int32_t count)
 {
-    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit > 0);
-
-    BEFORE(Observer, StringTableCreationObserver);
-    csgo::message::net::CSVCMsg_CreateStringTable data;
-    OK(data.ParseFromCodedStream(&stream));
-
-    StringTable* string_table = this->_network.allocate_string_table(data.name(), data.num_entries());
-    BitStream string_data(data.string_data());
-
+    BitStream string_data(blob);
     uint8_t verification_bit;
     string_data.read(&verification_bit, 1);
     OK(verification_bit == 0);
 
-    Ring<std::string_view, 32> string_table_entry_history;  // 31 appears to be constant
+    Ring<std::string_view, 32> string_table_entry_history;  // 32 appears to be constant
 
-    size_t index_size = csgopp::common::bits::width(data.max_entries());
+    size_t index_size = csgopp::common::bits::width(string_table->capacity);
     StringTable::Index auto_increment = 0;
-
-    for (int32_t i = 0; i < data.num_entries(); ++i)
+    for (int32_t i = 0; i < count; ++i)
     {
         uint8_t use_auto_increment;
         OK(string_data.read(&use_auto_increment, 1));
@@ -641,16 +648,30 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
         {
             StringTable::Index old = auto_increment;
             OK(string_data.read(&auto_increment, index_size));
-            printf("%d -> %d\n", old, auto_increment);
         }
 
-        StringTable::Entry* entry = this->_network.allocate_string_table_entry();
-        string_table->entries.at(auto_increment) = entry;
+        // Append
+        StringTable::Entry* entry = nullptr;
+        if (auto_increment == string_table->entries.size())
+        {
+            entry = this->_network.allocate_string_table_entry();
+            string_table->entries.emplace_back(entry);
+        }
+        else
+        {
+            entry = string_table->entries.at(auto_increment);
+            if (entry == nullptr)
+            {
+                entry = string_table->entries.at(auto_increment) = this->_network.allocate_string_table_entry();
+            }
+        }
 
         uint8_t has_string;
         OK(string_data.read(&has_string, 1));
         if (has_string)
         {
+            entry->string.clear();
+
             uint8_t append_to_existing;
             OK(string_data.read(&append_to_existing, 1));
             if (append_to_existing)
@@ -671,11 +692,11 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
         OK(string_data.read(&has_data, 1));
         if (has_data)
         {
-            if (data.user_data_fixed_size())  // < 8 bits
+            if (string_table->data_fixed)  // < 8 bits
             {
-                OK(data.user_data_size_bits() <= 8);
+                OK(string_table->data_size_bits <= 8);
                 entry->data.push_back(0);
-                string_data.read(&entry->data.back(), data.user_data_size_bits());
+                string_data.read(&entry->data.back(), string_table->data_size_bits);
             }
             else
             {
@@ -691,6 +712,22 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
 
         auto_increment += 1;
     }
+}
+
+/// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L163
+template<typename Observer>
+void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
+{
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit > 0);
+
+    BEFORE(Observer, StringTableCreationObserver);
+    csgo::message::net::CSVCMsg_CreateStringTable data;
+    OK(data.ParseFromCodedStream(&stream));
+
+    StringTable* string_table = this->_network.allocate_string_table(data);
+    this->populate_string_table(string_table, data.string_data(), data.num_entries());
+    this->_network.publish_string_table(string_table);
 
     AFTER(StringTableCreationObserver, string_table);
 
@@ -708,7 +745,25 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
 template<typename Observer>
 void Simulation<Observer>::advance_packet_update_string_table(CodedInputStream& stream)
 {
-    advance_packet_skip(stream);
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit > 0);
+
+    csgo::message::net::CSVCMsg_UpdateStringTable data;
+    OK(data.ParseFromCodedStream(&stream));
+
+    size_t index = data.table_id();
+    StringTable* string_table = this->_network._string_tables.at(index);  // TODO revisit if we remove
+    ASSERT(string_table != nullptr, "expected a string table at index %zd", index);
+
+    BEFORE(Observer, StringTableUpdateObserver, string_table);
+    this->populate_string_table(
+        string_table,
+        data.string_data(),
+        data.num_changed_entries());
+    AFTER(StringTableUpdateObserver, string_table);
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
 }
 
 template<typename Observer> void Simulation<Observer>::advance_packet_voice_initialization(CodedInputStream& stream)
