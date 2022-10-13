@@ -100,36 +100,31 @@ struct PlayersObserver : public SimulationObserverBase<PlayersObserver>
 
     using SimulationObserverBase::SimulationObserverBase;
 
-    struct StringTableCreationObserver final : public SimulationObserverBase::StringTableCreationObserver
+    void on_string_table_creation(Simulation& simulation, StringTable&& string_table) override
     {
-        using SimulationObserverBase::StringTableCreationObserver::StringTableCreationObserver;
-
-        void handle(Simulation& simulation, StringTable&& string_table) override
+        if (string_table.name == "userinfo")
         {
-            if (string_table.name == "userinfo")
+            for (StringTable::Entry& entry : string_table.entries)
             {
-                for (StringTable::Entry& entry : string_table.entries)
+                size_t player_index;
+                if (entry.index.has_value())
                 {
-                    size_t player_index;
-                    if (entry.index.has_value())
-                    {
-                        player_index = entry.index.value();
-                    }
-                    else
-                    {
-                        player_index = std::stoull(entry.string);
-                    }
+                    player_index = entry.index.value();
+                }
+                else
+                {
+                    player_index = std::stoull(entry.string);
+                }
 
-                    if (!entry.data.empty())
-                    {
-                        auto& [index, user] = simulation.observer.users.emplace_back();
-                        index = player_index;
-                        user.deserialize(entry.data);
-                    }
+                if (!entry.data.empty())
+                {
+                    auto& [index, user] = simulation.observer.users.emplace_back();
+                    index = player_index;
+                    user.deserialize(entry.data);
                 }
             }
         }
-    };
+    }
 
     void report() const
     {

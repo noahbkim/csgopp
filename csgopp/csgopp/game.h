@@ -80,41 +80,77 @@ struct SimulationObserverBase
     /// Convenience; avoids having to rewrite the full type.
     using Simulation = Simulation<SimulationObserver>;
 
+    /// Simulation also receives a reference to the simulation for setup.
     explicit SimulationObserverBase(Simulation& simulation) {}
+
+    /// Called by the default frame observer.
+    virtual void on_frame(Simulation& simulation, demo::Command::Type command) {}
 
     /// \brief This event is emitted when a DEMO frame is parsed.
     struct FrameObserver
     {
+        FrameObserver() = default;
         explicit FrameObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, demo::Command::Type type) {}
+        virtual void handle(Simulation& simulation, demo::Command::Type command)
+        {
+            simulation.observer.on_frame(simulation, command);
+        }
     };
+
+    /// Called by the default packet observer.
+    virtual void on_packet(Simulation& simulation, int32_t type) {}
 
     /// \brief This event is emitted when a game packet is parsed.
     struct PacketObserver
     {
+        PacketObserver() = default;
         explicit PacketObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, int32_t packet) {}
+        virtual void handle(Simulation& simulation, int32_t type)
+        {
+            simulation.observer.on_packet(simulation, type);
+        }
     };
+
+    /// Called by the default data table creation observer.
+    virtual void on_data_table_creation(Simulation& simulation, const DataTable* data_table) {}
 
     /// \brief This event is emitted when a network data table is created.
     struct DataTableCreationObserver
     {
+        DataTableCreationObserver() = default;
         explicit DataTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const DataTable* data_table) {}
+        virtual void handle(Simulation& simulation, const DataTable* data_table)
+        {
+            simulation.observer.on_data_table_creation(simulation, data_table);
+        }
     };
+
+    /// Called by the default server class creation observer.
+    virtual void on_server_class_creation(Simulation& simulation, const ServerClass* server_class) {}
 
     /// \brief This event is emitted when a network server class is created.
     struct ServerClassCreationObserver
     {
+        ServerClassCreationObserver() = default;
         explicit ServerClassCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const ServerClass* server_class) {}
+        virtual void handle(Simulation& simulation, const ServerClass* server_class)
+        {
+            simulation.observer.on_server_class_creation(simulation, server_class);
+        }
     };
+
+    /// Called by the default server class creation observer.
+    virtual void on_string_table_creation(Simulation& simulation, StringTable&& string_table) {}
 
     /// \brief This event is emitted when a network string table is created.
     struct StringTableCreationObserver
     {
+        StringTableCreationObserver() = default;
         explicit StringTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, StringTable&& string_table) {}
+        virtual void handle(Simulation& simulation, StringTable&& string_table)
+        {
+            simulation.observer.on_string_table_creation(simulation, std::move(string_table));
+        }
     };
 };
 
