@@ -16,4 +16,10 @@ void Network::publish_server_class(ServerClass* server_class)
     this->_server_classes_by_id.emplace(server_class->id, server_class);
 }
 
+void Network::publish_string_table(StringTable* string_table)
+{
+    this->_string_tables.push_back(string_table);
+    this->_string_tables_by_name.emplace(string_table->name, string_table);
+}
+
 }

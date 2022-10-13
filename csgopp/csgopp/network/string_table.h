@@ -17,13 +17,12 @@ struct StringTable
     {
         using Data = std::vector<uint8_t>;
 
-        std::optional<Index> index;
         std::string string;
         Data data;
     };
 
     std::string name;
-    std::vector<Entry> entries;
+    std::vector<Entry*> entries;
 
     StringTable(const std::string& name, size_t entry_count);
     StringTable(std::string&& name, size_t entry_count);

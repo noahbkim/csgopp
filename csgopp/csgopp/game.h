@@ -140,16 +140,16 @@ struct SimulationObserverBase
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_string_table_creation(Simulation& simulation, StringTable&& string_table) {}
+    virtual void on_string_table_creation(Simulation& simulation, const StringTable* string_table) {}
 
     /// \brief This event is emitted when a network string table is created.
     struct StringTableCreationObserver
     {
         StringTableCreationObserver() = default;
         explicit StringTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, StringTable&& string_table)
+        virtual void handle(Simulation& simulation, const StringTable* string_table)
         {
-            simulation.observer.on_string_table_creation(simulation, std::move(string_table));
+            simulation.observer.on_string_table_creation(simulation, string_table);
         }
     };
 };
@@ -430,12 +430,13 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
         uint16_t entry_count;
         OK(data.read(&entry_count, 16));
 
-        StringTable string_table(std::move(name), entry_count);
+        StringTable* string_table = this->_network.allocate_string_table(std::move(name), entry_count);
 
         for (uint16_t j = 0; j < entry_count; ++j)
         {
-            StringTable::Entry& entry = string_table.entries.at(j);
-            OK(data.read_string(entry.string));
+            StringTable::Entry* entry = this->_network.allocate_string_table_entry();
+            OK(data.read_string(entry->string));
+            string_table->entries.at(j) = entry;
 
             uint8_t has_data;
             OK(data.read(&has_data, 1));
@@ -444,10 +445,10 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
                 uint16_t data_size;
                 OK(data.read(&data_size, 16));
 
-                entry.data.resize(data_size);
+                entry->data.resize(data_size);
                 for (uint16_t k = 0; k < data_size; ++k)
                 {
-                    OK(data.read(&entry.data.at(j), 8));
+                    OK(data.read(&entry->data.at(j), 8));
                 }
             }
         }
@@ -620,7 +621,7 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
     csgo::message::net::CSVCMsg_CreateStringTable data;
     OK(data.ParseFromCodedStream(&stream));
 
-    StringTable string_table(data.name(), data.num_entries());
+    StringTable* string_table = this->_network.allocate_string_table(data.name(), data.num_entries());
     BitStream string_data(data.string_data());
 
     uint8_t verification_bit;
@@ -638,11 +639,13 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
         OK(string_data.read(&use_auto_increment, 1));
         if (!use_auto_increment)
         {
+            StringTable::Index old = auto_increment;
             OK(string_data.read(&auto_increment, index_size));
+            printf("%d -> %d\n", old, auto_increment);
         }
 
-        StringTable::Entry& entry = string_table.entries.at(i);
-        entry.index.emplace(auto_increment);
+        StringTable::Entry* entry = this->_network.allocate_string_table_entry();
+        string_table->entries.at(auto_increment) = entry;
 
         uint8_t has_string;
         OK(string_data.read(&has_string, 1));
@@ -656,14 +659,14 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
                 OK(string_data.read(&history_index, 5));
                 uint8_t bytes_to_copy;
                 OK(string_data.read(&bytes_to_copy, 5));
-                entry.string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
+                entry->string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
             }
 
             // Read a c-style string; take until null
-            OK(string_data.read_string(entry.string));
+            OK(string_data.read_string(entry->string));
         }
 
-        string_table_entry_history.push_back_overwrite(entry.string);
+        string_table_entry_history.push_back_overwrite(entry->string);
         uint8_t has_data;
         OK(string_data.read(&has_data, 1));
         if (has_data)
@@ -671,17 +674,17 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
             if (data.user_data_fixed_size())  // < 8 bits
             {
                 OK(data.user_data_size_bits() <= 8);
-                entry.data.push_back(0);
-                string_data.read(&entry.data.back(), data.user_data_size_bits());
+                entry->data.push_back(0);
+                string_data.read(&entry->data.back(), data.user_data_size_bits());
             }
             else
             {
                 uint16_t data_size;
                 OK(string_data.read(&data_size, 14));
-                entry.data.resize(data_size);
+                entry->data.resize(data_size);
                 for (uint16_t j = 0; j < data_size; ++j)
                 {
-                    OK(string_data.read(&entry.data.at(j), 8));
+                    OK(string_data.read(&entry->data.at(j), 8));
                 }
             }
         }
@@ -689,7 +692,7 @@ void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& 
         auto_increment += 1;
     }
 
-    AFTER(StringTableCreationObserver, std::move(string_table));
+    AFTER(StringTableCreationObserver, string_table);
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);

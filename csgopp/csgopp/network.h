@@ -154,6 +154,47 @@ private:
     void publish_server_class(ServerClass* server_class);
 
     /// @}
+
+    /// All string tables defined by the demo. Same notes as above.
+    ///
+    /// @{
+
+    /// Holds all allocated string tables.
+    std::vector <std::unique_ptr<StringTable>> _string_table_manager;
+
+    /// Holds all published string tables.
+    std::vector<StringTable*> _string_tables;
+
+    /// Holds all published string tables.
+    std::vector <std::unique_ptr<StringTable::Entry>> _string_table_entry_manager;
+
+    /// A mapping from server-defined name to string table.
+    absl::flat_hash_map<std::string_view, StringTable*> _string_tables_by_name;
+
+    /// Allocate a new string table.
+    ///
+    /// \tparam Args constructor arguments.
+    /// \param args constructor arguments.
+    /// \return A pointer to the string table.
+    /// \note The returned pointer has the same lifetime as the `Network`.
+    template<typename... Args>
+    StringTable* allocate_string_table(Args... args);
+
+    /// Allocate a new string table entry.
+    ///
+    /// \tparam Args constructor arguments.
+    /// \param args constructor arguments.
+    /// \return A pointer to the string table entry.
+    /// \note The returned pointer has the same lifetime as the `Network`.
+    template<typename... Args>
+    StringTable::Entry* allocate_string_table_entry(Args... args);
+
+    /// Publish a string table.
+    ///
+    /// \param string_table a string table to make externally accessible.
+    void publish_string_table(StringTable* string_table);
+
+    /// @}
 };
 
 template<typename... Args>
@@ -204,6 +245,21 @@ ServerClass* Network::allocate_server_class(Args... args)
 {
     std::unique_ptr<ServerClass> storage = std::make_unique<ServerClass>(args...);
     return this->_server_class_manager.emplace_back(std::move(storage)).get();
+}
+
+
+template<typename... Args>
+StringTable* Network::allocate_string_table(Args... args)
+{
+    std::unique_ptr<StringTable> storage = std::make_unique<StringTable>(args...);
+    return this->_string_table_manager.emplace_back(std::move(storage)).get();
+}
+
+template<typename... Args>
+StringTable::Entry* Network::allocate_string_table_entry(Args... args)
+{
+    std::unique_ptr<StringTable::Entry> storage = std::make_unique<StringTable::Entry>(args...);
+    return this->_string_table_entry_manager.emplace_back(std::move(storage)).get();
 }
 
 }

@@ -100,27 +100,18 @@ struct PlayersObserver : public SimulationObserverBase<PlayersObserver>
 
     using SimulationObserverBase::SimulationObserverBase;
 
-    void on_string_table_creation(Simulation& simulation, StringTable&& string_table) override
+    void on_string_table_creation(Simulation& simulation, const StringTable* string_table) override
     {
-        if (string_table.name == "userinfo")
+        if (string_table->name == "userinfo")
         {
-            for (StringTable::Entry& entry : string_table.entries)
+            for (size_t i = 0; i < string_table->entries.size(); ++i)
             {
-                size_t player_index;
-                if (entry.index.has_value())
-                {
-                    player_index = entry.index.value();
-                }
-                else
-                {
-                    player_index = std::stoull(entry.string);
-                }
-
-                if (!entry.data.empty())
+                const StringTable::Entry* entry = string_table->entries.at(i);
+                if (!entry->data.empty())
                 {
                     auto& [index, user] = simulation.observer.users.emplace_back();
-                    index = player_index;
-                    user.deserialize(entry.data);
+                    index = i;
+                    user.deserialize(entry->data);
                 }
             }
         }
