@@ -1,6 +1,6 @@
 #include "string_table.h"
 
-namespace csgopp::network
+namespace csgopp::client::string_table
 {
 
 StringTable::StringTable(const csgo::message::net::CSVCMsg_CreateStringTable& data)

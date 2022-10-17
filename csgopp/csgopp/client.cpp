@@ -1,6 +1,6 @@
-#include "game.h"
+#include "client.h"
 
-namespace csgopp::game
+namespace csgopp::client
 {
 
 }

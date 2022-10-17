@@ -8,193 +8,207 @@
 #include "common/bits.h"
 #include "common/interface.h"
 #include "common/ring.h"
+#include "common/database.h"
 #include "demo.h"
-#include "network.h"
+#include "client/data_table.h"
+#include "client/server_class.h"
+#include "client/string_table.h"
+#include "client/entity.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
 #define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, __VA_ARGS__);
 #define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
 
-/// Most notably, this namespace defines the `SimulationObserverBase` and
-/// `Simulation`, which together form the basis of csgopp's demo parsing and
-/// game simulation framework.
+/// Most notably, this namespace defines the `ClientObserverBase` and
+/// `Client`, which together form the basis of csgopp's demo parsing and
+/// game client framework.
 ///
-/// @brief Demo parsing and game simulation.
-namespace csgopp::game
+/// @brief Demo parsing and game client.
+namespace csgopp::client
 {
 
 using google::protobuf::io::CodedInputStream;
 using csgopp::common::bits::BitStream;
 using csgopp::common::ring::Ring;
 using csgopp::error::GameError;
-using csgopp::network::DataTable;
-using csgopp::network::ServerClass;
-using csgopp::network::StringTable;
+using csgopp::client::data_table::DataTable;
+using csgopp::client::server_class::ServerClass;
+using csgopp::client::string_table::StringTable;
+using csgopp::client::entity::Entity;
 
-// Forward declaration for use in `SimulationObserverBase`.
+constexpr size_t MAX_EDICT_BITS = 11;
+constexpr size_t ENTITY_HANDLE_INDEX_MASK = (1 << MAX_EDICT_BITS) - 1;
+constexpr size_t ENTITY_HANDLE_SERIAL_NUMBER_BITS = 10;
+constexpr size_t ENTITY_HANDLE_BITS = MAX_EDICT_BITS + ENTITY_HANDLE_SERIAL_NUMBER_BITS;
+constexpr size_t INVALID_ENTITY_HANDLE = (1 << ENTITY_HANDLE_BITS) - 1;
+
+// Forward declaration for use in `ClientObserverBase`.
 template<typename Observer>
-class Simulation;
+class Client;
 
-/// \brief This class serves as a base-class for `Simulation` observers.
+/// \brief This class serves as a base-class for `Client` observers.
 ///
-/// In order to efficiently handle events emitted by the simulation, we
+/// In order to efficiently handle events emitted by the client, we
 /// template an overarching observer and its various nested event observers
-/// directly into the simulation.
+/// directly into the client.
 ///
 /// This class provides empty implementations for every event observer used by
-/// the simulation. It therefore serves as a convenient base class for custom
+/// the client. It therefore serves as a convenient base class for custom
 /// observers that might not need to explicitly implement every event--the
-/// simulation just instantiates `Observer::EventObserver`, so if the subclass
+/// client just instantiates `Observer::EventObserver`, so if the subclass
 /// provides no override, the base's is used.
 ///
 /// An example observer that counts the frame in a demo as well as the
 /// frequency of each frame command might look something like the following:
 ///
 /// \code
-/// struct StructureObserver : public SimulationObserverBase<StructureObserver>
+/// struct StructureObserver : public ClientObserverBase<StructureObserver>
 /// {
 ///     size_t frame_count = 0;
 ///     std::map<csgopp::demo::Command::Type, size_t> commands;
 ///
-///     struct FrameObserver final : public SimulationObserverBase::FrameObserver
+///     struct FrameObserver final : public ClientObserverBase::FrameObserver
 ///     {
-///         using SimulationObserverBase::FrameObserver::FrameObserver;
+///         using ClientObserverBase::FrameObserver::FrameObserver;
 ///
-///         void handle(Simulation& simulation, csgopp::demo::Command::Type command) override
+///         void handle(Client& client, csgopp::demo::Command::Type command) override
 ///         {
-///             simulation.observer.frame_count += 1;
-///             simulation.observer.commands[command] += 1;
+///             client.observer.frame_count += 1;
+///             client.observer.commands[command] += 1;
 ///         }
 ///     };
 /// };
 /// \endcode
 ///
-/// \tparam SimulationObserver should be the subclass type, e.g.
-///     `struct CustomObserver : SimulationObserverBase<CustomObserver> {}`.
-///     This is necessary to properly type the `Simulation` reference that's
+/// \tparam ClientObserver should be the subclass type, e.g.
+///     `struct CustomObserver : ClientObserverBase<CustomObserver> {}`.
+///     This is necessary to properly type the `Client` reference that's
 ///     passed to both the constructor and `handle` method.
-template<typename SimulationObserver>
-struct SimulationObserverBase
+template<typename ClientObserver>
+struct ClientObserverBase
 {
     /// Convenience; avoids having to rewrite the full type.
-    using Simulation = Simulation<SimulationObserver>;
+    using Client = Client<ClientObserver>;
 
-    /// Simulation also receives a reference to the simulation for setup.
-    explicit SimulationObserverBase(Simulation& simulation) {}
+    /// Client also receives a reference to the client for setup.
+    explicit ClientObserverBase(Client& client) {}
 
     /// Called by the default frame observer.
-    virtual void on_frame(Simulation& simulation, demo::Command::Type command) {}
+    virtual void on_frame(Client& client, demo::Command::Type command) {}
 
     /// \brief This event is emitted when a DEMO frame is parsed.
     struct FrameObserver
     {
         FrameObserver() = default;
-        explicit FrameObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, demo::Command::Type command)
+        explicit FrameObserver(Client& client) {}
+        virtual void handle(Client& client, demo::Command::Type command)
         {
-            simulation.observer.on_frame(simulation, command);
+            client.observer.on_frame(client, command);
         }
     };
 
     /// Called by the default packet observer.
-    virtual void on_packet(Simulation& simulation, int32_t type) {}
+    virtual void on_packet(Client& client, int32_t type) {}
 
     /// \brief This event is emitted when a game packet is parsed.
     struct PacketObserver
     {
         PacketObserver() = default;
-        explicit PacketObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, int32_t type)
+        explicit PacketObserver(Client& client) {}
+        virtual void handle(Client& client, int32_t type)
         {
-            simulation.observer.on_packet(simulation, type);
+            client.observer.on_packet(client, type);
         }
     };
 
     /// Called by the default data table creation observer.
-    virtual void on_data_table_creation(Simulation& simulation, const DataTable* data_table) {}
+    virtual void on_data_table_creation(Client& client, const DataTable* data_table) {}
 
     /// \brief This event is emitted when a network data table is created.
     struct DataTableCreationObserver
     {
         DataTableCreationObserver() = default;
-        explicit DataTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const DataTable* data_table)
+        explicit DataTableCreationObserver(Client& client) {}
+        virtual void handle(Client& client, const DataTable* data_table)
         {
-            simulation.observer.on_data_table_creation(simulation, data_table);
+            client.observer.on_data_table_creation(client, data_table);
         }
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_server_class_creation(Simulation& simulation, const ServerClass* server_class) {}
+    virtual void on_server_class_creation(Client& client, const ServerClass* server_class) {}
 
     /// \brief This event is emitted when a network server class is created.
     struct ServerClassCreationObserver
     {
         ServerClassCreationObserver() = default;
-        explicit ServerClassCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const ServerClass* server_class)
+        explicit ServerClassCreationObserver(Client& client) {}
+        virtual void handle(Client& client, const ServerClass* server_class)
         {
-            simulation.observer.on_server_class_creation(simulation, server_class);
+            client.observer.on_server_class_creation(client, server_class);
         }
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_string_table_creation(Simulation& simulation, const StringTable* string_table) {}
+    virtual void on_string_table_creation(Client& client, const StringTable* string_table) {}
 
     /// \brief This event is emitted when a network string table is created.
     struct StringTableCreationObserver
     {
         StringTableCreationObserver() = default;
-        explicit StringTableCreationObserver(Simulation& simulation) {}
-        virtual void handle(Simulation& simulation, const StringTable* string_table)
+        explicit StringTableCreationObserver(Client& client) {}
+        virtual void handle(Client& client, const StringTable* string_table)
         {
-            simulation.observer.on_string_table_creation(simulation, string_table);
+            client.observer.on_string_table_creation(client, string_table);
         }
     };
 
     /// Called by the default server class update observer.
-    virtual void on_string_table_update(Simulation& simulation, const StringTable* string_table) {}
+    virtual void on_string_table_update(Client& client, const StringTable* string_table) {}
 
     /// \brief This event is emitted when a network string table is created.
     struct StringTableUpdateObserver
     {
         StringTableUpdateObserver() = default;
-        explicit StringTableUpdateObserver(Simulation& simulation, const StringTable* string_table) {}
-        virtual void handle(Simulation& simulation, const StringTable* string_table)
+        explicit StringTableUpdateObserver(Client& client, const StringTable* string_table) {}
+        virtual void handle(Client& client, const StringTable* string_table)
         {
-            simulation.observer.on_string_table_update(simulation, string_table);
+            client.observer.on_string_table_update(client, string_table);
         }
     };
 };
 
-/// \brief The core DEMO parser and game simulation.
+/// \brief The core DEMO parser and game client.
 ///
-/// This is where the magic happens! The Simulation object is responsible for
+/// This is where the magic happens! The Client object is responsible for
 /// consuming frames from the input stream, parsing them, and mutating the
-/// simulation state correspondingly.
+/// client state correspondingly.
 ///
 /// \tparam Observer The templated observer is instantiated as a class member
 ///     by the constructor and its nested event observers are compiled directly
-///     into the simulation runtime where events are emitted. While this system
+///     into the client runtime where events are emitted. While this system
 ///     incurs longer compile times, it's also zero-cost. The optimizer should
 ///     have no problem remove empty observer calls.
 template<typename Observer>
-class Simulation
+class Client
 {
 public:
-    using Network = csgopp::network::Network;
+    using DataTableDatabase = csgopp::client::data_table::DataTableDatabase;
+    using ServerClassDatabase = csgopp::client::server_class::ServerClassDatabase;
+    using StringTableDatabase = csgopp::client::string_table::StringTableDatabase;
+    using EntityDatabase = csgopp::client::entity::EntityDatabase;
 
-    /// Instantiate a new simulation with an observer.
+    /// Instantiate a new client with an observer.
     ///
     /// Arguments are passed directly to the observer preceded by a reference
-    /// to the simulation once the header has been parser.
+    /// to the client once the header has been parser.
     ///
     /// \tparam Args observer constructor arguments.
     /// \param stream a stream to read a DEMO header from.
     /// \param args observer constructor arguments.
     template<typename... Args>
-    explicit Simulation(CodedInputStream& stream, Args... args);
+    explicit Client(CodedInputStream& stream, Args... args);
 
     /// How about now? Is the issue any better?
     virtual bool advance(CodedInputStream& stream);
@@ -248,7 +262,6 @@ public:
 
     /// Interface
     [[nodiscard]] const demo::Header& header() { return this->_header; }
-    [[nodiscard]] const Network& network() { return this->_network; }
     [[nodiscard]] uint32_t cursor() { return this->_cursor; }
     [[nodiscard]] uint32_t tick() { return this->_tick; }
 
@@ -256,28 +269,35 @@ public:
 
 protected:
     demo::Header _header;
-    Network _network;
     uint32_t _cursor{0};
     uint32_t _tick{0};
+    DataTableDatabase _data_tables;
+    ServerClassDatabase _server_classes;
+    StringTableDatabase _string_tables;
+    EntityDatabase _entities;
 
     /// Helpers
+    void create_data_tables(CodedInputStream& stream);
     void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
+    Entity* create_entity(Entity::Id index, BitStream& data);
+    void update_entity(Entity* entity, BitStream& data);
+    void delete_entity(Entity::Id index);
 
 private:
     /// Cast this as a const reference for template constructors.
     ///
     /// \todo Figure out how to avoid this.
-    [[nodiscard]] inline Simulation& self() { return *this; }
+    [[nodiscard]] inline Client& self() { return *this; }
 };
 
 template<typename Observer>
 template<typename... Args>
-Simulation<Observer>::Simulation(CodedInputStream& stream, Args... args)
+Client<Observer>::Client(CodedInputStream& stream, Args... args)
     : _header(stream)
     , observer(self(), args...) {}
 
 template<typename Observer>
-bool Simulation<Observer>::advance(CodedInputStream& stream)
+bool Client<Observer>::advance(CodedInputStream& stream)
 {
     bool ok = true;
     BEFORE(Observer, FrameObserver);
@@ -325,7 +345,7 @@ bool Simulation<Observer>::advance(CodedInputStream& stream)
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_packets(CodedInputStream& stream)
+void Client<Observer>::advance_packets(CodedInputStream& stream)
 {
     // Arbitrary player data, seems useless
     OK(stream.Skip(152 + 4 + 4));
@@ -344,7 +364,7 @@ void Simulation<Observer>::advance_packets(CodedInputStream& stream)
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_packet(CodedInputStream& stream)
+void Client<Observer>::advance_packet(CodedInputStream& stream)
 {
     BEFORE(Observer, PacketObserver);
     uint32_t command = stream.ReadTag();
@@ -397,7 +417,7 @@ void Simulation<Observer>::advance_packet(CodedInputStream& stream)
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_console_command(CodedInputStream& stream)
+void Client<Observer>::advance_console_command(CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
@@ -405,7 +425,7 @@ void Simulation<Observer>::advance_console_command(CodedInputStream& stream)
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_user_command(CodedInputStream& stream)
+void Client<Observer>::advance_user_command(CodedInputStream& stream)
 {
     OK(stream.Skip(4));
     uint32_t size;
@@ -414,13 +434,13 @@ void Simulation<Observer>::advance_user_command(CodedInputStream& stream)
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_data_tables(CodedInputStream& stream)
+void Client<Observer>::advance_data_tables(CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
-    this->advance_packet_send_table(stream);
+    this->create_data_tables(stream);
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
@@ -429,7 +449,7 @@ void Simulation<Observer>::advance_data_tables(CodedInputStream& stream)
 /// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L66
 /// \todo actually test this method
 template<typename Observer>
-void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
+void Client<Observer>::advance_string_tables(CodedInputStream& stream)
 {
     uint32_t size;
     OK(stream.ReadLittleEndian32(&size));
@@ -448,11 +468,11 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
         uint16_t entry_count;
         OK(data.read(&entry_count, 16));
 
-        StringTable* string_table = this->_network.allocate_string_table(std::move(name), entry_count);
+        StringTable* string_table = new StringTable(std::move(name), entry_count);
 
         for (uint16_t j = 0; j < entry_count; ++j)
         {
-            StringTable::Entry* entry = this->_network.allocate_string_table_entry();
+            StringTable::Entry* entry = new StringTable::Entry();
             OK(data.read_string(entry->string));
             string_table->entries.at(j) = entry;
 
@@ -479,13 +499,13 @@ void Simulation<Observer>::advance_string_tables(CodedInputStream& stream)
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_custom_data(CodedInputStream& stream)
+void Client<Observer>::advance_custom_data(CodedInputStream& stream)
 {
     throw GameError("encountered unexpected CUSTOM_DATA event!");
 }
 
 template<typename Observer>
-bool Simulation<Observer>::advance_unknown(CodedInputStream& stream, char command)
+bool Client<Observer>::advance_unknown(CodedInputStream& stream, char command)
 {
     throw GameError("encountered unknown command " + std::to_string(command));
 }
@@ -497,53 +517,119 @@ inline void advance_packet_skip(CodedInputStream& stream)
     OK(stream.Skip(static_cast<int32_t>(size)));
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_nop(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_disconnect(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_file(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_split_screen_user(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_tick(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_string_command(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_set_console_variable(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_sign_on_state(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_server_info(CodedInputStream& stream)
+template<typename Observer>
+void Client<Observer>::advance_packet_nop(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_packet_send_table(CodedInputStream& stream)
+void Client<Observer>::advance_packet_disconnect(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_file(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_split_screen_user(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_tick(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_string_command(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_set_console_variable(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_sign_on_state(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_server_info(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+static inline DataTable::Int32Property* create_data_table_int32_property(
+    DataTable* data_table,
+    const csgo::message::net::CSVCMsg_SendTable_sendprop_t& property_data)
+{
+    if (property_data.flags() & csgopp::client::data_table::property::PropertyFlags::UNSIGNED)
+    {
+        return new DataTable::UnsignedInt32Property(data_table, property_data);
+    }
+    else
+    {
+        return new DataTable::SignedInt32Property(data_table, property_data);
+    }
+}
+
+static inline DataTable::Int64Property* create_data_table_int64_property(
+    DataTable* data_table,
+    const csgo::message::net::CSVCMsg_SendTable_sendprop_t& property_data)
+{
+    if (property_data.flags() & csgopp::client::data_table::property::PropertyFlags::UNSIGNED)
+    {
+        return new DataTable::UnsignedInt64Property(data_table, property_data);
+    }
+    else
+    {
+        return new DataTable::SignedInt64Property(data_table, property_data);
+    }
+}
+
+static inline DataTable::Property* create_data_table_property(
+    DataTable::Property::Type::T type,
+    DataTable* data_table,
+    const csgo::message::net::CSVCMsg_SendTable_sendprop_t& property_data)
+{
+    switch (type)
+    {
+        using Type = DataTable::Property::Type;
+        case Type::INT32:
+            return create_data_table_int32_property(data_table, property_data);
+        case Type::FLOAT:
+            return new DataTable::FloatProperty(data_table, property_data);
+        case Type::VECTOR3:
+            return new DataTable::Vector3Property(data_table, property_data);
+        case Type::VECTOR2:
+            return new DataTable::Vector2Property(data_table, property_data);
+        case Type::STRING:
+            return new DataTable::StringProperty(data_table, property_data);
+        case Type::ARRAY:
+            return new DataTable::ArrayProperty(data_table, property_data);
+        case Type::DATA_TABLE:
+            return new DataTable::DataTableProperty(data_table, property_data);
+        case Type::INT64:
+            return create_data_table_int64_property(data_table, property_data);
+        default:
+            throw csgopp::error::GameError("unreachable");
+    }
+}
+
+template<typename Observer>
+void Client<Observer>::create_data_tables(CodedInputStream& stream)
 {
     csgo::message::net::CSVCMsg_SendTable data;
     do
@@ -561,17 +647,17 @@ void Simulation<Observer>::advance_packet_send_table(CodedInputStream& stream)
         if (!data.is_end())
         {
             BEFORE(Observer, DataTableCreationObserver);
-            DataTable* data_table = this->_network.allocate_data_table(data);
+            DataTable* data_table = new DataTable(data);
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
             for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
             {
-                DataTable::Property* property = this->_network.allocate_data_table_property(
+                DataTable::Property* property = create_data_table_property(
                     property_data.type(),
                     data_table,
                     property_data);
-                data_table->properties.emplace(property->name, property);
+                data_table->properties.emplace(property);
             }
-            this->_network.publish_data_table(data_table);
+            this->_data_tables.emplace(data_table);
             AFTER(DataTableCreationObserver, data_table);
         }
 
@@ -585,51 +671,106 @@ void Simulation<Observer>::advance_packet_send_table(CodedInputStream& stream)
     absl::flat_hash_map<std::string_view, ServerClass*> temporary_server_class_lookup;
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
-        ServerClass* server_class = this->_network.allocate_server_class();
+        ServerClass* server_class = new ServerClass();
         OK(csgopp::demo::ReadLittleEndian16(stream, &server_class->id));
         OK(csgopp::demo::ReadCStyleString(stream, &server_class->name));
 
         std::string data_table_name;
         OK(csgopp::demo::ReadCStyleString(stream, &data_table_name));
-        server_class->data_table = this->_network._data_tables_by_name.at(data_table_name);
+        server_class->data_table = this->_data_tables.at(data_table_name);
         server_class->data_table->server_class = server_class;
         temporary_server_class_lookup.emplace(server_class->name, server_class);
     }
 
     for (auto [_, server_class] : temporary_server_class_lookup)
     {
-        for (const auto& [name, property] : server_class->data_table->properties)
+        for (DataTable::Property* property : server_class->data_table->properties)
         {
-            if (property->type == DataTable::Property::Type::DATA_TABLE && name == "baseclass")
+            if (property->type == DataTable::Property::Type::DATA_TABLE && property->name == "baseclass")
             {
                 const auto& actual = property->as<const DataTable::DataTableProperty>();
-                DataTable* base_data_table = this->_network._data_tables_by_name.at(actual.key);
+                DataTable* base_data_table = this->_data_tables.at(actual.key);
                 server_class->base_classes.push_back(base_data_table->server_class);
             }
             else
             {
-                server_class->properties.emplace(name, property);
+                server_class->properties.emplace(property);
             }
         }
 
         BEFORE(Observer, ServerClassCreationObserver);
-        this->_network.publish_server_class(server_class);
+        this->_server_classes.emplace(server_class);
         AFTER(ServerClassCreationObserver, server_class);
     }
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_class_info(CodedInputStream& stream)
+template<typename Observer>
+void Client<Observer>::advance_packet_send_table(CodedInputStream& stream)
 {
-    advance_packet_skip(stream);
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit != 0);
+
+    this->create_data_tables(stream);
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_set_pause(CodedInputStream& stream)
+template<typename Observer>
+void Client<Observer>::advance_packet_class_info(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
 template<typename Observer>
-void Simulation<Observer>::populate_string_table(StringTable* string_table, const std::string& blob, int32_t count)
+void Client<Observer>::advance_packet_set_pause(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+/// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L163
+template<typename Observer>
+void Client<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
+{
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit > 0);
+
+    csgo::message::net::CSVCMsg_CreateStringTable data;
+    OK(data.ParseFromCodedStream(&stream));
+
+    BEFORE(Observer, StringTableCreationObserver);
+    StringTable* string_table = new StringTable(data);
+    this->populate_string_table(string_table, data.string_data(), data.num_entries());
+    this->_string_tables.emplace(string_table);
+    AFTER(StringTableCreationObserver, string_table);
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_update_string_table(CodedInputStream& stream)
+{
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit > 0);
+
+    csgo::message::net::CSVCMsg_UpdateStringTable data;
+    OK(data.ParseFromCodedStream(&stream));
+
+    size_t index = data.table_id();
+    StringTable* string_table = this->_string_tables.at(index);  // TODO revisit if we remove
+    ASSERT(string_table != nullptr, "expected a string table at index %zd", index);
+
+    BEFORE(Observer, StringTableUpdateObserver, string_table);
+    this->populate_string_table(string_table, data.string_data(), data.num_changed_entries());
+    AFTER(StringTableUpdateObserver, string_table);
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
+}
+
+template<typename Observer>
+void Client<Observer>::populate_string_table(StringTable* string_table, const std::string& blob, int32_t count)
 {
     BitStream string_data(blob);
     uint8_t verification_bit;
@@ -646,7 +787,6 @@ void Simulation<Observer>::populate_string_table(StringTable* string_table, cons
         OK(string_data.read(&use_auto_increment, 1));
         if (!use_auto_increment)
         {
-            StringTable::Index old = auto_increment;
             OK(string_data.read(&auto_increment, index_size));
         }
 
@@ -654,15 +794,15 @@ void Simulation<Observer>::populate_string_table(StringTable* string_table, cons
         StringTable::Entry* entry = nullptr;
         if (auto_increment == string_table->entries.size())
         {
-            entry = this->_network.allocate_string_table_entry();
-            string_table->entries.emplace_back(entry);
+            entry = new StringTable::Entry();
+            string_table->entries.emplace(entry);
         }
         else
         {
             entry = string_table->entries.at(auto_increment);
             if (entry == nullptr)
             {
-                entry = string_table->entries.at(auto_increment) = this->_network.allocate_string_table_entry();
+                entry = string_table->entries.at(auto_increment) = new StringTable::Entry();
             }
         }
 
@@ -714,180 +854,260 @@ void Simulation<Observer>::populate_string_table(StringTable* string_table, cons
     }
 }
 
-/// \see https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/stringtables.go#L163
 template<typename Observer>
-void Simulation<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
+void Client<Observer>::advance_packet_voice_initialization(CodedInputStream& stream)
 {
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_voice_data(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_print(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_sounds(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_set_view(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_fix_angle(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_crosshair_angle(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_bsp_decal(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_split_screen(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_user_message(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_entity_message(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+    return;
+
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     OK(limit > 0);
 
-    BEFORE(Observer, StringTableCreationObserver);
-    csgo::message::net::CSVCMsg_CreateStringTable data;
+    csgo::message::net::CSVCMsg_PacketEntities data;
     OK(data.ParseFromCodedStream(&stream));
 
-    StringTable* string_table = this->_network.allocate_string_table(data);
-    this->populate_string_table(string_table, data.string_data(), data.num_entries());
-    this->_network.publish_string_table(string_table);
+    BitStream entity_data(data.entity_data());
+    uint32_t auto_increment = 0;
+    for (uint32_t i = 0; i < data.updated_entries(); ++i)
+    {
+        uint32_t auto_increment_skip;
+        entity_data.read_compressed_uint32(&auto_increment_skip);
+        auto_increment += auto_increment_skip;
 
-    AFTER(StringTableCreationObserver, string_table);
+        uint8_t command;
+        entity_data.read(&command, 2);
+
+        if (command & 0b1)
+        {
+            this->delete_entity(auto_increment);
+        }
+        else
+        {
+            Entity* entity;
+            if (command & 0b10)
+            {
+                entity = this->create_entity(auto_increment, entity_data);
+            }
+            else
+            {
+                entity = this->_entities.at(auto_increment);
+            }
+
+            this->update_entity(entity, entity_data);
+        }
+
+        auto_increment += 1;
+    }
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
-//https://developer.valvesoftware.com/wiki/Networking_Events_%26_Messages
-//https://developer.valvesoftware.com/wiki/Networking_Entities
-//https://gist.github.com/jboner/2841832#file-latency-txt-L12
-//https://github.com/markus-wa/gobitread/blob/a316e052584a5cb5f7a6a6285d3636d62146b5aa/bitread.go#L155
-//https://github.com/markus-wa/demoinfocs-golang/blob/master/pkg/demoinfocs/stringtables.go
-//https://github.com/markus-wa/demoinfocs-golang/blob/50f55785b7a0ba89164662a000e00cd55969f7ae/pkg/demoinfocs/parsing.go
+template<typename Observer>
+Entity* Client<Observer>::create_entity(Entity::Id id, BitStream& data)
+{
+    size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size());
+    ServerClass::Id server_class_id;
+    OK(data.read(&server_class_id, server_class_index_size));
+    ServerClass* server_class = this->_server_classes.at(server_class_id);
+
+    uint16_t serial_number;
+    OK(data.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
+
+    Entity* entity = new Entity(id, server_class);
+    for (DataTable::Property* property : server_class->properties)
+    {
+//        Entity::Member* member = (property);
+        // todo default
+//        entity->members.emplace(member);
+    }
+
+    // todo emplace entity
+
+    LOG("create entity of type %s", server_class->name.c_str());
+    return nullptr;
+}
 
 template<typename Observer>
-void Simulation<Observer>::advance_packet_update_string_table(CodedInputStream& stream)
+void Client<Observer>::update_entity(Entity* entity, BitStream& data)
 {
-    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit > 0);
+    uint8_t small_entity_optimization;
+    OK(data.read(&small_entity_optimization, 1));
 
-    csgo::message::net::CSVCMsg_UpdateStringTable data;
-    OK(data.ParseFromCodedStream(&stream));
+    Entity::Member::Index auto_index = 0;
+    while (true)
+    {
+        Entity::Member::Index jump;
+        if (!small_entity_optimization)
+        {
+            data.read_compressed_uint16(&jump);
+        }
+        else
+        {
+            uint8_t use_auto_index;
+            OK(data.read(&use_auto_index, 1));
+            if (use_auto_index)
+            {
+                jump = 0;
+            }
+            else
+            {
+                OK(data.read(&jump, 3));
+            }
+        }
 
-    size_t index = data.table_id();
-    StringTable* string_table = this->_network._string_tables.at(index);  // TODO revisit if we remove
-    ASSERT(string_table != nullptr, "expected a string table at index %zd", index);
+        // Update property
 
-    BEFORE(Observer, StringTableUpdateObserver, string_table);
-    this->populate_string_table(
-        string_table,
-        data.string_data(),
-        data.num_changed_entries());
-    AFTER(StringTableUpdateObserver, string_table);
-
-    OK(stream.BytesUntilLimit() == 0);
-    stream.PopLimit(limit);
+        auto_index += jump;
+    }
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_voice_initialization(CodedInputStream& stream)
+template<typename Observer>
+void Client<Observer>::delete_entity(Entity::Id index)
 {
-    advance_packet_skip(stream);
+
 }
 
-template<typename Observer> void Simulation<Observer>::advance_packet_voice_data(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_print(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_sounds(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_set_view(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_fix_angle(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_crosshair_angle(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_bsp_decal(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_split_screen(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_user_message(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_entity_message(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_game_event(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_temporary_entities(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_prefetch(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_menu(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_get_console_variable_value(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_paintmap_data(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_command_key_values(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_encrypted_data(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_hltv_replay(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_broadcast_command(CodedInputStream& stream)
-{
-    advance_packet_skip(stream);
-}
-
-template<typename Observer> void Simulation<Observer>::advance_packet_player_avatar_data(CodedInputStream& stream)
+template<typename Observer>
+void Client<Observer>::advance_packet_temporary_entities(CodedInputStream& stream)
 {
     advance_packet_skip(stream);
 }
 
 template<typename Observer>
-void Simulation<Observer>::advance_packet_unknown(CodedInputStream& stream, int32_t command)
+void Client<Observer>::advance_packet_prefetch(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_menu(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_get_console_variable_value(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_paintmap_data(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_command_key_values(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_encrypted_data(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_hltv_replay(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_broadcast_command(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_player_avatar_data(CodedInputStream& stream)
+{
+    advance_packet_skip(stream);
+}
+
+template<typename Observer>
+void Client<Observer>::advance_packet_unknown(CodedInputStream& stream, int32_t command)
 {
     throw GameError("unrecognized message " + std::string(demo::describe_net_message(command)));
 }

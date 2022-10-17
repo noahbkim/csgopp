@@ -133,6 +133,82 @@ public:
         return true;
     }
 
+    template<typename T>
+    bool read_variable_int(T* value)
+    {
+        *value = 0;
+        constexpr size_t limit = (sizeof(T) * 8 + 6) / 7;
+        size_t i = 0;
+        uint8_t cursor = 0;
+        do
+        {
+            if (!this->read(&cursor, 8))
+            {
+                return false;
+            }
+
+            *value |= static_cast<T>(cursor & 0x7F) << (7 * i);
+            ++i;
+        } while ((cursor & 0x80) && i < limit);
+        return true;
+    }
+
+    bool read_compressed_uint32(uint32_t* value)
+    {
+        if (!this->read(value, 6))
+        {
+            return false;
+        }
+
+        uint32_t buffer;
+        bool ok;
+        switch (*value & 0b110000)
+        {
+            case 0b010000:
+                ok = this->read(&buffer, 4);
+                break;
+            case 0b100000:
+                ok = this->read(&buffer, 8);
+                break;
+            case 0b110000:
+                ok = this->read(&buffer, 32 - 4);
+                break;
+            default:
+                buffer = 0;
+        }
+
+        *value = (*value & 0b1111) | (buffer << 4);
+        return ok;
+    }
+
+    bool read_compressed_uint16(uint16_t* value)
+    {
+        if (!this->read(value, 7))
+        {
+            return false;
+        }
+
+        uint32_t buffer;
+        bool ok;
+        switch (*value & 0b1100000)
+        {
+            case 0b0100000:
+                ok = this->read(&buffer, 2);
+                break;
+            case 0b1000000:
+                ok = this->read(&buffer, 4);
+                break;
+            case 0b1100000:
+                ok = this->read(&buffer, 7);
+                break;
+            default:
+                buffer = 0;
+        }
+
+        *value = (*value & 0b11111) | (buffer << 5);
+        return ok;
+    }
+
 private:
     std::vector<uint8_t> data;
     size_t byte_index{};

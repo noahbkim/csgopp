@@ -3,47 +3,47 @@
 #include <iostream>
 #include <map>
 
-#include <csgopp/network/data_table.h>
-#include <csgopp/network/server_class.h>
+#include <csgopp/client/data_table.h>
+#include <csgopp/client/server_class.h>
 #include <csgopp/demo.h>
-#include <csgopp/game.h>
+#include <csgopp/client.h>
 #include <csgopp/model/user.h>
 
-using csgopp::network::ServerClass;
-using csgopp::network::DataTable;
-using csgopp::network::StringTable;
+using csgopp::client::ServerClass;
+using csgopp::client::DataTable;
+using csgopp::client::StringTable;
 using csgopp::model::user::User;
-using csgopp::game::SimulationObserverBase;
+using csgopp::client::ClientObserverBase;
 using csgopp::demo::Command;
 
-struct StructureObserver : public SimulationObserverBase<StructureObserver>
+struct StructureObserver : public ClientObserverBase<StructureObserver>
 {
-    using SimulationObserverBase::SimulationObserverBase;
+    using ClientObserverBase::ClientObserverBase;
 
     size_t frame_count = 0;
     std::map<Command::Type, size_t> commands;
     size_t packet_count = 0;
     std::map<int32_t, size_t> net_messages;
 
-    struct FrameObserver final : public SimulationObserverBase::FrameObserver
+    struct FrameObserver final : public ClientObserverBase::FrameObserver
     {
-        using SimulationObserverBase::FrameObserver::FrameObserver;
+        using ClientObserverBase::FrameObserver::FrameObserver;
 
-        void handle(Simulation& simulation, Command::Type command) override
+        void handle(Client& client, Command::Type command) override
         {
-            simulation.observer.frame_count += 1;
-            simulation.observer.commands[command] += 1;
+            client.observer.frame_count += 1;
+            client.observer.commands[command] += 1;
         }
     };
 
-    struct PacketObserver final : public SimulationObserverBase::PacketObserver
+    struct PacketObserver final : public ClientObserverBase::PacketObserver
     {
-        using SimulationObserverBase::PacketObserver::PacketObserver;
+        using ClientObserverBase::PacketObserver::PacketObserver;
 
-        void handle(Simulation& simulation, int32_t net_message) override
+        void handle(Client& client, int32_t net_message) override
         {
-            simulation.observer.packet_count += 1;
-            simulation.observer.net_messages[net_message] += 1;
+            client.observer.packet_count += 1;
+            client.observer.net_messages[net_message] += 1;
         }
     };
 
@@ -63,29 +63,30 @@ struct StructureObserver : public SimulationObserverBase<StructureObserver>
     }
 };
 
-struct DataObserver : public SimulationObserverBase<DataObserver>
+struct DataObserver : public ClientObserverBase<DataObserver>
 {
-    using SimulationObserverBase::SimulationObserverBase;
+    using ClientObserverBase::ClientObserverBase;
 
-    struct DataTableCreationObserver final : public SimulationObserverBase::DataTableCreationObserver
+    struct DataTableCreationObserver final : public ClientObserverBase::DataTableCreationObserver
     {
-        using SimulationObserverBase::DataTableCreationObserver::DataTableCreationObserver;
+        using ClientObserverBase::DataTableCreationObserver::DataTableCreationObserver;
 
-        void handle(Simulation& simulation, const DataTable* send_table) override
+        void handle(Client& client, const DataTable* send_table) override
         {
             std::cout << "send table: " << send_table->name << std::endl;
-            for (const auto& [name, property] : send_table->properties)
+            for (const DataTable::Property* property : send_table->properties)
             {
-                std::cout << "  - " << name << " " << csgopp::network::describe(property->type) << std::endl;
+                std::cout << "  - " << property->name << " "
+                    << csgopp::client::data_table::describe(property->type) << std::endl;
             }
         }
     };
 
-    struct ServerClassCreationObserver final : public SimulationObserverBase::ServerClassCreationObserver
+    struct ServerClassCreationObserver final : public ClientObserverBase::ServerClassCreationObserver
     {
-        using SimulationObserverBase::ServerClassCreationObserver::ServerClassCreationObserver;
+        using ClientObserverBase::ServerClassCreationObserver::ServerClassCreationObserver;
 
-        void handle(Simulation& simulation, const ServerClass* server_class) override
+        void handle(Client& client, const ServerClass* server_class) override
         {
             std::cout << "server class: " << server_class->name << ": " << server_class->data_table->name << std::endl;
         }
@@ -94,13 +95,13 @@ struct DataObserver : public SimulationObserverBase<DataObserver>
     void report() const {}
 };
 
-struct PlayersObserver : public SimulationObserverBase<PlayersObserver>
+struct PlayersObserver : public ClientObserverBase<PlayersObserver>
 {
     std::vector<std::pair<size_t, User>> users;
 
-    using SimulationObserverBase::SimulationObserverBase;
+    using ClientObserverBase::ClientObserverBase;
 
-    void on_string_table_creation(Simulation& simulation, const StringTable* string_table) override
+    void on_string_table_creation(Client& client, const StringTable* string_table) override
     {
         if (string_table->name == "userinfo")
         {
@@ -109,7 +110,7 @@ struct PlayersObserver : public SimulationObserverBase<PlayersObserver>
                 const StringTable::Entry* entry = string_table->entries.at(i);
                 if (!entry->data.empty())
                 {
-                    auto& [index, user] = simulation.observer.users.emplace_back();
+                    auto& [index, user] = client.observer.users.emplace_back();
                     index = i;
                     user.deserialize(entry->data);
                 }

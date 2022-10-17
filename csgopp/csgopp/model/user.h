@@ -5,12 +5,12 @@
 #include <vector>
 
 #include "../common/reader.h"
-#include "../network/string_table.h"
+#include "../client/string_table.h"
 
 namespace csgopp::model::user
 {
 
-using csgopp::network::StringTable;
+using csgopp::client::string_table::StringTable;
 
 struct User
 {
@@ -29,7 +29,7 @@ struct User
     uint32_t custom_files[4];
     uint8_t files_downloaded;
 
-    void deserialize(const StringTable::Entry::Data& data);
+    void deserialize(const std::string& data);
 };
 
 }

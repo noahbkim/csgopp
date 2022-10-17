@@ -2,7 +2,7 @@
 #include <utility>
 
 #include "csgopy.h"
-#include "csgopp/game.h"
+#include "csgopp/client.h"
 
 using namespace nanobind::literals;
 

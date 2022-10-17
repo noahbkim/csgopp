@@ -6,9 +6,9 @@ using csgopp::common::reader::ContainerReader;
 using csgopp::common::reader::BigEndian;
 using csgopp::common::reader::LittleEndian;
 
-void User::deserialize(const StringTable::Entry::Data& data)
+void User::deserialize(const std::string& data)
 {
-    ContainerReader<StringTable::Entry::Data> reader(data);
+    ContainerReader<std::string> reader(data);
     this->version = reader.deserialize<uint64_t, BigEndian>();
     this->xuid = reader.deserialize<uint64_t, BigEndian>();
     this->name = reader.terminated();

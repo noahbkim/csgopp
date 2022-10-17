@@ -10,11 +10,12 @@ This project provides a couple things:
 
 ## To Do
 
-- PacketEntities
-- GameEventList
-- GameEvent
-- UpdateStringTable
-- UserMessage
-- ServerInfo
-- SetConVar
-- EncryptedData
+- [ ] PacketEntities
+- [ ] GameEventList
+- [ ] GameEvent
+- [x] CreateStringTable
+- [x] UpdateStringTable
+- [ ] UserMessage
+- [ ] ServerInfo
+- [ ] SetConVar
+- [ ] EncryptedData

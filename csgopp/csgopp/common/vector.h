@@ -3,19 +3,21 @@
 namespace csgopp::common::vector
 {
 
-class Vector3
+struct Vector3
 {
-public:
     double x;
     double y;
     double z;
+
+    Vector3() = default;
 };
 
-class Vector2
+struct Vector2
 {
-public:
     double x;
     double y;
+
+    Vector2() = default;
 };
 
 }

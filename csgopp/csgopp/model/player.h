@@ -6,14 +6,14 @@
 #include "../common/vector.h"
 #include "../common/id.h"
 #include "../common/interface.h"
-#include "csgopp/network/entity.h"
+#include "csgopp/client/entity.h"
 
 namespace csgopp::model
 {
 
 using csgopp::common::id::IdBase;
 using csgopp::common::vector::Vector3;
-using csgopp::network::Entity;
+using csgopp::client::entity::Entity;
 
 class Team;
 
@@ -31,7 +31,7 @@ public:
         std::string _name{};
         uint16_t _reserve_ammo_count[32]{};  // For each weapon
         int32_t _entity_id{};
-        Entity _entity{};
+        Entity* _entity{};
         size_t _flash_tick{};
         float _flash_duration{};
         Team* _team{};
