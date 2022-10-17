@@ -599,35 +599,6 @@ static inline DataTable::Int64Property* create_data_table_int64_property(
     }
 }
 
-static inline DataTable::Property* create_data_table_property(
-    DataTable::Property::Type::T type,
-    DataTable* data_table,
-    const csgo::message::net::CSVCMsg_SendTable_sendprop_t& property_data)
-{
-    switch (type)
-    {
-        using Type = DataTable::Property::Type;
-        case Type::INT32:
-            return create_data_table_int32_property(data_table, property_data);
-        case Type::FLOAT:
-            return new DataTable::FloatProperty(data_table, property_data);
-        case Type::VECTOR3:
-            return new DataTable::Vector3Property(data_table, property_data);
-        case Type::VECTOR2:
-            return new DataTable::Vector2Property(data_table, property_data);
-        case Type::STRING:
-            return new DataTable::StringProperty(data_table, property_data);
-        case Type::ARRAY:
-            return new DataTable::ArrayProperty(data_table, property_data);
-        case Type::DATA_TABLE:
-            return new DataTable::DataTableProperty(data_table, property_data);
-        case Type::INT64:
-            return create_data_table_int64_property(data_table, property_data);
-        default:
-            throw csgopp::error::GameError("unreachable");
-    }
-}
-
 template<typename Observer>
 void Client<Observer>::create_data_tables(CodedInputStream& stream)
 {
@@ -648,14 +619,58 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
         {
             BEFORE(Observer, DataTableCreationObserver);
             DataTable* data_table = new DataTable(data);
+
+            DataTable::Property* array_property_type{nullptr};
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
             for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
             {
-                DataTable::Property* property = create_data_table_property(
-                    property_data.type(),
-                    data_table,
-                    property_data);
-                data_table->properties.emplace(property);
+                DataTable::Property* property;
+                switch (property_data.type())
+                {
+                    using Type = DataTable::Property::Type;
+                    case Type::INT32:
+                        property = create_data_table_int32_property(data_table, property_data);
+                        break;
+                    case Type::FLOAT:
+                        property = new DataTable::FloatProperty(data_table, property_data);
+                        break;
+                    case Type::VECTOR3:
+                        property = new DataTable::Vector3Property(data_table, property_data);
+                        break;
+                    case Type::VECTOR2:
+                        property = new DataTable::Vector2Property(data_table, property_data);
+                        break;
+                    case Type::STRING:
+                        property = new DataTable::StringProperty(data_table, property_data);
+                        break;
+                    case Type::ARRAY:
+                        OK(array_property_type != nullptr);
+                        property = new DataTable::ArrayProperty(
+                            data_table,
+                            property_data,
+                            array_property_type);
+                        array_property_type = nullptr;
+                        break;
+                    case Type::DATA_TABLE:
+                        property = new DataTable::DataTableProperty(data_table, property_data);
+                        break;
+                    case Type::INT64:
+                        property = create_data_table_int64_property(data_table, property_data);
+                        break;
+                    default:
+                        throw csgopp::error::GameError("unreachable");
+                }
+
+                // If there's an array property, the element type always precedes it; don't both adding
+                if (property_data.flags() & DataTable::Property::Flags::INSIDE_ARRAY)
+                {
+                    OK(array_property_type == nullptr);
+                    array_property_type = property;
+                }
+                else
+                {
+                    data_table->properties.emplace(property);
+                }
             }
             this->_data_tables.emplace(data_table);
             AFTER(DataTableCreationObserver, data_table);
@@ -688,9 +703,10 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
         {
             if (property->type == DataTable::Property::Type::DATA_TABLE && property->name == "baseclass")
             {
+                ASSERT(server_class->base_class == nullptr, "received two base classes for one server class");
                 const auto& actual = property->as<const DataTable::DataTableProperty>();
                 DataTable* base_data_table = this->_data_tables.at(actual.key);
-                server_class->base_classes.push_back(base_data_table->server_class);
+                server_class->base_class = base_data_table->server_class;
             }
             else
             {

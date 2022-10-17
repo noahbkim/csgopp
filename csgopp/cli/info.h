@@ -73,12 +73,12 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 
         void handle(Client& client, const DataTable* send_table) override
         {
-            std::cout << "send table: " << send_table->name << std::endl;
-            for (const DataTable::Property* property : send_table->properties)
-            {
-                std::cout << "  - " << property->name << " "
-                    << csgopp::client::data_table::describe(property->type) << std::endl;
-            }
+//            std::cout << "send table: " << send_table->name << std::endl;
+//            for (const DataTable::Property* property : send_table->properties)
+//            {
+//                std::cout << "  - " << property->name << " "
+//                    << csgopp::client::data_table::describe(property->type) << std::endl;
+//            }
         }
     };
 
@@ -88,7 +88,13 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 
         void handle(Client& client, const ServerClass* server_class) override
         {
-            std::cout << "server class: " << server_class->name << ": " << server_class->data_table->name << std::endl;
+            for (const DataTable::Property* property : server_class->properties)
+            {
+                if (property->type == DataTable::Property::Type::ARRAY)
+                {
+
+                }
+            }
         }
     };
 

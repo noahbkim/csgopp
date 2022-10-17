@@ -52,6 +52,16 @@ struct Database
         return this->container.at(index);
     }
 
+    [[nodiscard]] T*& back()
+    {
+        return this->container.back();
+    }
+
+    [[nodiscard]] const T* back() const
+    {
+        return this->container.back();
+    }
+
     [[nodiscard]] size_t size() const
     {
         return this->container.size();

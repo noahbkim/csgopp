@@ -25,8 +25,17 @@ struct ServerClass
     Id id{};
     std::string name;
     DataTable* data_table{nullptr};
-    std::vector<ServerClass*> base_classes;
+    ServerClass* base_class{nullptr};
     PropertyDatabase properties;
+
+    template<typename Callback>
+    void traverse_properties(Callback callback)
+    {
+        for (const DataTable::Property* property : this->properties)
+        {
+
+        }
+    }
 };
 
 using ServerClassDatabase = DatabaseWithNameId<ServerClass, Delete<ServerClass>>;

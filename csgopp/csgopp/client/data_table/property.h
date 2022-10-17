@@ -88,7 +88,12 @@ struct Property
     // [[nodiscard]] virtual Value* value() const = 0;
 
     template<typename T>
-    T& as() const { return *dynamic_cast<T*>(this); }
+    T& as() const
+    {
+        T* subclass = dynamic_cast<T*>(this);
+        ASSERT(subclass != nullptr, "failed to cast down property!");
+        return *subclass;
+    }
 };
 
 struct Int32Property : public Property
@@ -154,10 +159,12 @@ struct StringProperty final : public Property
 
 struct ArrayProperty final : public Property
 {
+    Property* element{nullptr};
     int32_t size;
 
-    explicit ArrayProperty(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
+    explicit ArrayProperty(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data, Property* element)
         : Property(data_table, data)
+        , element(element)
         , size(data.num_elements()) {}
 };
 
