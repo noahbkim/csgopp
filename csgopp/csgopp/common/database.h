@@ -91,12 +91,18 @@ struct Database
     {
         this->container.emplace_back(item);
     }
+
+    virtual void reserve(size_t count)
+    {
+        this->container.reserve(count);
+    }
 };
 
 template<typename T>
 struct NameTableMixin
 {
-    absl::flat_hash_map<std::string_view, T*> by_name;
+    using NameTable = absl::flat_hash_map<std::string_view, T*>;
+    NameTable by_name;
 
     NameTableMixin() = default;
     explicit NameTableMixin(size_t reserved) : by_name(reserved) {}
@@ -106,6 +112,10 @@ struct NameTableMixin
         return this->by_name.at(name);
     }
 
+    [[nodiscard]] bool contains(std::string_view name)
+    {
+        return this->by_name.contains(name);
+    }
 
     [[nodiscard]] const T* at(std::string_view name) const
     {
@@ -115,6 +125,11 @@ struct NameTableMixin
     void emplace(T* member)
     {
         this->by_name.emplace(member->name, member);
+    }
+
+    void reserve(size_t count)
+    {
+        this->by_name.reserve(count);
     }
 };
 
@@ -134,12 +149,19 @@ struct DatabaseWithName : public Database<T, Manager>, public NameTableMixin<T>
         Database<T, Manager>::emplace(property);
         NameTableMixin<T>::emplace(property);
     }
+
+    void reserve(size_t count) override
+    {
+        Database<T, Manager>::reserve(count);
+        NameTableMixin<T>::reserve(count);
+    }
 };
 
 template<typename T>
 struct IdTableMixin
 {
-    absl::flat_hash_map<typename T::Id, T*> by_id;
+    using IdTable = absl::flat_hash_map<typename T::Id, T*>;
+    IdTable by_id;
 
     IdTableMixin() = default;
     explicit IdTableMixin(size_t reserved) : by_id(reserved) {}
@@ -158,6 +180,11 @@ struct IdTableMixin
     {
         this->by_id.emplace(member->id, member);
     }
+
+    void reserve(size_t count)
+    {
+        this->by_id.reserve(count);
+    }
 };
 
 template<typename T, typename Manager = Noop<T>>
@@ -175,6 +202,12 @@ struct DatabaseWithNameId : public DatabaseWithName<T, Manager>, public IdTableM
     {
         DatabaseWithName<T, Manager>::emplace(property);
         IdTableMixin<T>::emplace(property);
+    }
+
+    void reserve(size_t count) override
+    {
+        DatabaseWithName<T, Manager>::reserve(count);
+        IdTableMixin<T>::reserve(count);
     }
 };
 

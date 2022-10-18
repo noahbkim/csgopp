@@ -17,7 +17,7 @@ add_library(csgopp STATIC
         common/magic.h common/bits.h
         client/string_table.cpp client/string_table.h
         common/ring.h model/user.cpp model/user.h
-        common/reader.h common/database.h)
+        common/reader.h common/database.h common/control.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

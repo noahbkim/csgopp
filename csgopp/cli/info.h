@@ -77,7 +77,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 //            for (const DataTable::Property* property : send_table->properties)
 //            {
 //                std::cout << "  - " << property->name << " "
-//                    << csgopp::client::data_table::describe(property->type) << std::endl;
+//                    << csgopp::client::origin::describe(property->type) << std::endl;
 //            }
         }
     };

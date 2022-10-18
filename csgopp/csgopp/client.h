@@ -2,6 +2,7 @@
 
 #include <string>
 #include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <google/protobuf/io/coded_stream.h>
 
 #include "common/lookup.h"
@@ -9,6 +10,7 @@
 #include "common/interface.h"
 #include "common/ring.h"
 #include "common/database.h"
+#include "common/control.h"
 #include "demo.h"
 #include "client/data_table.h"
 #include "client/server_class.h"
@@ -31,6 +33,7 @@ namespace csgopp::client
 using google::protobuf::io::CodedInputStream;
 using csgopp::common::bits::BitStream;
 using csgopp::common::ring::Ring;
+using csgopp::common::control::at;
 using csgopp::error::GameError;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::server_class::ServerClass;
@@ -277,7 +280,9 @@ protected:
     EntityDatabase _entities;
 
     /// Helpers
+    void create_data_tables_and_server_classes(CodedInputStream& stream);
     void create_data_tables(CodedInputStream& stream);
+    void create_server_classes(CodedInputStream& stream);
     void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
     Entity* create_entity(Entity::Id index, BitStream& data);
     void update_entity(Entity* entity, BitStream& data);
@@ -440,7 +445,7 @@ void Client<Observer>::advance_data_tables(CodedInputStream& stream)
     OK(stream.ReadLittleEndian32(&size));
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
-    this->create_data_tables(stream);
+    this->create_data_tables_and_server_classes(stream);
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
@@ -602,6 +607,8 @@ static inline DataTable::Int64Property* create_data_table_int64_property(
 template<typename Observer>
 void Client<Observer>::create_data_tables(CodedInputStream& stream)
 {
+    DataTableDatabase::NameTable new_data_tables;
+    std::vector<std::pair<DataTable::DataTableProperty*, std::string>> data_table_properties;
     csgo::message::net::CSVCMsg_SendTable data;
     do
     {
@@ -611,18 +618,16 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
         CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
         OK(limit > 0);
 
-        // Break if we're at the end of the data_table.
+        // Break if we're at the end of the origin.
         data.ParseFromCodedStream(&stream);
 
         // Actually do event handling if we're not at the terminator.
         if (!data.is_end())
         {
-            BEFORE(Observer, DataTableCreationObserver);
             DataTable* data_table = new DataTable(data);
-
             DataTable::Property* array_property_type{nullptr};
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
-            for (const CSVCMsg_SendTable_sendprop_t& property_data : data.props())
+            for (const CSVCMsg_SendTable_sendprop_t& property_data: data.props())
             {
                 DataTable::Property* property;
                 switch (property_data.type())
@@ -645,14 +650,13 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
                         break;
                     case Type::ARRAY:
                         OK(array_property_type != nullptr);
-                        property = new DataTable::ArrayProperty(
-                            data_table,
-                            property_data,
-                            array_property_type);
+                        property = new DataTable::ArrayProperty(data_table, property_data, array_property_type);
                         array_property_type = nullptr;
                         break;
                     case Type::DATA_TABLE:
-                        property = new DataTable::DataTableProperty(data_table, property_data);
+                        property = data_table_properties.emplace_back(
+                            new DataTable::DataTableProperty(data_table, property_data),
+                            property_data.dt_name()).first;
                         break;
                     case Type::INT64:
                         property = create_data_table_int64_property(data_table, property_data);
@@ -662,18 +666,17 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
                 }
 
                 // If there's an array property, the element type always precedes it; don't both adding
-                if (property_data.flags() & DataTable::Property::Flags::INSIDE_ARRAY)
+                if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                 {
                     OK(array_property_type == nullptr);
                     array_property_type = property;
-                }
-                else
+                } else
                 {
                     data_table->properties.emplace(property);
                 }
             }
-            this->_data_tables.emplace(data_table);
-            AFTER(DataTableCreationObserver, data_table);
+
+            new_data_tables.emplace(data_table->name, data_table);
         }
 
         // Related to inline parsing at start of block
@@ -681,9 +684,40 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
         stream.PopLimit(limit);
     } while (!data.is_end());
 
+    // Link data table properties to their data table
+    for (auto& [data_table_property, data_table_name]: data_table_properties)
+    {
+        DataTableDatabase::NameTable::iterator search = new_data_tables.find(data_table_name);
+        if (search == new_data_tables.end())
+        {
+            // Fall back onto global existing data tables
+            search = this->_data_tables.by_name.find(data_table_name);
+            if (search == this->_data_tables.by_name.end())
+            {
+                throw GameError("failed to find referenced data table " + data_table_name);
+            }
+        }
+
+        // Assign to property now that we're guaranteed
+        data_table_property->value = search->second;
+    }
+
+    // Now we can emplace and emit
+    this->_data_tables.reserve(new_data_tables.size());
+    for (const std::pair<std::string_view, DataTable*>& pair : new_data_tables)
+    {
+        BEFORE(Observer, DataTableCreationObserver);
+        this->_data_tables.emplace(pair.second);
+        AFTER(DataTableCreationObserver, pair.second);
+    }
+}
+
+template<typename Observer>
+void Client<Observer>::create_server_classes(CodedInputStream& stream)
+{
     uint16_t server_class_count;
     OK(demo::ReadLittleEndian16(stream, &server_class_count));
-    absl::flat_hash_map<std::string_view, ServerClass*> temporary_server_class_lookup;
+    std::vector<ServerClass*> new_server_classes(server_class_count);
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
         ServerClass* server_class = new ServerClass();
@@ -694,30 +728,42 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
         OK(csgopp::demo::ReadCStyleString(stream, &data_table_name));
         server_class->data_table = this->_data_tables.at(data_table_name);
         server_class->data_table->server_class = server_class;
-        temporary_server_class_lookup.emplace(server_class->name, server_class);
+        new_server_classes.at(i) = server_class;
     }
 
-    for (auto [_, server_class] : temporary_server_class_lookup)
+    for (ServerClass* server_class : new_server_classes)
     {
         for (DataTable::Property* property : server_class->data_table->properties)
         {
             if (property->type == DataTable::Property::Type::DATA_TABLE && property->name == "baseclass")
             {
                 ASSERT(server_class->base_class == nullptr, "received two base classes for one server class");
-                const auto& actual = property->as<const DataTable::DataTableProperty>();
-                DataTable* base_data_table = this->_data_tables.at(actual.key);
-                server_class->base_class = base_data_table->server_class;
+                DataTable::DataTableProperty* base_class_property = property->as<DataTable::DataTableProperty>();
+                OK(base_class_property != nullptr);
+                OK(base_class_property->value != nullptr);
+                OK(base_class_property->value->server_class != nullptr);
+                server_class->base_class = base_class_property->value->server_class;
             }
             else
             {
                 server_class->properties.emplace(property);
             }
         }
+    }
 
+    for (ServerClass* server_class : new_server_classes)
+    {
         BEFORE(Observer, ServerClassCreationObserver);
         this->_server_classes.emplace(server_class);
         AFTER(ServerClassCreationObserver, server_class);
     }
+}
+
+template<typename Observer>
+void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& stream)
+{
+    this->create_data_tables(stream);
+    this->create_server_classes(stream);
 }
 
 template<typename Observer>
@@ -726,7 +772,7 @@ void Client<Observer>::advance_packet_send_table(CodedInputStream& stream)
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     OK(limit != 0);
 
-    this->create_data_tables(stream);
+    this->create_data_tables_and_server_classes(stream);
 
     OK(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);

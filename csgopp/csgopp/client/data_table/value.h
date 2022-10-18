@@ -27,7 +27,6 @@ struct Value
     virtual void deserialize(BitStream& stream) = 0;
 };
 
-
 struct Int32Value final : public Value
 {
     Int32Property* property;
@@ -39,7 +38,6 @@ struct Int32Value final : public Value
 
     void deserialize(BitStream& stream) override;
 };
-
 
 struct FloatValue final : public Value
 {
@@ -53,7 +51,6 @@ struct FloatValue final : public Value
     void deserialize(BitStream& stream) override;
 };
 
-
 struct Vector3Value final : public Value
 {
     Vector3Property* property;
@@ -65,7 +62,6 @@ struct Vector3Value final : public Value
 
     void deserialize(BitStream& stream) override;
 };
-
 
 struct Vector2Value final : public Value
 {
@@ -79,7 +75,6 @@ struct Vector2Value final : public Value
     void deserialize(BitStream& stream) override;
 };
 
-
 struct StringValue final : public Value
 {
     StringProperty* property;
@@ -91,7 +86,6 @@ struct StringValue final : public Value
 
     void deserialize(BitStream& stream) override;
 };
-
 
 struct ArrayValue final : public Value
 {
@@ -105,7 +99,6 @@ struct ArrayValue final : public Value
     void deserialize(BitStream& stream) override;
 };
 
-
 struct DataTableValue final : public Value
 {
     DataTableProperty* property;
@@ -116,7 +109,6 @@ struct DataTableValue final : public Value
 
     void deserialize(BitStream& stream) override;
 };
-
 
 struct Int64Value final : public Value
 {

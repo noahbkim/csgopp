@@ -75,36 +75,56 @@ struct Property
     using Type = PropertyType;
     using Flags = PropertyFlags;
 
-    DataTable* data_table;
+    DataTable* origin;
     std::string name;
     Type::T type;
+    Flags::Type flags;
+    int32_t priority;
 
-    Property(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
-        : data_table(data_table)
+    Property(DataTable* origin, const CSVCMsg_SendTable_sendprop_t& data)
+        : origin(origin)
         , name(data.var_name())
-        , type(data.type()) {}
+        , type(data.type())
+        , flags(data.flags())
+        , priority(data.priority()) {}
 
     virtual ~Property() = default;
     // [[nodiscard]] virtual Value* value() const = 0;
 
+    [[nodiscard]] constexpr bool excluded() const
+    {
+        return this->flags & Flags::EXCLUDE;
+    }
+
+    [[nodiscard]] constexpr bool collapsible() const
+    {
+        return this->flags & Flags::COLLAPSIBLE;
+    }
+
     template<typename T>
-    T& as() const
+    T* as()
     {
         T* subclass = dynamic_cast<T*>(this);
         ASSERT(subclass != nullptr, "failed to cast down property!");
-        return *subclass;
+        return subclass;
+    }
+
+    template<typename T>
+    const T* as() const
+    {
+        const T* subclass = dynamic_cast<T*>(this);
+        ASSERT(subclass != nullptr, "failed to cast down property!");
+        return subclass;
     }
 };
 
 struct Int32Property : public Property
 {
     int32_t bits;
-    Flags::Type flags;
 
     Int32Property(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(data_table, data)
-        , bits(data.num_bits())
-        , flags(data.flags()) {}
+        , bits(data.num_bits()) {}
 };
 
 struct SignedInt32Property final : public Int32Property
@@ -126,35 +146,27 @@ struct FloatProperty final : public Property
     float high_value;
     float low_value;
     int32_t bits;
-    Flags::Type flags;
 
     explicit FloatProperty(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(data_table, data)
         , high_value(data.high_value())
         , low_value(data.low_value())
-        , bits(data.num_bits())
-        , flags(data.flags()) {}
+        , bits(data.num_bits()) {}
 };
 
 struct Vector3Property final : public Property
 {
-    Flags::Type flags;
-
-    explicit Vector3Property(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
-        : Property(data_table, data)
-        , flags(data.flags()) {}
+    using Property::Property;
 };
 
 struct Vector2Property final : public Property
 {
-    explicit Vector2Property(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
-        : Property(data_table, data) {}
+    using Property::Property;
 };
 
 struct StringProperty final : public Property
 {
-    explicit StringProperty(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
-        : Property(data_table, data) {}
+    using Property::Property;
 };
 
 struct ArrayProperty final : public Property
@@ -170,17 +182,14 @@ struct ArrayProperty final : public Property
 
 struct DataTableProperty final : public Property
 {
-    std::string key;
+    DataTable* value;
 
-    explicit DataTableProperty(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
-        : Property(data_table, data)
-        , key(data.dt_name()) {}
+    using Property::Property;
 };
 
 struct Int64Property : public Property
 {
     int32_t bits;
-    Flags::Type flags;
 
     explicit Int64Property(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data)
         : Property(data_table, data)

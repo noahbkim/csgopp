@@ -31,9 +31,39 @@ struct ServerClass
     template<typename Callback>
     void traverse_properties(Callback callback)
     {
+        this->traverse_properties(callback, "");
+    }
+
+private:
+    template<typename Callback>
+    void traverse_properties(Callback callback, const std::string& prefix)
+    {
         for (const DataTable::Property* property : this->properties)
         {
+            if (property->excluded())
+            {
+                continue;
+            }
 
+            DataTable::DataTableProperty* data_table_property = property->as<DataTable::DataTableProperty>();
+            if (data_table_property != nullptr)
+            {
+                if (data_table_property->collapsible())
+                {
+                    for (const DataTable::Property* property : data_table_property->origin->properties)
+                    {
+
+                    }
+                }
+                else
+                {
+
+                }
+            }
+            else
+            {
+                callback(prefix, property);
+            }
         }
     }
 };
