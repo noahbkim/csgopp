@@ -744,10 +744,6 @@ void Client<Observer>::create_server_classes(CodedInputStream& stream)
                 OK(base_class_property->value->server_class != nullptr);
                 server_class->base_class = base_class_property->value->server_class;
             }
-            else
-            {
-                server_class->properties.emplace(property);
-            }
         }
     }
 
@@ -1049,12 +1045,12 @@ Entity* Client<Observer>::create_entity(Entity::Id id, BitStream& data)
     OK(data.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
 
     Entity* entity = new Entity(id, server_class);
-    for (DataTable::Property* property : server_class->properties)
-    {
+//    for (DataTable::Property* property : server_class->properties)
+//    {
 //        Entity::Member* member = (property);
         // todo default
 //        entity->members.emplace(member);
-    }
+//    }
 
     // todo emplace entity
 

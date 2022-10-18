@@ -38,7 +38,7 @@ struct Entity
         void emplace(Member* member) override
         {
             Database::emplace(member);
-            this->by_name.emplace(member->origin()->name, member);
+//            this->by_name.emplace(member->origin()->name, member);
         }
     };
 
@@ -49,8 +49,7 @@ struct Entity
 
     explicit Entity(Id id, ServerClass* server_class)
         : id(id)
-        , server_class(server_class)
-        , members(server_class->properties.size()) {}
+        , server_class(server_class) {}
 };
 
 using EntityDatabase = Database<Entity, Delete<Entity>>;

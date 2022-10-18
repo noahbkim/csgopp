@@ -24,6 +24,7 @@ template<typename T, typename Manager = Noop<T>>
 struct Database
 {
     using Vector = std::vector<T*>;
+    using Value = T;
 
     Vector container;
 
@@ -102,7 +103,7 @@ template<typename T>
 struct NameTableMixin
 {
     using NameTable = absl::flat_hash_map<std::string_view, T*>;
-    NameTable by_name;
+    NameTable by_name{};
 
     NameTableMixin() = default;
     explicit NameTableMixin(size_t reserved) : by_name(reserved) {}
@@ -112,14 +113,14 @@ struct NameTableMixin
         return this->by_name.at(name);
     }
 
-    [[nodiscard]] bool contains(std::string_view name)
-    {
-        return this->by_name.contains(name);
-    }
-
     [[nodiscard]] const T* at(std::string_view name) const
     {
         return this->by_name.at(name);
+    }
+
+    [[nodiscard]] bool contains(std::string_view name)
+    {
+        return this->by_name.contains(name);
     }
 
     void emplace(T* member)
@@ -161,19 +162,24 @@ template<typename T>
 struct IdTableMixin
 {
     using IdTable = absl::flat_hash_map<typename T::Id, T*>;
-    IdTable by_id;
+    IdTable by_id{};
 
     IdTableMixin() = default;
     explicit IdTableMixin(size_t reserved) : by_id(reserved) {}
 
-    [[nodiscard]] T*& at(typename T::Id name)
+    [[nodiscard]] T*& at(typename T::Id id)
     {
-        return this->by_id.at(name);
+        return this->by_id.at(id);
     }
 
-    [[nodiscard]] const T* at(typename T::Id name) const
+    [[nodiscard]] const T* at(typename T::Id id) const
     {
-        return this->by_id.at(name);
+        return this->by_id.at(id);
+    }
+
+    [[nodiscard]] bool contains(typename T::Id id)
+    {
+        return this->by_name.contains(id);
     }
 
     void emplace(T* member)

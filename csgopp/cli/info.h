@@ -88,13 +88,11 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 
         void handle(Client& client, const ServerClass* server_class) override
         {
-            for (const DataTable::Property* property : server_class->properties)
+            std::cout << server_class->name << std::endl;
+            server_class->visit([server_class](const std::string& prefix, DataTable::Property* property)
             {
-                if (property->type == DataTable::Property::Type::ARRAY)
-                {
-
-                }
-            }
+                std::cout << "  " << prefix << "." << property->name << std::endl;
+            });
         }
     };
 

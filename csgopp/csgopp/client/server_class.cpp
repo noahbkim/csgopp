@@ -1,7 +1,6 @@
 #include "server_class.h"
-#include "../demo.h"
 
-namespace csgopp::client
+namespace csgopp::client::server_class
 {
 
 }
