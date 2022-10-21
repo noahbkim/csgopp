@@ -65,7 +65,16 @@ struct StructureObserver : public ClientObserverBase<StructureObserver>
 
 struct DataObserver : public ClientObserverBase<DataObserver>
 {
-    using ClientObserverBase::ClientObserverBase;
+    size_t server_class_count = 0;
+    size_t max_properties = 0;
+    std::ofstream out;
+
+    explicit DataObserver(Client& client)
+        : ClientObserverBase<DataObserver>(client)
+        , out("server_classes.txt")
+    {
+
+    }
 
     struct DataTableCreationObserver final : public ClientObserverBase::DataTableCreationObserver
     {
@@ -88,15 +97,41 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 
         void handle(Client& client, const ServerClass* server_class) override
         {
-            std::cout << server_class->name << std::endl;
-            server_class->visit([server_class](const std::string& prefix, DataTable::Property* property)
+            client.observer.server_class_count += 1;
+            client.observer.out << server_class->name;
+            ServerClass* base_class = server_class->base_class;
+            while (base_class != nullptr)
             {
-                std::cout << "  " << prefix << "." << property->name << std::endl;
-            });
+                client.observer.out << " : " << base_class->name;
+                base_class = base_class->base_class;
+            }
+
+            client.observer.out << std::endl;
+            size_t properties = 0;
+            server_class->visit(
+                [&client, &properties](
+                    const std::string& prefix,
+                    DataTable::Property* property
+                ) {
+                    client.observer.out
+                        << "  "
+                        << csgopp::client::data_table::describe(property->type)
+                        << " "
+                        << csgopp::client::server_class::join(prefix, property->name)
+                        << std::endl;
+                    properties += 1;
+                }
+            );
+
+            client.observer.max_properties = std::max(client.observer.max_properties, server_class->data_table->properties.size());
         }
     };
 
-    void report() const {}
+    void report() const
+    {
+        std::cout << this->server_class_count << " total server classes" << std::endl;
+        std::cout << this->max_properties << " max properties" << std::endl;
+    }
 };
 
 struct PlayersObserver : public ClientObserverBase<PlayersObserver>

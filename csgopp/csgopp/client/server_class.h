@@ -117,21 +117,7 @@ void ServerClass::visit(const DataTable* data_table, Callback callback)
     ServerClass::visit(data_table, callback, "");
 }
 
-static std::string join(const std::string& head, const std::string& tail, bool skip)
-{
-    if (head.empty())
-    {
-        return tail;
-    }
-    else if (tail.empty() || skip)
-    {
-        return head;
-    }
-    else
-    {
-        return head + "." + tail;
-    }
-}
+std::string join(const std::string& head, const std::string& tail, bool skip = false);
 
 template<typename Callback>
 void ServerClass::visit(DataTable* data_table, Callback callback, const std::string& prefix)
