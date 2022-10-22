@@ -20,9 +20,9 @@ add_library(csgopp STATIC
         common/reader.h common/database.h common/control.h common/object.h common/hash.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(csgopp PRIVATE cxx_std_17)
 
 target_include_directories(csgopp PUBLIC ..)
-target_compile_features(csgopp PRIVATE cxx_std_17)
 target_link_libraries(csgopp
-        PRIVATE csgopp.messages
+        PUBLIC csgopp.messages
         PUBLIC CONAN_PKG::abseil CONAN_PKG::protobuf)

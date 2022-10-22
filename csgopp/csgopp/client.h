@@ -607,108 +607,113 @@ static inline DataTable::Int64Property* create_data_table_int64_property(
 template<typename Observer>
 void Client<Observer>::create_data_tables(CodedInputStream& stream)
 {
-    DataTableDatabase::NameTable new_data_tables;
-    std::vector<std::pair<DataTable::DataTableProperty*, std::string>> data_table_properties;
-    csgo::message::net::CSVCMsg_SendTable data;
-    do
+    std::vector<DataTable*> new_data_tables;
     {
-        // This code isn't encapsulated because the final DataTable, which returns true from data.is_end(), is always
-        // empty besides that flag; we don't want to bother initializing a bunch of resources for that.
-        OK(stream.ExpectTag(csgo::message::net::SVC_Messages::svc_SendTable));
-        CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-        OK(limit > 0);
-
-        // Break if we're at the end of the origin.
-        data.ParseFromCodedStream(&stream);
-
-        // Actually do event handling if we're not at the terminator.
-        if (!data.is_end())
+        DataTableDatabase::NameTable new_data_tables_by_name;
+        std::vector<std::pair<DataTable::DataTableProperty*, std::string>> new_data_table_properties;
+        csgo::message::net::CSVCMsg_SendTable data;
+        do
         {
-            DataTable* data_table = new DataTable(data);
-            DataTable::Property* array_property_type{nullptr};
-            using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
-            for (const CSVCMsg_SendTable_sendprop_t& property_data: data.props())
+            // This code isn't encapsulated because the final DataTable, which returns true from data.is_end(), is always
+            // empty besides that flag; we don't want to bother initializing a bunch of resources for that.
+            OK(stream.ExpectTag(csgo::message::net::SVC_Messages::svc_SendTable));
+            CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+            OK(limit > 0);
+
+            // Break if we're at the end of the origin.
+            data.ParseFromCodedStream(&stream);
+
+            // Actually do event handling if we're not at the terminator.
+            if (!data.is_end())
             {
-                DataTable::Property* property;
-                switch (property_data.type())
+                DataTable* data_table = new DataTable(data);
+                DataTable::Property* array_property_type{nullptr};
+                using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
+                for (const CSVCMsg_SendTable_sendprop_t& property_data: data.props())
                 {
-                    using Type = DataTable::Property::Type;
-                    case Type::INT32:
-                        property = create_data_table_int32_property(data_table, property_data);
-                        break;
-                    case Type::FLOAT:
-                        property = new DataTable::FloatProperty(data_table, property_data);
-                        break;
-                    case Type::VECTOR3:
-                        property = new DataTable::Vector3Property(data_table, property_data);
-                        break;
-                    case Type::VECTOR2:
-                        property = new DataTable::Vector2Property(data_table, property_data);
-                        break;
-                    case Type::STRING:
-                        property = new DataTable::StringProperty(data_table, property_data);
-                        break;
-                    case Type::ARRAY:
-                        OK(array_property_type != nullptr);
-                        property = new DataTable::ArrayProperty(data_table, property_data, array_property_type);
-                        array_property_type = nullptr;
-                        break;
-                    case Type::DATA_TABLE:
-                        property = data_table_properties.emplace_back(
-                            new DataTable::DataTableProperty(data_table, property_data),
-                            property_data.dt_name()).first;
-                        break;
-                    case Type::INT64:
-                        property = create_data_table_int64_property(data_table, property_data);
-                        break;
-                    default:
-                        throw csgopp::error::GameError("unreachable");
+                    DataTable::Property* property;
+                    switch (property_data.type())
+                    {
+                        using Type = DataTable::Property::Type;
+                        case Type::INT32:
+                            property = create_data_table_int32_property(data_table, property_data);
+                            break;
+                        case Type::FLOAT:
+                            property = new DataTable::FloatProperty(data_table, property_data);
+                            break;
+                        case Type::VECTOR3:
+                            property = new DataTable::Vector3Property(data_table, property_data);
+                            break;
+                        case Type::VECTOR2:
+                            property = new DataTable::Vector2Property(data_table, property_data);
+                            break;
+                        case Type::STRING:
+                            property = new DataTable::StringProperty(data_table, property_data);
+                            break;
+                        case Type::ARRAY:
+                            property = new DataTable::ArrayProperty(data_table, property_data, array_property_type);
+                            array_property_type = nullptr;
+                            break;
+                        case Type::DATA_TABLE:
+                            property = new_data_table_properties.emplace_back(
+                                new DataTable::DataTableProperty(data_table, property_data),
+                                property_data.dt_name()).first;
+                            break;
+                        case Type::INT64:
+                            property = create_data_table_int64_property(data_table, property_data);
+                            break;
+                        default:
+                            throw csgopp::error::GameError("unreachable");
+                    }
+
+                    // If there's an array property, the element_type type always precedes it; don't both adding
+                    if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
+                    {
+                        OK(array_property_type == nullptr);
+                        array_property_type = property;
+                    }
+                    else
+                    {
+                        data_table->properties.emplace(property);
+                    }
                 }
 
-                // If there's an array property, the element_type type always precedes it; don't both adding
-                if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
+                OK(array_property_type == nullptr);
+                new_data_tables.emplace_back(data_table);
+                new_data_tables_by_name.emplace(data_table->name, data_table);
+            }
+
+            // Related to inline parsing at start of block
+            OK(stream.BytesUntilLimit() == 0);
+            stream.PopLimit(limit);
+        } while (!data.is_end());
+
+        // Link data table properties to their data table
+        for (auto& [data_table_property, data_table_name]: new_data_table_properties)
+        {
+            DataTableDatabase::NameTable::iterator search = new_data_tables_by_name.find(data_table_name);
+            if (search == new_data_tables_by_name.end())
+            {
+                // Fall back onto global existing data tables
+                search = this->_data_tables.by_name.find(data_table_name);
+                if (search == this->_data_tables.by_name.end())
                 {
-                    OK(array_property_type == nullptr);
-                    array_property_type = property;
-                } else
-                {
-                    data_table->properties.emplace(property);
+                    throw GameError("failed to find referenced data table " + data_table_name);
                 }
             }
 
-            new_data_tables.emplace(data_table->name, data_table);
+            // Assign to property now that we're guaranteed
+            data_table_property->value = search->second;
         }
-
-        // Related to inline parsing at start of block
-        OK(stream.BytesUntilLimit() == 0);
-        stream.PopLimit(limit);
-    } while (!data.is_end());
-
-    // Link data table properties to their data table
-    for (auto& [data_table_property, data_table_name]: data_table_properties)
-    {
-        DataTableDatabase::NameTable::iterator search = new_data_tables.find(data_table_name);
-        if (search == new_data_tables.end())
-        {
-            // Fall back onto global existing data tables
-            search = this->_data_tables.by_name.find(data_table_name);
-            if (search == this->_data_tables.by_name.end())
-            {
-                throw GameError("failed to find referenced data table " + data_table_name);
-            }
-        }
-
-        // Assign to property now that we're guaranteed
-        data_table_property->value = search->second;
     }
 
     // Now we can emplace and emit
     this->_data_tables.reserve(new_data_tables.size());
-    for (const std::pair<std::string_view, DataTable*>& pair : new_data_tables)
+    for (DataTable* data_table : new_data_tables)
     {
         BEFORE(Observer, DataTableCreationObserver);
-        this->_data_tables.emplace(pair.second);
-        AFTER(DataTableCreationObserver, pair.second);
+        this->_data_tables.emplace(data_table);
+        AFTER(DataTableCreationObserver, std::as_const(data_table));
     }
 }
 

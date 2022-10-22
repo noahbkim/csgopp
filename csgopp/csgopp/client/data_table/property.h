@@ -171,7 +171,7 @@ struct StringProperty final : public Property
 
 struct ArrayProperty final : public Property
 {
-    Property* element{nullptr};
+    std::unique_ptr<Property> element;
     int32_t size;
 
     explicit ArrayProperty(DataTable* data_table, const CSVCMsg_SendTable_sendprop_t& data, Property* element)

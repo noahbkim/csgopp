@@ -6,7 +6,7 @@
 #include "../common/vector.h"
 #include "../common/id.h"
 #include "../common/interface.h"
-#include "csgopp/client/entity.h"
+#include "../client/entity.h"
 
 namespace csgopp::model
 {

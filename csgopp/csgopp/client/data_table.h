@@ -5,9 +5,9 @@
 
 #include "../common/lookup.h"
 #include "../common/database.h"
+#include "../error.h"
 #include "data_table/property.h"
 #include "data_table/value.h"
-#include "csgopp/error.h"
 #include "netmessages.pb.h"
 
 namespace csgopp::client::server_class
@@ -58,7 +58,7 @@ struct DataTable
     using DataTableValue = data_table::value::DataTableValue;
     using Int64Value = data_table::value::Int64Value;
 
-    using PropertyDatabase = DatabaseWithName<Property>;
+    using PropertyDatabase = DatabaseWithName<Property, Delete<Property>>;
 
     std::string name;
     PropertyDatabase properties;
