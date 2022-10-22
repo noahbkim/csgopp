@@ -17,3 +17,19 @@ TEST(Object, create)
     Prototype bar(std::move(builder2));
     bar.debug();
 }
+
+TEST(Object, allocate)
+{
+    Prototype::Builder builder;
+    builder.value("name", Value::of<std::string>());
+    builder.array("numbers", 4, ValueType(Value::of<int>()));
+    Prototype object(std::move(builder));
+    object.debug();
+
+    Instance* instance = object.allocate();
+    std::string& name = (*instance)["name"].as<std::string>();
+    name = "hello, world!";
+    std::cout << (*instance)["name"].as<std::string>() << std::endl;
+
+    delete instance;
+}
