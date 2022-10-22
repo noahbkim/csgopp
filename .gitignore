@@ -4,6 +4,7 @@
 # .idea
 **/.idea/workspace.xml
 **/.idea/tasks.xml
+**/.idea/serialmonitor_settings.xml
 
 # CMake
 CMakeCache.txt

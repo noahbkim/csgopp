@@ -19,7 +19,7 @@
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
-#define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, __VA_ARGS__);
+#define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, ## __VA_ARGS__);
 #define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
 
 /// Most notably, this namespace defines the `ClientObserverBase` and
@@ -665,7 +665,7 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
                         throw csgopp::error::GameError("unreachable");
                 }
 
-                // If there's an array property, the element type always precedes it; don't both adding
+                // If there's an array property, the element_type type always precedes it; don't both adding
                 if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                 {
                     OK(array_property_type == nullptr);

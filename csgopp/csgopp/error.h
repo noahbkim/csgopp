@@ -12,7 +12,7 @@ namespace csgopp::error
         explicit Error(const std::string& message) : _message(message) {}
         explicit Error(std::string&& message) : _message(message) {}
 
-        [[nodiscard]] const char* what() const
+        [[nodiscard]] const char* what() noexcept
         {
             return this->_message.c_str();
         }

@@ -5,6 +5,7 @@ abseil/20220623.0
 [build_requires]
 gtest/1.12.1
 doxygen/1.9.4
+xapian-core/1.4.19
 
 [generators]
 cmake

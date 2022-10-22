@@ -1,133 +1,261 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <vector>
+#include <algorithm>
+#include <absl/container/flat_hash_map.h>
 #include <iostream>
 
-namespace csgopp::common::object
-{
+namespace csgopp::common::object {
 
-struct Member
+struct SizeVisitor
 {
-    virtual ~Member() = default;
+    template<typename T>
+    size_t operator()(const T& type) const { return type.size(); }
 };
 
-template<typename T>
-struct PrimitiveMember final : public Member
+struct DebugVisitor
 {
-    T value;
+    size_t indent;
+
+    template<typename T>
+    void operator()(const T& type) const { type.debug(this->indent); }
+};
+
+struct Value
+{
+    typedef void (*Constructor)(char*);
+    typedef void (*Destructor)(char*);
+
+    size_t size;
+    Constructor constructor;
+    Destructor destructor;
+
+    Value(size_t size, Constructor constructor, Destructor destructor)
+        : size(size)
+        , constructor(constructor)
+        , destructor(destructor)
+    {}
+
+    template<typename T>
+    static Value of()
+    {
+        return Value(sizeof(T), &Value::construct<T>, &Value::destroy<T>);
+    }
+
+    template<typename T>
+    static void construct(char* address)
+    {
+        new (reinterpret_cast<T*>(address)) T;
+    }
+
+    template<typename T>
+    static void destroy(char* address)
+    {
+        reinterpret_cast<T*>(address)->~T();
+    }
+};
+
+struct ValueType
+{
+    Value value;
+
+    explicit ValueType(const Value& value) : value(value) {}
+    ValueType(ValueType&& other) noexcept : value(std::move(other.value)) {}
+    virtual ~ValueType() = default;
+
+    [[nodiscard]] size_t size() const
+    {
+        return this->value.size;
+    }
+
+    void debug(size_t indent = 0) const;
+};
+
+struct PrototypeType
+{
+    struct Prototype* prototype;
+
+    explicit PrototypeType(Prototype* prototype) : prototype(prototype) {}
+
+    [[nodiscard]] size_t size() const;
+
+    void debug(size_t indent = 0) const;
+};
+
+struct ArrayType;
+using AnyType = std::variant<ValueType, PrototypeType, ArrayType>;
+
+struct Reference;
+
+struct ArrayType
+{
+    size_t length;
+    std::unique_ptr<AnyType> element_type;
+    size_t element_size;
+
+    template<typename... Args>
+    explicit ArrayType(size_t length, Args&&... args)
+        : length(length)
+        , element_type(std::make_unique<AnyType>(std::forward<Args>(args)...))
+        , element_size(std::visit(SizeVisitor{}, *this->element_type)) {}
+
+    ArrayType(ArrayType&& other) noexcept
+        : length(other.length)
+        , element_type(std::move(other.element_type))
+        , element_size(other.element_size) {}
+
+    [[nodiscard]] size_t size() const;
+    [[nodiscard]] Reference at(size_t index) const;
+
+    void debug(size_t indent = 0) const;
+};
+
+struct Reference
+{
+    const AnyType* type;
+    size_t offset;
+    size_t size;
+
+    Reference(const AnyType* type, size_t offset, size_t size)
+        : type(type)
+        , offset(offset)
+        , size(size)
+    {}
+
+    void debug(size_t indent = 0) const
+    {
+        std::cout << " (offset: " << this->offset << ", size: " << this->size << ")" << std::endl;
+        std::visit(DebugVisitor{indent + 2}, *this->type);
+    }
 };
 
 struct Property
 {
-    virtual ~Property() = default;
+    AnyType type;
+    size_t offset;
+    size_t size;
 
-    [[nodiscard]] virtual size_t size() const = 0;
+    template<typename... Args>
+    explicit Property(size_t offset, Args&&... args)
+        : type(std::forward<Args>(args)...)
+        , offset(offset)
+        , size(std::visit(SizeVisitor{}, this->type))
+    {}
 
-    virtual Member* construct(char* blob) const = 0;
-    virtual void destroy(Member* member) const = 0;
+    [[nodiscard]] Reference reference() const
+    {
+        return {&this->type, this->offset, this->size};
+    }
 };
 
-template<typename M>
-struct PropertyBase : public Property
+struct Prototype
 {
-    using MemberType = M;
-
-    Member* construct(char* blob) const override
+    struct Builder
     {
-        auto* as = reinterpret_cast<M*>(blob);
-        new (as) M();
-        return as;
+        size_t size{};
+        std::vector<Property> properties;
+        absl::flat_hash_map<std::string, size_t> lookup;
+
+        template<typename Name, typename... Args>
+        void add(Name&& name, Args&&... args)
+        {
+            const Property& property = this->properties.emplace_back(
+                this->size,
+                std::forward<Args>(args)...);
+            this->size += property.size;
+            this->lookup.emplace(std::forward<Name>(name), this->properties.size() - 1);
+        }
+
+        template<typename Name>
+        void value(Name&& name, Value value)
+        {
+            this->add(
+                std::forward<Name>(name),
+                std::move(ValueType(value)));
+        }
+
+        template<typename Name, typename... Args>
+        void array(Name&& name, size_t length, Args&&... args)
+        {
+            this->add(
+                std::forward<Name>(name),
+                std::move(ArrayType(length, std::forward<Args>(args)...)));
+        }
+
+        template<typename Name>
+        void prototype(Name&& name, Prototype* prototype)
+        {
+            this->add(
+                std::forward<Name>(name),
+                std::move(PrototypeType(prototype)));
+        }
+    };
+
+    size_t size;
+    std::vector<Property> properties;
+    absl::flat_hash_map<std::string, size_t> lookup;
+
+    explicit Prototype(Builder&& builder)
+        : size(builder.size)
+        , properties(std::move(builder.properties))
+        , lookup(std::move(builder.lookup))
+    {
     }
 
-    void destroy(Member* member) const override
+    void debug(size_t indent = 0) const
     {
-        auto* as = dynamic_cast<M*>(member);
-        as->~M();
+        using Member = std::pair<std::string_view, Reference>;
+        std::vector<Member> members;
+        for (const std::pair<const std::string, size_t>& pair : this->lookup)
+        {
+            members.emplace_back(pair.first, this->properties[pair.second].reference());
+        }
+        std::sort(members.begin(), members.end(), [](const Member& a, const Member& b)
+        {
+            return a.second.offset < b.second.offset;
+        });
+        for (const Member& member : members)
+        {
+            std::cout << std::string(indent, ' ') << member.first;
+            member.second.debug(indent + 2);
+        }
     }
 };
 
-template<typename T>
-struct PrimitiveProperty : public PropertyBase<PrimitiveMember<T>>
+[[nodiscard]] size_t PrototypeType::size() const
 {
-    using MemberType = typename PropertyBase<PrimitiveMember<T>>::MemberType;
+    return this->prototype->size;
+}
 
-    [[nodiscard]] size_t size() const override
+[[nodiscard]] size_t ArrayType::size() const
+{
+    return this->element_size * this->length;
+}
+
+Reference ArrayType::at(size_t index) const
+{
+    return {this->element_type.get(), this->element_size * index, this->element_size};
+}
+
+void ValueType::debug(size_t indent) const
+{
+
+}
+
+void ArrayType::debug(size_t indent) const
+{
+    for (size_t i = 0; i < this->length; ++i)
     {
-        return sizeof(MemberType);
-    }
-};
-
-struct Structure;
-
-struct Object {
-    const Structure* structure;
-    std::unordered_map<std::string, Member*> members;
-
-    Object(const Structure* structure) : structure(structure) {}
-    Object(const Object& other) = delete;
-    ~Object();
-
-private:
-    friend Structure;
-
-    Object();
-};
-
-struct Structure {
-    std::unordered_map<std::string, Property*> properties;
-
-    ~Structure() {
-        for (const auto& [name, property] : this->properties) {
-            delete property;
-        }
-    }
-
-    Object* allocate() const {
-        size_t needs = sizeof(Object);
-        std::cout << "object " << needs << std::endl;
-        for (const auto& [name, property] : this->properties) {
-            std::cout << "  " << name << " " << property->needs() << std::endl;
-            needs += property->needs();
-        }
-
-        char* blob = new char[needs];
-        Object* object = reinterpret_cast<Object*>(blob);
-        new (object) Object(this);
-        blob += sizeof(Object);
-
-        for (const auto& [name, property] : this->properties) {
-            Member* member = property->construct(blob);
-            object->members.emplace(name, member);
-            blob += property->needs();
-        }
-
-        return object;
-    }
-};
-
-Object::Object() {}
-
-Object::~Object() {
-    std::cerr << "destroying" << std::endl;
-    for (const auto& [name, property] : this->structure->properties) {
-        property->destroy(this->members.at(name));
+        Reference reference = this->at(i);
+        std::cout << std::string(indent, ' ') << i;
+        reference.debug(indent + 2);
     }
 }
 
-using IntProperty = PrimitiveProperty<int>;
-
-//int main() {
-//    Structure pair;
-//    pair.properties.emplace("a", new IntProperty());
-//    pair.properties.emplace("b", new IntProperty());
-//
-//    Object* object = pair.allocate();
-//    dynamic_cast<IntProperty::M*>(object->members["a"])->value = 10;
-//    dynamic_cast<IntProperty::M*>(object->members["b"])->value = 4710;
-//    std::cout << dynamic_cast<IntProperty::M*>(object->members["a"])->value << ", " << dynamic_cast<IntProperty::M*>(object->members["b"])->value << std::endl;
-//
-//    delete object;
-//}
+void PrototypeType::debug(size_t indent) const
+{
+    this->prototype->debug(indent + 2);
+}
 
 }

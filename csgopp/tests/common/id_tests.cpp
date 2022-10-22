@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <csgopp/common/id.h>
+#include <unordered_map>
 
 using namespace csgopp::common::id;
 

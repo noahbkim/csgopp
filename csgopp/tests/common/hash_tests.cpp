@@ -1,13 +1,19 @@
 #include <gtest/gtest.h>
 
-#include <csgopp/common/hash.h>
+#include <csgopp/common/object.h>
 
-using namespace csgopp::common::hash;
+using namespace csgopp::common::object;
 
-TEST(Lookup, create)
+TEST(Object, create)
 {
-    Lookup<size_t>::Builder builder;
-    builder.add("hello", 1);
-    builder.add("world", 2);
-    EXPECT_TRUE(builder.build());
+    Prototype::Builder builder1;
+    builder1.value("name", Value::of<std::string>());
+    builder1.array("numbers", 2, ValueType(Value::of<int>()));
+    Prototype foo(std::move(builder1));
+
+    Prototype::Builder builder2;
+    builder2.value("number", Value::of<int>());
+    builder2.array("foos", 3, PrototypeType(&foo));
+    Prototype bar(std::move(builder2));
+    bar.debug();
 }
