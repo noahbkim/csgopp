@@ -69,7 +69,6 @@ TEST(Object, integration)
     EXPECT_THROW(Accessor a = (*engine_T)["hello"], MemberError);
     EXPECT_THROW((*engine_T)["entities"][2], IndexError);
 
-
     const Type* entities_array_T = e["entities"].type;
     As<Entity> first_entity = (*entities_array_T)[0].as<Entity>();
     ASSERT_EQ(e["entities"][first_entity]->name, "noah");
