@@ -78,7 +78,7 @@ TEST(BitStream, string_unterminated)
     EXPECT_FALSE(stream.read_string(value));
 }
 
-// def offset(s, b):
+// def address(s, b):
 //	for c in s:
 //		b = bin(ord(c))[2:].rjust(8, "0") + b
 //		print("0b" + b[-8:])
