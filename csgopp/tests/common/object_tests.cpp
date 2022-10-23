@@ -20,7 +20,7 @@ TEST(Object, integration)
     entity_builder.member("id", uint32_T);
     entity_builder.member("name", string_T);
     entity_builder.member("position", vector3_T);
-    std::shared_ptr<ObjectType> entity_T = std::make_unique<ObjectType>(std::move(entity_builder));
+    std::shared_ptr<ObjectType> entity_T = std::make_shared<ObjectType>(std::move(entity_builder));
 
     struct Entity
     {
@@ -33,7 +33,7 @@ TEST(Object, integration)
     engine_builder.member("alive", bool_T);
     engine_builder.member("flags", uint32_T);
     engine_builder.member("entities", std::make_shared<ArrayType>(entity_T, 2));
-    std::shared_ptr<ObjectType> engine_T = std::make_unique<ObjectType>(std::move(engine_builder));
+    std::shared_ptr<ObjectType> engine_T = std::make_shared<ObjectType>(std::move(engine_builder));
 
     struct Engine
     {
@@ -57,11 +57,22 @@ TEST(Object, integration)
     EXPECT_EQ(e["entities"][0]["name"].is<std::string>(), "noah");
     EXPECT_EQ(e["entities"][1]["id"].is<uint32_t>(), 2);
     EXPECT_EQ(e["entities"][1]["name"].is<std::string>(), "dylan");
+    EXPECT_THROW(e["hello"], MemberError);
+    EXPECT_THROW(e["entities"][2], IndexError);
 
     Is<bool> alive = (*engine_T)["alive"].is<bool>();
     EXPECT_EQ(alive(e), true);
+    EXPECT_EQ(e[alive], true);
     Is<std::string> entities_1_name = (*engine_T)["entities"][1]["name"].is<std::string>();
     EXPECT_EQ(entities_1_name(e), "dylan");
+    EXPECT_EQ(e[entities_1_name], "dylan");
+    EXPECT_THROW(Accessor a = (*engine_T)["hello"], MemberError);
+    EXPECT_THROW((*engine_T)["entities"][2], IndexError);
+
+
+    const Type* entities_array_T = e["entities"].type;
+    As<Entity> first_entity = (*entities_array_T)[0].as<Entity>();
+    ASSERT_EQ(e["entities"][first_entity]->name, "noah");
 
     Engine* c{e.as<Engine>()};
     EXPECT_EQ(c->alive, true);
