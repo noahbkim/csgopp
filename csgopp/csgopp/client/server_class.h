@@ -133,7 +133,7 @@ void ServerClass::visit(DataTable* data_table, Callback callback, const std::str
         if (data_table_property != nullptr)
         {
             visit(
-                data_table_property->value,
+                data_table_property->data_table,
                 callback,
                 join(prefix, data_table_property->name, data_table_property->collapsible()));
         }
@@ -158,7 +158,7 @@ void ServerClass::visit(const DataTable* data_table, Callback callback, const st
         if (data_table_property != nullptr)
         {
             visit(
-                data_table_property->value,
+                data_table_property->data_table,
                 callback,
                 join(prefix, data_table_property->name, data_table_property->collapsible()));
         }

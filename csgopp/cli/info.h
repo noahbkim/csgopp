@@ -71,7 +71,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 
     explicit DataObserver(Client& client)
         : ClientObserverBase<DataObserver>(client)
-        , out("server_classes.txt")
+        , out("local/server_classes.txt")
     {
 
     }
@@ -115,7 +115,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
                 ) {
                     client.observer.out
                         << "  "
-                        << csgopp::client::data_table::describe(property->type)
+                        << csgopp::client::data_table::describe(property->type())
                         << " "
                         << csgopp::client::server_class::join(prefix, property->name)
                         << std::endl;

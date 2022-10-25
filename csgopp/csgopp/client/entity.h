@@ -23,29 +23,10 @@ using csgopp::client::server_class::ServerClass;
 struct Entity
 {
     using Id = uint32_t;
-    using Member = DataTable::Value;
-
-    // We can't use DatabaseWithName because we emplace the member property name
-    struct MemberDatabase : public Database<Member>, public NameTableMixin<Member>
-    {
-        using Database<Member>::Database;
-
-        [[nodiscard]] const Member* at(Id member_id) const
-        {
-            return this->container.at(static_cast<size_t>(member_id));
-        }
-
-        void emplace(Member* member) override
-        {
-            Database::emplace(member);
-//            this->by_name.emplace(member->origin()->name, member);
-        }
-    };
 
     Id id;
     Vector3 position{};
     ServerClass* server_class;
-    MemberDatabase members;
 
     explicit Entity(Id id, ServerClass* server_class)
         : id(id)

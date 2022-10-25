@@ -12,8 +12,6 @@ add_library(csgopp STATIC
         client/server_class.cpp client/server_class.h
         error.h
         client/data_table.cpp client/data_table.h
-        client/data_table/property.h client/data_table/property.cpp
-        client/data_table/value.cpp client/data_table/value.h
         common/magic.h common/bits.h
         client/string_table.cpp client/string_table.h
         common/ring.h model/user.cpp model/user.h

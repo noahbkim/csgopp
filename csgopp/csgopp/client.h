@@ -69,13 +69,13 @@ class Client;
 /// struct StructureObserver : public ClientObserverBase<StructureObserver>
 /// {
 ///     size_t frame_count = 0;
-///     std::map<csgopp::demo::Command::Type, size_t> commands;
+///     std::map<csgopp::demo::Command::T, size_t> commands;
 ///
 ///     struct FrameObserver final : public ClientObserverBase::FrameObserver
 ///     {
 ///         using ClientObserverBase::FrameObserver::FrameObserver;
 ///
-///         void handle(Client& client, csgopp::demo::Command::Type command) override
+///         void handle(Client& client, csgopp::demo::Command::T command) override
 ///         {
 ///             client.observer.frame_count += 1;
 ///             client.observer.commands[command] += 1;
@@ -576,34 +576,6 @@ void Client<Observer>::advance_packet_server_info(CodedInputStream& stream)
     advance_packet_skip(stream);
 }
 
-static inline DataTable::Int32Property* create_data_table_int32_property(
-    DataTable* data_table,
-    const csgo::message::net::CSVCMsg_SendTable_sendprop_t& property_data)
-{
-    if (property_data.flags() & csgopp::client::data_table::property::PropertyFlags::UNSIGNED)
-    {
-        return new DataTable::UnsignedInt32Property(data_table, property_data);
-    }
-    else
-    {
-        return new DataTable::SignedInt32Property(data_table, property_data);
-    }
-}
-
-static inline DataTable::Int64Property* create_data_table_int64_property(
-    DataTable* data_table,
-    const csgo::message::net::CSVCMsg_SendTable_sendprop_t& property_data)
-{
-    if (property_data.flags() & csgopp::client::data_table::property::PropertyFlags::UNSIGNED)
-    {
-        return new DataTable::UnsignedInt64Property(data_table, property_data);
-    }
-    else
-    {
-        return new DataTable::SignedInt64Property(data_table, property_data);
-    }
-}
-
 template<typename Observer>
 void Client<Observer>::create_data_tables(CodedInputStream& stream)
 {
@@ -627,40 +599,42 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
             if (!data.is_end())
             {
                 DataTable* data_table = new DataTable(data);
-                DataTable::Property* array_property_type{nullptr};
+                DataTable::Property* array_property_element{nullptr};
                 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
-                for (const CSVCMsg_SendTable_sendprop_t& property_data: data.props())
+                for (CSVCMsg_SendTable_sendprop_t& property_data : *data.mutable_props())
                 {
                     DataTable::Property* property;
+
                     switch (property_data.type())
                     {
                         using Type = DataTable::Property::Type;
                         case Type::INT32:
-                            property = create_data_table_int32_property(data_table, property_data);
+                            property = new DataTable::Int32Property(std::move(property_data));
                             break;
                         case Type::FLOAT:
-                            property = new DataTable::FloatProperty(data_table, property_data);
+                            property = new DataTable::FloatProperty(std::move(property_data));
                             break;
                         case Type::VECTOR3:
-                            property = new DataTable::Vector3Property(data_table, property_data);
+                            property = new DataTable::Vector3Property(std::move(property_data));
                             break;
                         case Type::VECTOR2:
-                            property = new DataTable::Vector2Property(data_table, property_data);
+                            property = new DataTable::Vector2Property(std::move(property_data));
                             break;
                         case Type::STRING:
-                            property = new DataTable::StringProperty(data_table, property_data);
+                            property = new DataTable::StringProperty(std::move(property_data));
                             break;
                         case Type::ARRAY:
-                            property = new DataTable::ArrayProperty(data_table, property_data, array_property_type);
-                            array_property_type = nullptr;
+                            OK(array_property_element != nullptr);
+                            property = new DataTable::ArrayProperty(std::move(property_data), array_property_element);
+                            array_property_element = nullptr;
                             break;
                         case Type::DATA_TABLE:
                             property = new_data_table_properties.emplace_back(
-                                new DataTable::DataTableProperty(data_table, property_data),
-                                property_data.dt_name()).first;
+                                new DataTable::DataTableProperty(std::move(property_data)),
+                                std::string(std::move(*property_data.mutable_dt_name()))).first;
                             break;
                         case Type::INT64:
-                            property = create_data_table_int64_property(data_table, property_data);
+                            property = new DataTable::Int64Property(std::move(property_data));
                             break;
                         default:
                             throw csgopp::error::GameError("unreachable");
@@ -669,8 +643,8 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
                     // If there's an array property, the element_type type always precedes it; don't both adding
                     if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                     {
-                        OK(array_property_type == nullptr);
-                        array_property_type = property;
+                        OK(array_property_element == nullptr);
+                        array_property_element = property;
                     }
                     else
                     {
@@ -678,7 +652,7 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
                     }
                 }
 
-                OK(array_property_type == nullptr);
+                OK(array_property_element == nullptr);
                 new_data_tables.emplace_back(data_table);
                 new_data_tables_by_name.emplace(data_table->name, data_table);
             }
@@ -689,7 +663,7 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
         } while (!data.is_end());
 
         // Link data table properties to their data table
-        for (auto& [data_table_property, data_table_name]: new_data_table_properties)
+        for (auto& [data_table_data, data_table_name]: new_data_table_properties)
         {
             DataTableDatabase::NameTable::iterator search = new_data_tables_by_name.find(data_table_name);
             if (search == new_data_tables_by_name.end())
@@ -703,7 +677,7 @@ void Client<Observer>::create_data_tables(CodedInputStream& stream)
             }
 
             // Assign to property now that we're guaranteed
-            data_table_property->value = search->second;
+            data_table_data->data_table = search->second;
         }
     }
 
@@ -740,14 +714,13 @@ void Client<Observer>::create_server_classes(CodedInputStream& stream)
     {
         for (DataTable::Property* property : server_class->data_table->properties)
         {
-            if (property->type == DataTable::Property::Type::DATA_TABLE && property->name == "baseclass")
+            if (property->name == "baseclass")
             {
+                auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
                 ASSERT(server_class->base_class == nullptr, "received two base classes for one server class");
-                DataTable::DataTableProperty* base_class_property = property->as<DataTable::DataTableProperty>();
-                OK(base_class_property != nullptr);
-                OK(base_class_property->value != nullptr);
-                OK(base_class_property->value->server_class != nullptr);
-                server_class->base_class = base_class_property->value->server_class;
+                OK(data_table_property->data_table != nullptr);
+                OK(data_table_property->data_table->server_class != nullptr);
+                server_class->base_class = data_table_property->data_table->server_class;
             }
         }
     }
@@ -1069,10 +1042,10 @@ void Client<Observer>::update_entity(Entity* entity, BitStream& data)
     uint8_t small_entity_optimization;
     OK(data.read(&small_entity_optimization, 1));
 
-    Entity::Member::Index auto_index = 0;
+    uint16_t auto_index = 0;
     while (true)
     {
-        Entity::Member::Index jump;
+        uint16_t jump;
         if (!small_entity_optimization)
         {
             data.read_compressed_uint16(&jump);

@@ -142,7 +142,7 @@ struct Reference
     T* operator[](const As<T>& as);
 
     template<typename T>
-    T& operator[](const Is<T>& as);
+    T& operator[](const Is<T>& is);
 
     template<typename T>
     T* as();
@@ -454,7 +454,7 @@ Reference Reference::operator[](size_t element_index) const
 }
 
 template<typename T>
-void leak(T* address) {}
+void leak(T*) {}
 
 template<typename T>
 std::shared_ptr<T> make_shared_static()
