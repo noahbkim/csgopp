@@ -2,17 +2,17 @@
 
 #include <csgopp/common/object.h>
 
-std::shared_ptr<DefaultValueType<bool>> bool_T = std::make_shared<DefaultValueType<bool>>();
-std::shared_ptr<DefaultValueType<uint8_t>> uint8_T = std::make_shared<DefaultValueType<uint8_t>>();
-std::shared_ptr<DefaultValueType<uint32_t>> uint32_T = std::make_shared<DefaultValueType<uint32_t>>();
-std::shared_ptr<DefaultValueType<std::string>> string_T = std::make_shared<DefaultValueType<std::string>>();
+auto bool_T = make_shared_static<DefaultValueType<bool>>();
+auto uint8_T = make_shared_static<DefaultValueType<uint8_t>>();
+auto uint32_T = make_shared_static<DefaultValueType<uint32_t>>();
+auto string_T = make_shared_static<DefaultValueType<std::string>>();
 
 struct Vector3
 {
     double x, y, z;
 };
 
-std::shared_ptr<DefaultValueType<Vector3>> vector3_T = std::make_shared<DefaultValueType<Vector3>>();
+auto vector3_T = make_shared_static<DefaultValueType<Vector3>>();
 
 TEST(Object, integration)
 {
@@ -29,23 +29,33 @@ TEST(Object, integration)
         Vector3 position;
     };
 
+    EXPECT_EQ(entity_T->at("id").offset, offsetof(Entity, id));
+    EXPECT_EQ(entity_T->at("name").offset, offsetof(Entity, name));
+    EXPECT_EQ(entity_T->at("position").offset, offsetof(Entity, position));
+    EXPECT_EQ(entity_T->size(), sizeof(Entity));
+
+    auto entity_array_T = std::make_shared<ArrayType>(entity_T, 2);
+    EXPECT_EQ(entity_array_T->size(), sizeof(Entity) * 2);
+
     ObjectType::Builder engine_builder;
     engine_builder.member("alive", bool_T);
     engine_builder.member("flags", uint32_T);
-    engine_builder.member("entities", std::make_shared<ArrayType>(entity_T, 2));
+    engine_builder.member("entities", entity_array_T);
     std::shared_ptr<ObjectType> engine_T = std::make_shared<ObjectType>(std::move(engine_builder));
 
     struct Engine
     {
-        bool alive;
-        uint32_t flags;
+        bool alive{};
+        uint32_t flags{};
         Entity entities[2];
     };
+
 
     std::shared_ptr<Object> engine(instantiate(engine_T));
     Object& e = *engine;
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
+    fprintf(stderr, "accessing %p\n", e["entities"][0]["name"].address);
     e["entities"][0]["id"].is<uint32_t>() = 1;
     e["entities"][0]["name"].is<std::string>() = "noah";
     e["entities"][1]["id"].is<uint32_t>() = 2;
@@ -80,6 +90,38 @@ TEST(Object, integration)
     EXPECT_EQ(c->entities[0].name, "noah");
     EXPECT_EQ(c->entities[1].id, 2);
     EXPECT_EQ(c->entities[1].name, "dylan");
+}
+
+TEST(Object, null)
+{
+    ObjectType::Builder builder;
+    std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
+    EXPECT_EQ(type->size(), 0);
+    std::shared_ptr<Object> object(instantiate(type));
+    EXPECT_EQ(object->type, type.get());
+}
+
+TEST(Object, one_field_primitive)
+{
+    ObjectType::Builder builder;
+    builder.member("value", uint32_T);
+    std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
+    EXPECT_EQ(type->size(), sizeof(uint32_t));
+    std::shared_ptr<Object> object(instantiate(type));
+    (*object)["value"].is<uint32_t>() = 69;
+    EXPECT_EQ((*object)["value"].is<uint32_t>(), 69);
+}
+
+TEST(Object, one_field_allocating)
+{
+    ObjectType::Builder builder;
+    builder.member("value", string_T);
+    std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
+    EXPECT_EQ(type->size(), sizeof(std::string));
+    std::shared_ptr<Object> object(instantiate(type));
+    EXPECT_EQ((*object)["value"].is<std::string>(), "");
+    (*object)["value"].is<std::string>() = "hello, world!";
+    EXPECT_EQ((*object)["value"].is<std::string>(), "hello, world!");
 }
 
 template<typename T, typename U, typename V>
@@ -118,6 +160,10 @@ TEST_ALIGNMENT(uint8_t, uint64_t, uint8_t);
 TEST_ALIGNMENT(uint16_t, uint16_t, uint8_t);
 TEST_ALIGNMENT(uint32_t, uint32_t, uint8_t);
 TEST_ALIGNMENT(uint64_t, uint64_t, uint8_t);
+TEST_ALIGNMENT_NAMED(uint8_t, std::string, uint8_t, uint8_t_std_string_uint8_t);
+TEST_ALIGNMENT_NAMED(uint16_t, std::string, uint8_t, uint16_t_std_string_uint8_t);
+TEST_ALIGNMENT_NAMED(uint32_t, std::string, uint8_t, uint32_t_std_string_uint8_t);
+TEST_ALIGNMENT_NAMED(uint64_t, std::string, uint8_t, uint64_t_std_string_uint8_t);
 TEST_ALIGNMENT_NAMED(uint8_t, TRIPLE(uint8_t, uint8_t, uint8_t), uint8_t, uint8_t_struct_uint8_t);
 TEST_ALIGNMENT_NAMED(uint16_t, TRIPLE(uint8_t, uint8_t, uint8_t), uint8_t, uint16_t_struct_uint8_t);
 TEST_ALIGNMENT_NAMED(uint32_t, TRIPLE(uint8_t, uint8_t, uint8_t), uint8_t, uint32_t_struct_uint8_t);

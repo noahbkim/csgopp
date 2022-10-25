@@ -454,6 +454,16 @@ Reference Reference::operator[](size_t element_index) const
 }
 
 template<typename T>
+void leak(T* address) {}
+
+template<typename T>
+std::shared_ptr<T> make_shared_static()
+{
+    static T type;
+    return std::shared_ptr<T>(&type, &leak<T>);
+}
+
+template<typename T>
 T* Reference::operator[](const As<T>& as)
 {
     return as(*this);
@@ -547,8 +557,9 @@ template<typename T>
 template<typename T>
 void DefaultValueType<T>::construct(char* address) const
 {
-    if constexpr (!std::is_constructible<T>::value)
+    if constexpr (std::is_constructible<T>::value)
     {
+        printf("constructing %s %p\n", this->info().name(), address);
         new (address) T;
     }
 }
@@ -556,7 +567,7 @@ void DefaultValueType<T>::construct(char* address) const
 template<typename T>
 void DefaultValueType<T>::destroy(char* address) const
 {
-    if constexpr (!std::is_destructible<T>::value)
+    if constexpr (std::is_destructible<T>::value)
     {
         reinterpret_cast<T*>(address)->~T();
     }
@@ -564,7 +575,7 @@ void DefaultValueType<T>::destroy(char* address) const
 
 ArrayType::ArrayType(std::shared_ptr<const Type> element_type, size_t length)
     : element_type(std::move(element_type))
-    , element_size(this->element_type->size())
+    , element_size(align(this->element_type->alignment(), this->element_type->size()))
     , length(length)
 {}
 
@@ -580,8 +591,10 @@ size_t ArrayType::alignment() const
 
 void ArrayType::construct(char *address) const
 {
+    printf("constructing array from %p\n", address);
     for (size_t i = 0; i < this->length; ++i)
     {
+        printf("constructing array element %zd: %p\n", i, address + this->element_size * i);
         this->element_type->construct(address + this->element_size * i);
     }
 }
@@ -646,7 +659,7 @@ void ObjectType::construct(char *address) const
 {
     std::for_each(this->members.begin(), this->members.end(), [address](const Member& member)
     {
-        member.type->construct(address);
+        member.type->construct(address + member.offset);
     });
 }
 
@@ -654,7 +667,7 @@ void ObjectType::destroy(char *address) const
 {
     std::for_each(this->members.rbegin(), this->members.rend(), [address](const Member& member)
     {
-        member.type->destroy(address);
+        member.type->destroy(address + member.offset);
     });
 }
 
