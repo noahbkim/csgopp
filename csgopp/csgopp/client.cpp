@@ -36,6 +36,6 @@ namespace csgopp::client
 // modelPreCache        []string                                        // Used to find out whether a weapon is a p250 or cz for example (same id)
 // triggers             map[int]*boundingBoxInformation                 // Maps entity IDs to triggers (used for bombsites)
 // gameEventDescs       map[int32]*msg.CSVCMsg_GameEventListDescriptorT // Maps game-event IDs to descriptors
-// grenadeModelIndices  map[int]common.EquipmentType                    // Used to map model indices to grenades (used for grenade projectiles)
+// grenadeModelIndices  map[int]common.EquipmentType                    // Used to map game indices to grenades (used for grenade projectiles)
 // stringTables         []*msg.CSVCMsg_CreateStringTable                // Contains all created sendtables, needed when updating them
 // delayedEventHandlers []func()

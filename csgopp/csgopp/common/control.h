@@ -1,22 +1,25 @@
 #pragma once
 
-#include <optional>
+#include "../error.h"
 
 namespace csgopp::common::control
 {
 
-template<typename Map>
-std::optional<typename Map::value_type> at(Map& map, typename Map::key_type&& key)
+using csgopp::error::GameError;
+
+template<typename Map, typename Key, typename Error>
+auto lookup(Map& first, Map& second, const Key& key, Error error)
 {
-    auto iterator = map.find(key);
-    if (iterator == map.end())
+    typename Map::const_iterator search = first.find(key);
+    if (search == first.end())
     {
-        return std::nullopt;
+        search = second.find(key);
+        if (search == second.end())
+        {
+            throw GameError(error());
+        }
     }
-    else
-    {
-        return std::make_optional(iterator->second);
-    }
+    return search->second;
 }
 
 }

@@ -7,7 +7,7 @@
 #include "../common/reader.h"
 #include "../client/string_table.h"
 
-namespace csgopp::model::user
+namespace csgopp::game::user
 {
 
 using csgopp::client::string_table::StringTable;

@@ -1,6 +1,6 @@
 #include "user.h"
 
-namespace csgopp::model::user
+namespace csgopp::game::user
 {
 using csgopp::common::reader::ContainerReader;
 using csgopp::common::reader::BigEndian;

@@ -7,12 +7,12 @@
 #include <csgopp/client/server_class.h>
 #include <csgopp/demo.h>
 #include <csgopp/client.h>
-#include <csgopp/model/user.h>
+#include <csgopp/game/user.h>
 
 using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
-using csgopp::model::user::User;
+using csgopp::game::user::User;
 using csgopp::client::ClientObserverBase;
 using csgopp::demo::Command;
 
@@ -66,71 +66,40 @@ struct StructureObserver : public ClientObserverBase<StructureObserver>
 struct DataObserver : public ClientObserverBase<DataObserver>
 {
     size_t server_class_count = 0;
-    size_t max_properties = 0;
+    size_t data_table_count = 0;
+    size_t entity_type_count = 0;
     std::ofstream out;
 
     explicit DataObserver(Client& client)
         : ClientObserverBase<DataObserver>(client)
-        , out("local/server_classes.txt")
+        , out("local/server_classes.h")
     {
-
+        out << "#include <cstdint>" << std::endl;
+        out << "#include <string>" << std::endl << std::endl;
+        out << "struct Vector3 { float x; float y; float z; };" << std::endl;
+        out << "struct Vector2 { float x; float y; };" << std::endl << std::endl;
     }
 
-    struct DataTableCreationObserver final : public ClientObserverBase::DataTableCreationObserver
+    void on_data_table_creation(Client& client, const DataTable* data_table) override
     {
-        using ClientObserverBase::DataTableCreationObserver::DataTableCreationObserver;
-
-        void handle(Client& client, const DataTable* send_table) override
+        this->data_table_count += 1;
+        if (data_table->entity_type)
         {
-//            std::cout << "send table: " << send_table->name << std::endl;
-//            for (const DataTable::Property* property : send_table->properties)
-//            {
-//                std::cout << "  - " << property->name << " "
-//                    << csgopp::client::origin::describe(property->type) << std::endl;
-//            }
+            data_table->entity_type->declare(client.observer.out);
+            this->entity_type_count += 1;
         }
-    };
+    }
 
-    struct ServerClassCreationObserver final : public ClientObserverBase::ServerClassCreationObserver
+    void on_server_class_creation(Client& client, const ServerClass* server_class) override
     {
-        using ClientObserverBase::ServerClassCreationObserver::ServerClassCreationObserver;
-
-        void handle(Client& client, const ServerClass* server_class) override
-        {
-            client.observer.server_class_count += 1;
-            client.observer.out << server_class->name;
-            ServerClass* base_class = server_class->base_class;
-            while (base_class != nullptr)
-            {
-                client.observer.out << " : " << base_class->name;
-                base_class = base_class->base_class;
-            }
-
-            client.observer.out << std::endl;
-            size_t properties = 0;
-            server_class->visit(
-                [&client, &properties](
-                    const std::string& prefix,
-                    DataTable::Property* property
-                ) {
-                    client.observer.out
-                        << "  "
-                        << csgopp::client::data_table::describe(property->type())
-                        << " "
-                        << csgopp::client::server_class::join(prefix, property->name)
-                        << std::endl;
-                    properties += 1;
-                }
-            );
-
-            client.observer.max_properties = std::max(client.observer.max_properties, server_class->data_table->properties.size());
-        }
-    };
+        this->server_class_count += 1;
+    }
 
     void report() const
     {
-        std::cout << this->server_class_count << " total server classes" << std::endl;
-        std::cout << this->max_properties << " max properties" << std::endl;
+        std::cout << "server classes: " << this->server_class_count << std::endl;
+        std::cout << "data tables: " << this->data_table_count << std::endl;
+        std::cout << "entity types: " << this->entity_type_count << std::endl;
     }
 };
 

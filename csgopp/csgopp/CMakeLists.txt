@@ -3,8 +3,6 @@ add_library(csgopp STATIC
         common/lookup.h
         client.cpp client.h
         common/macro.h
-        model/team.cpp model/team.h
-        model/player.cpp model/player.h
         common/vector.h
         client/entity.cpp client/entity.h
         common/id.h
@@ -14,9 +12,10 @@ add_library(csgopp STATIC
         client/data_table.cpp client/data_table.h
         common/magic.h common/bits.h
         client/string_table.cpp client/string_table.h
-        common/ring.h model/user.cpp model/user.h
+        common/ring.h
         common/reader.h common/database.h common/control.h common/object.h common/hash.h
-        common/object.h common/owned.h)
+        common/object.h common/owned.h common/object.cpp
+        game/user.h game/user.cpp)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(csgopp PRIVATE cxx_std_17)

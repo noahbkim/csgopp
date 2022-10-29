@@ -1,13 +1,16 @@
 #pragma once
 
 #include <string>
-#include <utility>
+#include <string_view>
 #include <vector>
-#include <variant>
 #include <typeinfo>
 #include <algorithm>
 #include <stdexcept>
+#include <ostream>
 #include <absl/container/flat_hash_map.h>
+
+namespace csgopp::common::object
+{
 
 struct Error : std::runtime_error
 {
@@ -126,6 +129,8 @@ struct Type
 
     [[nodiscard]] virtual Accessor operator[](const std::string& member_name) const;
     [[nodiscard]] virtual Accessor operator[](size_t element_index) const;
+
+    [[nodiscard]] virtual std::string declare(const std::string& name) const = 0;
 };
 
 struct Reference
@@ -156,18 +161,19 @@ struct ValueType : public Type
     [[nodiscard]] virtual const std::type_info& info() const = 0;
 };
 
-template<typename T>
-struct DefaultValueType final : public ValueType
+template<typename T, typename Base = ValueType>
+struct DefaultValueType : public Base
 {
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
     [[nodiscard]] const std::type_info& info() const override;
+    [[nodiscard]] std::string declare(const std::string& name) const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
 };
 
-struct ArrayType final : public Type
+struct ArrayType : public Type
 {
     std::shared_ptr<const Type> element_type;
     size_t element_size;
@@ -180,21 +186,24 @@ struct ArrayType final : public Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
+    [[nodiscard]] std::string declare(const std::string& name) const override;
+
     [[nodiscard]] Accessor operator[](size_t element_index) const override;
 
     [[nodiscard]] size_t at(size_t element_index) const;
 };
 
-struct Member
+struct ObjectType : public Type
 {
-    std::shared_ptr<const Type> type;
-    size_t offset;
+    struct Member
+    {
+        std::shared_ptr<const Type> type;
+        size_t offset;
+        std::string name;
 
-    Member(std::shared_ptr<const Type> type, size_t offset);
-};
+        Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name);
+    };
 
-struct ObjectType final : public Type
-{
     using Members = std::vector<Member>;
     using MembersLookup = absl::flat_hash_map<std::string, size_t>;
 
@@ -202,19 +211,24 @@ struct ObjectType final : public Type
     {
         Members members;
         MembersLookup members_lookup;
-        size_t members_size = 0;
+        size_t members_size{0};
         std::string name;
+        const ObjectType* base{nullptr};
 
         Builder() = default;
         explicit Builder(std::string name);
+        explicit Builder(const ObjectType* base);
+        Builder(std::string name, const ObjectType* base);
 
-        void member(const std::string& member_name, std::shared_ptr<const Type> type);
+        void embed(const ObjectType* other);
+        void member(std::string member_name, std::shared_ptr<const Type> member_type);
     };
 
     Members members;
     MembersLookup members_lookup;
     size_t members_size;
     std::string name;
+    const ObjectType* base;
 
     explicit ObjectType(Builder&& builder);
     [[nodiscard]] size_t size() const override;
@@ -222,6 +236,9 @@ struct ObjectType final : public Type
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
+
+    [[nodiscard]] std::string declare(const std::string& name) const override;
+    void declare(std::ostream& out) const;
 
     [[nodiscard]] Accessor operator[](const std::string& member_name) const override;
 
@@ -405,62 +422,15 @@ Is<T> Accessor::is() const
     }
 }
 
-Reference Accessor::bind(char* address) const
-{
-    return Reference(this->type, address + this->offset);
-}
-
-[[nodiscard]] Accessor Type::operator[](const std::string& member_name) const
-{
-    throw TypeError("member access is only available on objects!");
-}
-
-[[nodiscard]] Accessor Type::operator[](size_t element_index) const
-{
-    throw TypeError("indexing is only available on arrays!");
-}
-
-Reference::Reference(const Type* type, char* address)
-    : type(type)
-    , address(address)
-{}
-
-Reference Reference::operator[](const std::string& member_name) const
-{
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type);
-    if (object_type != nullptr)
-    {
-        const Member& member = object_type->at(member_name);
-        return Reference(member.type.get(), this->address + member.offset);
-    }
-    else
-    {
-        throw TypeError("member access is only available on objects!");
-    }
-}
-
-Reference Reference::operator[](size_t element_index) const
-{
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type);
-    if (array_type != nullptr)
-    {
-        size_t element_offset = array_type->at(element_index);
-        return Reference(array_type->element_type.get(), this->address + element_offset);
-    }
-    else
-    {
-        throw TypeError("indexing is only available on arrays!");
-    }
-}
-
 template<typename T>
 void leak(T*) {}
 
 template<typename T>
-std::shared_ptr<T> make_shared_static()
+std::shared_ptr<T> shared()
 {
     static T type;
-    return std::shared_ptr<T>(&type, &leak<T>);
+    static std::shared_ptr<T> pointer(&type, &leak<T>);
+    return pointer;
 }
 
 template<typename T>
@@ -502,191 +472,45 @@ T& Reference::is()
     }
 }
 
-Accessor::Accessor(const Type* origin, const Type* type, size_t offset)
-    : origin(origin)
-    , type(type)
-    , offset(offset)
-{}
-
-Accessor Accessor::operator[](const std::string& member_name) const
-{
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type);
-    if (object_type != nullptr)
-    {
-        const Member& member = object_type->at(member_name);
-        return Accessor(this->origin, member.type.get(), this->offset + member.offset);
-    }
-    else
-    {
-        throw TypeError("member access is only available on objects!");
-    }
-}
-
-Accessor Accessor::operator[](size_t element_index) const
-{
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type);
-    if (array_type != nullptr)
-    {
-        size_t element_offset = array_type->at(element_index);
-        return Accessor(this->origin, array_type->element_type.get(), this->offset + element_offset);
-    }
-    else
-    {
-        throw TypeError("indexing is only available on arrays!");
-    }
-}
-
-template<typename T>
-[[nodiscard]] size_t DefaultValueType<T>::size() const
+template<typename T, typename Base>
+[[nodiscard]] size_t DefaultValueType<T, Base>::size() const
 {
     return sizeof(T);
 }
 
-template<typename T>
-[[nodiscard]] size_t DefaultValueType<T>::alignment() const
+template<typename T, typename Base>
+[[nodiscard]] size_t DefaultValueType<T, Base>::alignment() const
 {
     return alignmentof<T>();
 }
 
-template<typename T>
-[[nodiscard]] const std::type_info& DefaultValueType<T>::info() const
+template<typename T, typename Base>
+[[nodiscard]] const std::type_info& DefaultValueType<T, Base>::info() const
 {
     return typeid(T);
 }
 
-template<typename T>
-void DefaultValueType<T>::construct(char* address) const
+template<typename T, typename Base>
+[[nodiscard]] std::string DefaultValueType<T, Base>::declare(const std::string& name) const
+{
+    return typeid(T).name();
+}
+
+template<typename T, typename Base>
+void DefaultValueType<T, Base>::construct(char* address) const
 {
     if constexpr (std::is_constructible<T>::value)
     {
-        printf("constructing %s %p\n", this->info().name(), address);
         new (address) T;
     }
 }
 
-template<typename T>
-void DefaultValueType<T>::destroy(char* address) const
+template<typename T, typename Base>
+void DefaultValueType<T, Base>::destroy(char* address) const
 {
     if constexpr (std::is_destructible<T>::value)
     {
         reinterpret_cast<T*>(address)->~T();
-    }
-}
-
-ArrayType::ArrayType(std::shared_ptr<const Type> element_type, size_t length)
-    : element_type(std::move(element_type))
-    , element_size(align(this->element_type->alignment(), this->element_type->size()))
-    , length(length)
-{}
-
-size_t ArrayType::size() const
-{
-    return this->element_size * this->length;
-}
-
-size_t ArrayType::alignment() const
-{
-    return this->element_type->alignment();
-}
-
-void ArrayType::construct(char *address) const
-{
-    printf("constructing array from %p\n", address);
-    for (size_t i = 0; i < this->length; ++i)
-    {
-        printf("constructing array element %zd: %p\n", i, address + this->element_size * i);
-        this->element_type->construct(address + this->element_size * i);
-    }
-}
-
-void ArrayType::destroy(char *address) const
-{
-    for (size_t i = 0; i < this->length; ++i)
-    {
-        this->element_type->destroy(address + this->element_size * (this->length - i - 1));
-    }
-}
-
-Accessor ArrayType::operator[](size_t element_index) const
-{
-    size_t offset = this->at(element_index);
-    return Accessor(this, this->element_type.get(), offset);
-}
-
-size_t ArrayType::at(size_t element_index) const
-{
-    if (element_index >= this->length)
-    {
-        throw IndexError("out of bounds index " + std::to_string(element_index));
-    }
-    return element_index * this->element_size;
-}
-
-Member::Member(std::shared_ptr<const Type> type, size_t offset)
-    : type(std::move(type))
-    , offset(offset)
-{}
-
-ObjectType::Builder::Builder(std::string name)
-    : name(std::move(name))
-{}
-
-void ObjectType::Builder::member(const std::string& member_name, std::shared_ptr<const Type> member_type)
-{
-    size_t offset = align(this->members_size, member_type->alignment());
-    this->members_size = offset + member_type->size();
-    this->members.emplace_back(std::move(member_type), offset);
-    this->members_lookup.emplace(member_name, this->members.size() - 1);
-}
-
-ObjectType::ObjectType(Builder&& builder)
-    : members(std::move(builder.members))
-    , members_lookup(std::move(builder.members_lookup))
-    , members_size(builder.members_size)
-{}
-
-size_t ObjectType::size() const
-{
-    return this->members_size;
-}
-
-size_t ObjectType::alignment() const
-{
-    return this->members.empty() ? 0 : this->members.front().type->alignment();
-}
-
-void ObjectType::construct(char *address) const
-{
-    std::for_each(this->members.begin(), this->members.end(), [address](const Member& member)
-    {
-        member.type->construct(address + member.offset);
-    });
-}
-
-void ObjectType::destroy(char *address) const
-{
-    std::for_each(this->members.rbegin(), this->members.rend(), [address](const Member& member)
-    {
-        member.type->destroy(address + member.offset);
-    });
-}
-
-Accessor ObjectType::operator[](const std::string &member_name) const
-{
-    const Member& member = this->at(member_name);
-    return Accessor(this, member.type.get(), member.offset);
-}
-
-const Member& ObjectType::at(const std::string& member_name) const
-{
-    MembersLookup::const_iterator find = this->members_lookup.find(member_name);
-    if (find != this->members_lookup.end())
-    {
-        return this->members[find->second];
-    }
-    else
-    {
-        throw MemberError("no such member " + member_name);
     }
 }
 
@@ -704,28 +528,35 @@ Instance<T>::~Instance()
 }
 
 template<typename T>
-Reference Instance<T>::operator[](const std::string& member_name)
+Reference Instance<T>::operator[](const std::string&)
 {
     throw TypeError("member access is only available on objects!");
 }
 
 template<>
-Reference Instance<ObjectType>::operator[](const std::string& member_name)
+inline Reference Instance<ObjectType>::operator[](const std::string& member_name)
 {
-    const Member& member = this->type->at(member_name);
+    const ObjectType::Member& member = this->type->at(member_name);
     return Reference(member.type.get(), this->address + member.offset);
+}
+
+template<typename T>
+Reference Instance<T>::operator[](size_t)
+{
+    throw TypeError("indexing is only available on arrays!");
+}
+
+template<>
+inline Reference Instance<ArrayType>::operator[](size_t element_index)
+{
+    size_t offset = this->type->at(element_index);
+    return Reference(this->type->element_type.get(), this->address + offset);
 }
 
 template<typename T>
 Reference Instance<T>::operator*()
 {
     return Reference(this->type, this->address);
-}
-
-template<typename T>
-Reference Instance<T>::operator[](size_t element_index)
-{
-    throw TypeError("indexing is only available on arrays!");
 }
 
 template<typename T>
@@ -740,13 +571,6 @@ template<typename U>
 U& Instance<T>::operator[](const Is<U>& as)
 {
     return as(*this);
-}
-
-template<>
-Reference Instance<ArrayType>::operator[](size_t element_index)
-{
-    size_t offset = this->type->at(element_index);
-    return Reference(this->type->element_type.get(), this->address + offset);
 }
 
 template<typename T>
@@ -768,4 +592,6 @@ typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& Instance
     {
         throw TypeError("cast is only available for values!");
     }
+}
+
 }

@@ -2,17 +2,19 @@
 
 #include <csgopp/common/object.h>
 
-auto bool_T = make_shared_static<DefaultValueType<bool>>();
-auto uint8_T = make_shared_static<DefaultValueType<uint8_t>>();
-auto uint32_T = make_shared_static<DefaultValueType<uint32_t>>();
-auto string_T = make_shared_static<DefaultValueType<std::string>>();
+using namespace csgopp::common::object;
+
+auto bool_T = shared<DefaultValueType<bool>>();
+auto uint8_T = shared<DefaultValueType<uint8_t>>();
+auto uint32_T = shared<DefaultValueType<uint32_t>>();
+auto string_T = shared<DefaultValueType<std::string>>();
 
 struct Vector3
 {
     double x, y, z;
 };
 
-auto vector3_T = make_shared_static<DefaultValueType<Vector3>>();
+auto vector3_T = shared<DefaultValueType<Vector3>>();
 
 TEST(Object, integration)
 {
@@ -50,12 +52,10 @@ TEST(Object, integration)
         Entity entities[2];
     };
 
-
     std::shared_ptr<Object> engine(instantiate(engine_T));
     Object& e = *engine;
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
-    fprintf(stderr, "accessing %p\n", e["entities"][0]["name"].address);
     e["entities"][0]["id"].is<uint32_t>() = 1;
     e["entities"][0]["name"].is<std::string>() = "noah";
     e["entities"][1]["id"].is<uint32_t>() = 2;
@@ -122,6 +122,20 @@ TEST(Object, one_field_allocating)
     EXPECT_EQ((*object)["value"].is<std::string>(), "");
     (*object)["value"].is<std::string>() = "hello, world!";
     EXPECT_EQ((*object)["value"].is<std::string>(), "hello, world!");
+}
+
+TEST(Object, inherit_simple)
+{
+    ObjectType::Builder parent_builder;
+    parent_builder.member("first", uint8_T);
+    parent_builder.member("second", uint32_T);
+    std::shared_ptr<ObjectType> parent(std::make_shared<ObjectType>(std::move(parent_builder)));
+    ObjectType::Builder child_builder(parent.get());
+    child_builder.member("third", string_T);
+    std::shared_ptr<ObjectType> child(std::make_shared<ObjectType>(std::move(child_builder)));
+    EXPECT_EQ(child->members.at(0).name, "first");
+    EXPECT_EQ(child->members.at(1).name, "second");
+    EXPECT_EQ(child->members.at(2).name, "third");
 }
 
 template<typename T, typename U, typename V>
