@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 
+#include <csgopp/common/code.h>
 #include <csgopp/client/data_table.h>
 #include <csgopp/client/server_class.h>
 #include <csgopp/demo.h>
@@ -15,6 +16,8 @@ using csgopp::client::StringTable;
 using csgopp::game::user::User;
 using csgopp::client::ClientObserverBase;
 using csgopp::demo::Command;
+using csgopp::common::code::Definition;
+using csgopp::common::code::Generator;
 
 struct StructureObserver : public ClientObserverBase<StructureObserver>
 {
@@ -68,6 +71,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
     size_t server_class_count = 0;
     size_t data_table_count = 0;
     size_t entity_type_count = 0;
+    Generator generator;
     std::ofstream out;
 
     explicit DataObserver(Client& client)
@@ -85,7 +89,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
         this->data_table_count += 1;
         if (data_table->entity_type)
         {
-            data_table->entity_type->declare(client.observer.out);
+            data_table->emit(generator.append(data_table->name));
             this->entity_type_count += 1;
         }
     }
@@ -95,8 +99,11 @@ struct DataObserver : public ClientObserverBase<DataObserver>
         this->server_class_count += 1;
     }
 
-    void report() const
+    void report()
     {
+//        sort(this->structures);
+        this->generator.write(out);
+
         std::cout << "server classes: " << this->server_class_count << std::endl;
         std::cout << "data tables: " << this->data_table_count << std::endl;
         std::cout << "entity types: " << this->entity_type_count << std::endl;

@@ -9,6 +9,8 @@
 #include <ostream>
 #include <absl/container/flat_hash_map.h>
 
+#include "code.h"
+
 namespace csgopp::common::object
 {
 
@@ -130,7 +132,7 @@ struct Type
     [[nodiscard]] virtual Accessor operator[](const std::string& member_name) const;
     [[nodiscard]] virtual Accessor operator[](size_t element_index) const;
 
-    [[nodiscard]] virtual std::string declare(const std::string& name) const = 0;
+    virtual void emit(code::Cursor<code::Declaration>) const = 0;
 };
 
 struct Reference
@@ -167,7 +169,7 @@ struct DefaultValueType : public Base
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
     [[nodiscard]] const std::type_info& info() const override;
-    [[nodiscard]] std::string declare(const std::string& name) const override;
+    void emit(code::Cursor<code::Declaration>) const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
@@ -186,7 +188,7 @@ struct ArrayType : public Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    [[nodiscard]] std::string declare(const std::string& name) const override;
+    void emit(code::Cursor<code::Declaration>) const override;
 
     [[nodiscard]] Accessor operator[](size_t element_index) const override;
 
@@ -237,12 +239,14 @@ struct ObjectType : public Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    [[nodiscard]] std::string declare(const std::string& name) const override;
-    void declare(std::ostream& out) const;
+    void emit(code::Cursor<code::Declaration>) const override;
 
     [[nodiscard]] Accessor operator[](const std::string& member_name) const override;
-
     [[nodiscard]] const Member& at(const std::string& member_name) const;
+
+    [[nodiscard]] Members::const_iterator begin() const;
+    [[nodiscard]] Members::const_iterator begin_self() const;
+    [[nodiscard]] Members::const_iterator end() const;
 };
 
 template<typename T>
@@ -491,9 +495,9 @@ template<typename T, typename Base>
 }
 
 template<typename T, typename Base>
-[[nodiscard]] std::string DefaultValueType<T, Base>::declare(const std::string& name) const
+void DefaultValueType<T, Base>::emit(code::Cursor<code::Declaration> cursor) const
 {
-    return typeid(T).name();
+    cursor.target.name = typeid(T).name();
 }
 
 template<typename T, typename Base>

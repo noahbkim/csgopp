@@ -1,4 +1,6 @@
 #include "entity.h"
+#include "data_table.h"
+#include "server_class.h"
 
 namespace csgopp::client::entity
 {
@@ -35,9 +37,9 @@ void BitCoordinateFloatType::update(char* address, BitStream& stream) const
 
 }
 
-std::string BitCoordinateFloatType::declare(const std::string& name) const
+void BitCoordinateFloatType::emit(Cursor<Declaration> cursor) const
 {
-    return "float " + name;
+    cursor.target.type = "float";
 }
 
 void BitNormalFloatType::update(char* address, BitStream& stream) const
@@ -45,9 +47,9 @@ void BitNormalFloatType::update(char* address, BitStream& stream) const
 
 }
 
-std::string BitNormalFloatType::declare(const std::string& name) const
+void BitNormalFloatType::emit(Cursor<Declaration> cursor) const
 {
-    return "float " + name;
+    cursor.target.type = "float";
 }
 
 void Vector3Type::update(char* address, BitStream& stream) const
@@ -55,9 +57,9 @@ void Vector3Type::update(char* address, BitStream& stream) const
 
 }
 
-std::string Vector3Type::declare(const std::string& name) const
+void Vector3Type::emit(Cursor<Declaration> cursor) const
 {
-    return "Vector3 " + name;
+    cursor.target.type = "Vector3";
 }
 
 void Vector2Type::update(char* address, BitStream& stream) const
@@ -65,9 +67,9 @@ void Vector2Type::update(char* address, BitStream& stream) const
 
 }
 
-std::string Vector2Type::declare(const std::string& name) const
+void Vector2Type::emit(Cursor<Declaration> cursor) const
 {
-    return "Vector2 " + name;
+    cursor.target.type = "Vector2";
 }
 
 void StringType::update(char* address, BitStream& stream) const
@@ -75,9 +77,14 @@ void StringType::update(char* address, BitStream& stream) const
 
 }
 
-std::string StringType::declare(const std::string& name) const
+void StringType::emit(Cursor<Declaration> cursor) const
 {
-    return "std::string " + name;
+    cursor.target.type = "std::string";
 }
+
+EntityType::EntityType(Builder&& builder, const DataTable* data_table)
+    : ObjectType(std::move(builder))
+    , data_table(data_table)
+{}
 
 }

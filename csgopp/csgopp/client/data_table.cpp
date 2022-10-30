@@ -291,6 +291,12 @@ std::shared_ptr<const EntityType> DataTable::materialize()
             continue;
         }
 
+        // Skip if exclude
+        if (property->flags & Property::Flags::EXCLUDE)
+        {
+            continue;
+        }
+
         if (property->collapsible())
         {
             auto object_type = std::dynamic_pointer_cast<const common::object::ObjectType>(property->materialize());
@@ -317,6 +323,29 @@ std::shared_ptr<const EntityType> DataTable::materialize()
 
     this->entity_type = std::make_shared<EntityType>(std::move(builder), this);
     return this->entity_type;
+}
+
+void DataTable::emit(Cursor<Definition> cursor) const
+{
+    if (this->entity_type->base != nullptr)
+    {
+        cursor.target.base_name.emplace(this->entity_type->base->name);
+        cursor.dependencies.emplace(this->entity_type->base->name);
+    }
+
+    for (auto iterator = this->entity_type->begin_self(); iterator != this->entity_type->end(); ++iterator)
+    {
+        iterator->type->emit(cursor.into(cursor.target.append(iterator->name)));
+    }
+
+    if (this->server_class != nullptr)
+    {
+        cursor.target.annotations.emplace_back(this->server_class->name);
+    }
+    else
+    {
+        cursor.target.annotations.emplace_back("none");
+    }
 }
 
 /// Left pad with zeros to 3 characters

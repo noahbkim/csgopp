@@ -613,12 +613,12 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
         if (!data.is_end())
         {
             DataTable* data_table = new DataTable(data);
-            DataTable::Property* array_property_element{nullptr};
+            DataTable::Property* preceding_array_element{nullptr};
 
             // Do a check to see if our items are all the same type and enumerated
-            bool is_array{true};
-            DataTable::Property* array_type{nullptr};
-            size_t array_index{0};
+            bool is_coalesced_array{true};
+            DataTable::Property* coalesced_array_element{nullptr};
+            size_t coalesced_array_index{0};
 
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
             for (CSVCMsg_SendTable_sendprop_t& property_data : *data.mutable_props())
@@ -643,9 +643,9 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                         property = new DataTable::StringProperty(std::move(property_data));
                         break;
                     case Type::ARRAY:
-                        OK(array_property_element != nullptr);
-                        property = new DataTable::ArrayProperty(std::move(property_data), array_property_element);
-                        array_property_element = nullptr;
+                        OK(preceding_array_element != nullptr);
+                        property = new DataTable::ArrayProperty(std::move(property_data), preceding_array_element);
+                        preceding_array_element = nullptr;
                         break;
                     case Type::DATA_TABLE:
                         property = new_data_table_properties.emplace_back(
@@ -660,28 +660,30 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 }
 
                 // Check if we're still optimizing as array
-                if (is_array)
+                if (is_coalesced_array)
                 {
-                    if (array_type == nullptr)
+                    if (coalesced_array_element == nullptr)
                     {
-                        array_type = property;
+                        coalesced_array_element = property;
                     }
 
-                    if (is_array_index(property->name, array_index) && property->equals(array_type))
-                    {
-                        array_index += 1;
+                    if (
+                        is_array_index(property->name, coalesced_array_index)
+                        && property->equals(coalesced_array_element)
+                    ) {
+                        coalesced_array_index += 1;
                     }
                     else
                     {
-                        is_array = false;
+                        is_coalesced_array = false;
                     }
                 }
 
                 // If there's an array property, the element_type type always precedes it; don't both adding
                 if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                 {
-                    OK(array_property_element == nullptr);
-                    array_property_element = property;
+                    OK(preceding_array_element == nullptr);
+                    preceding_array_element = property;
                 }
                 else
                 {
@@ -689,9 +691,9 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 }
             }
 
-            data_table->is_array = data_table->properties.size() > 0 && is_array;
+            data_table->is_array = data_table->properties.size() > 0 && is_coalesced_array;
 
-            OK(array_property_element == nullptr);
+            OK(preceding_array_element == nullptr);
             new_data_tables.emplace(data_table);
         }
 
@@ -878,7 +880,7 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
         }
 
         // Append
-        StringTable::Entry* entry = nullptr;
+        StringTable::Entry* entry;
         if (auto_increment == string_table->entries.size())
         {
             entry = new StringTable::Entry();

@@ -120,9 +120,10 @@ void ArrayType::destroy(char *address) const
     }
 }
 
-std::string ArrayType::declare(const std::string& member_name) const
+void ArrayType::emit(code::Cursor<code::Declaration> cursor) const
 {
-    return this->element_type->declare(member_name) + "[" + std::to_string(this->length) + "]";
+    this->element_type->emit(cursor);
+    cursor.target.array_sizes.push_back(this->length);
 }
 
 Accessor ArrayType::operator[](size_t element_index) const
@@ -216,33 +217,10 @@ void ObjectType::destroy(char *address) const
     });
 }
 
-std::string ObjectType::declare(const std::string& member_name) const
+void ObjectType::emit(code::Cursor<code::Declaration> cursor) const
 {
-    return this->name + " " + member_name;
-}
-
-void ObjectType::declare(std::ostream& out) const
-{
-    out << "struct " << this->name;
-    if (this->base != nullptr)
-    {
-        out << " : public " << this->base->name;
-    }
-    out << std::endl;
-    out << "{" << std::endl;
-
-    auto iterator = this->members.begin();
-    if (this->base != nullptr)
-    {
-        std::advance(iterator, this->base->members.size());
-    }
-
-    for (; iterator != this->members.end(); ++iterator)
-    {
-        const Member& member = *iterator;
-        out << "    " << member.type->declare(member.name) << ";" << std::endl;
-    }
-    out << "};" << std::endl << std::endl;
+    cursor.target.type = this->name;
+    cursor.dependencies.emplace(this->name);
 }
 
 Accessor ObjectType::operator[](const std::string &member_name) const
@@ -262,6 +240,26 @@ const ObjectType::Member& ObjectType::at(const std::string& member_name) const
     {
         throw MemberError("no such member " + member_name);
     }
+}
+
+[[nodiscard]] ObjectType::Members::const_iterator ObjectType::begin() const
+{
+    return this->members.begin();
+}
+
+[[nodiscard]] ObjectType::Members::const_iterator ObjectType::begin_self() const
+{
+    auto iterator = this->members.begin();
+    if (this->base != nullptr)
+    {
+        std::advance(iterator, this->base->members.size());
+    }
+    return iterator;
+}
+
+[[nodiscard]] ObjectType::Members::const_iterator ObjectType::end() const
+{
+    return this->members.end();
 }
 
 }

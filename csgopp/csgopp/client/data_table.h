@@ -8,6 +8,7 @@
 #include "../common/database.h"
 #include "../common/vector.h"
 #include "../common/macro.h"
+#include "../common/code.h"
 #include "../error.h"
 #include "entity.h"
 #include "netmessages.pb.h"
@@ -30,6 +31,10 @@ using csgopp::common::vector::Vector2;
 using csgopp::common::database::DatabaseWithName;
 using csgopp::common::database::Delete;
 using csgopp::common::database::NameTableMixin;
+using csgopp::common::code::Definition;
+using csgopp::common::code::Dependencies;
+using csgopp::common::code::Declaration;
+using csgopp::common::code::Cursor;
 using csgopp::error::GameError;
 using csgopp::client::server_class::ServerClass;
 using csgopp::client::entity::EntityType;
@@ -202,6 +207,7 @@ struct DataTable
     explicit DataTable(const CSVCMsg_SendTable& data);
 
     std::shared_ptr<const EntityType> materialize();
+    void emit(Cursor<Definition> cursor) const;
 };
 
 using DataTableDatabase = DatabaseWithName<DataTable, Delete<DataTable>>;
