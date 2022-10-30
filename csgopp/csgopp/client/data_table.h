@@ -201,6 +201,7 @@ struct DataTable
     PropertyDatabase properties;  // pointer stability is very convenient
     ServerClass* server_class{nullptr};
     std::shared_ptr<const EntityType> entity_type;
+    std::vector<std::pair<std::string, std::string>> excludes;
     bool is_array{false};  // Whether we can make array when member
 
     DataTable() = default;

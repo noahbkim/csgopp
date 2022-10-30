@@ -1,5 +1,6 @@
 #include "data_table.h"
 #include "server_class.h"
+#include "../common/control.h"
 
 #define GUARD(CONDITION) if (!(CONDITION)) { return false; }
 #define CAST(OTHER, TYPE, VALUE) auto* OTHER = dynamic_cast<const TYPE*>(VALUE); GUARD(OTHER != nullptr);
@@ -11,6 +12,7 @@ namespace csgopp::client::data_table
 using csgopp::error::GameError;
 using csgopp::common::object::ArrayType;
 using csgopp::common::object::shared;
+using csgopp::common::control::concatenate;
 
 DataTable::Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
@@ -291,12 +293,6 @@ std::shared_ptr<const EntityType> DataTable::materialize()
             continue;
         }
 
-        // Skip if exclude
-        if (property->flags & Property::Flags::EXCLUDE)
-        {
-            continue;
-        }
-
         if (property->collapsible())
         {
             auto object_type = std::dynamic_pointer_cast<const common::object::ObjectType>(property->materialize());
@@ -338,13 +334,18 @@ void DataTable::emit(Cursor<Definition> cursor) const
         iterator->type->emit(cursor.into(cursor.target.append(iterator->name)));
     }
 
+    for (auto& [a, b] : this->excludes)
+    {
+        cursor.target.annotations.emplace_back(concatenate("exclude: ", a, ".", b));
+    }
+
     if (this->server_class != nullptr)
     {
-        cursor.target.annotations.emplace_back(this->server_class->name);
+        cursor.target.annotations.emplace_back(concatenate("server class: ", this->server_class->name));
     }
     else
     {
-        cursor.target.annotations.emplace_back("none");
+        cursor.target.annotations.emplace_back("server class: none");
     }
 }
 

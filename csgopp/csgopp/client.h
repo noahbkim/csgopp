@@ -623,6 +623,12 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
             for (CSVCMsg_SendTable_sendprop_t& property_data : *data.mutable_props())
             {
+                if (property_data.flags() & DataTable::Property::Flags::EXCLUDE)
+                {
+                    data_table->excludes.emplace_back(property_data.dt_name(), property_data.var_name());
+                    continue;
+                }
+
                 DataTable::Property* property;
                 switch (property_data.type())
                 {

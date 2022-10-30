@@ -177,10 +177,14 @@ void ObjectType::Builder::embed(const ObjectType* other)
 
 void ObjectType::Builder::member(std::string member_name, std::shared_ptr<const Type> member_type)
 {
+    // TODO: find a clean way to log if a member is hidden here
+
     size_t offset = align(this->members_size, member_type->alignment());
     this->members_size = offset + member_type->size();
     Member& member = this->members.emplace_back(std::move(member_type), offset, std::move(member_name));
-    this->members_lookup.emplace(member.name, this->members.size() - 1);
+
+    // Overwrite here; excludes always hide base class members, so we want to always point to child's member
+    this->members_lookup[member.name] = this->members.size() - 1;
 }
 
 ObjectType::ObjectType(Builder&& builder)
