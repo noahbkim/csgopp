@@ -106,10 +106,4 @@ void Generator::sort()
     }
 }
 
-//
-//void sort(std::vector<Structure>& structures)
-//{
-
-//}
-
 }

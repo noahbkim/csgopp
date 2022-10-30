@@ -73,10 +73,12 @@ struct DataObserver : public ClientObserverBase<DataObserver>
     size_t entity_type_count = 0;
     Generator generator;
     std::ofstream out;
+    std::ofstream out2;
 
     explicit DataObserver(Client& client)
         : ClientObserverBase<DataObserver>(client)
         , out("local/server_classes.h")
+        , out2("local/prioritized.txt")
     {
         out << "#include <cstdint>" << std::endl;
         out << "#include <string>" << std::endl << std::endl;
@@ -91,6 +93,11 @@ struct DataObserver : public ClientObserverBase<DataObserver>
         {
             data_table->emit(generator.append(data_table->name));
             this->entity_type_count += 1;
+            out2 << data_table->entity_type->name << std::endl;
+            for (auto& [offset, name] : data_table->entity_type->prioritized)
+            {
+                out2 << "  " << name << ": " << offset.offset << std::endl;
+            }
         }
     }
 

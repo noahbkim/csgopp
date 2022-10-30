@@ -4,14 +4,14 @@
 #include <absl/container/flat_hash_map.h>
 #include <google/protobuf/io/coded_stream.h>
 
+#include "netmessages.pb.h"
+#include "../error.h"
 #include "../common/lookup.h"
 #include "../common/database.h"
 #include "../common/vector.h"
 #include "../common/macro.h"
 #include "../common/code.h"
-#include "../error.h"
 #include "entity.h"
-#include "netmessages.pb.h"
 
 namespace csgopp::client::server_class
 {
@@ -26,6 +26,7 @@ namespace csgopp::client::data_table
 using google::protobuf::io::CodedInputStream;
 using csgo::message::net::CSVCMsg_SendTable;
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
+using csgopp::error::GameError;
 using csgopp::common::vector::Vector3;
 using csgopp::common::vector::Vector2;
 using csgopp::common::database::DatabaseWithName;
@@ -35,9 +36,11 @@ using csgopp::common::code::Definition;
 using csgopp::common::code::Dependencies;
 using csgopp::common::code::Declaration;
 using csgopp::common::code::Cursor;
-using csgopp::error::GameError;
 using csgopp::client::server_class::ServerClass;
+using csgopp::client::entity::PropertyType;
+using csgopp::client::entity::ArrayType;
 using csgopp::client::entity::EntityType;
+using csgopp::client::entity::Offset;
 
 struct PropertyFlags
 {
@@ -67,39 +70,40 @@ struct PropertyFlags
     };
 };
 
-struct PropertyType
-{
-    using T = int32_t;
-    enum E : T
-    {
-        INT32 = 0,
-        FLOAT = 1,
-        VECTOR3 = 2,
-        VECTOR2 = 3,
-        STRING = 4,
-        ARRAY = 5,
-        DATA_TABLE = 6,
-        INT64 = 7,
-    };
-};
 
 struct DataTable
 {
     struct Property
     {
-        using Type = PropertyType;
+        struct Type
+        {
+            using T = int32_t;
+            enum E : T
+            {
+                INT32 = 0,
+                FLOAT = 1,
+                VECTOR3 = 2,
+                VECTOR2 = 3,
+                STRING = 4,
+                ARRAY = 5,
+                DATA_TABLE = 6,
+                INT64 = 7,
+            };
+        };
+
         using Flags = PropertyFlags;
         using Priority = int32_t;
 
         std::string name;
         Flags::T flags;
         Priority priority;
+        Offset offset;
 
         explicit Property(CSVCMsg_SendTable_sendprop_t&& data);
         virtual ~Property() = default;
 
         [[nodiscard]] virtual Type::T type() const = 0;
-        [[nodiscard]] virtual std::shared_ptr<const csgopp::common::object::Type> materialize() const = 0;
+        [[nodiscard]] virtual std::shared_ptr<const PropertyType> materialize() const = 0;
 
         [[nodiscard]] virtual bool equals(const Property* other) const
         {
@@ -123,7 +127,7 @@ struct DataTable
 
         explicit Int32Property(CSVCMsg_SendTable_sendprop_t&& data);
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -135,7 +139,7 @@ struct DataTable
 
         explicit FloatProperty(CSVCMsg_SendTable_sendprop_t&& data);
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -143,7 +147,7 @@ struct DataTable
     {
         using Property::Property;
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -151,7 +155,7 @@ struct DataTable
     {
         using Property::Property;
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -159,7 +163,7 @@ struct DataTable
     {
         using Property::Property;
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -170,7 +174,7 @@ struct DataTable
 
         explicit ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element);
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -181,7 +185,7 @@ struct DataTable
         // No constructor because data_table is set later on
         explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
@@ -191,23 +195,25 @@ struct DataTable
 
         explicit Int64Property(CSVCMsg_SendTable_sendprop_t&& data);
         [[nodiscard]] Type::T type() const override;
-        [[nodiscard]] std::shared_ptr<const csgopp::common::object::Type> materialize() const override;
+        [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
     using PropertyDatabase = DatabaseWithName<Property, Delete<Property>>;
+    using Excludes = absl::flat_hash_set<std::pair<std::string, std::string>>;
 
     std::string name;
     PropertyDatabase properties;  // pointer stability is very convenient
     ServerClass* server_class{nullptr};
     std::shared_ptr<const EntityType> entity_type;
-    std::vector<std::pair<std::string, std::string>> excludes;
+    Excludes excludes;
     bool is_array{false};  // Whether we can make array when member
 
     DataTable() = default;
     explicit DataTable(const CSVCMsg_SendTable& data);
 
     std::shared_ptr<const EntityType> materialize();
+    std::shared_ptr<const ArrayType> materialize_array();
     void emit(Cursor<Definition> cursor) const;
 };
 

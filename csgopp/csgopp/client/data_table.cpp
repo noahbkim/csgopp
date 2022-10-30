@@ -1,18 +1,21 @@
 #include "data_table.h"
-#include "server_class.h"
+
 #include "../common/control.h"
+#include "server_class.h"
+#include "entity.h"
 
 #define GUARD(CONDITION) if (!(CONDITION)) { return false; }
-#define CAST(OTHER, TYPE, VALUE) auto* OTHER = dynamic_cast<const TYPE*>(VALUE); GUARD(OTHER != nullptr);
-#define EQUAL(OTHER, NAME) (OTHER->NAME == this->NAME)
+#define CAST(OTHER, TYPE, VALUE) auto* (OTHER) = dynamic_cast<const TYPE*>(VALUE); GUARD((OTHER) != nullptr);
+#define EQUAL(OTHER, NAME) ((OTHER)->NAME == this->NAME)
 
 namespace csgopp::client::data_table
 {
 
 using csgopp::error::GameError;
-using csgopp::common::object::ArrayType;
 using csgopp::common::object::shared;
 using csgopp::common::control::concatenate;
+using csgopp::client::entity::ArrayType;
+using csgopp::client::entity::EntityType;
 
 DataTable::Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
@@ -30,7 +33,7 @@ DataTable::Property::Type::T DataTable::Int32Property::type() const
     return Type::INT32;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::Int32Property::materialize() const
+std::shared_ptr<const PropertyType> DataTable::Int32Property::materialize() const
 {
     if (this->flags & Flags::UNSIGNED)
     {
@@ -75,7 +78,7 @@ DataTable::Property::Type::T DataTable::FloatProperty::type() const
     return Type::FLOAT;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::FloatProperty::materialize() const
+std::shared_ptr<const PropertyType> DataTable::FloatProperty::materialize() const
 {
     if (this->flags & Flags::COORDINATES)
     {
@@ -131,7 +134,7 @@ DataTable::Property::Type::T DataTable::Vector3Property::type() const
     return Type::VECTOR3;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::Vector3Property::materialize() const
+std::shared_ptr<const PropertyType> DataTable::Vector3Property::materialize() const
 {
     return shared<entity::Vector3Type>();
 }
@@ -148,7 +151,7 @@ DataTable::Property::Type::T DataTable::Vector2Property::type() const
     return Type::VECTOR2;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::Vector2Property::materialize() const
+std::shared_ptr<const PropertyType> DataTable::Vector2Property::materialize() const
 {
     return shared<entity::Vector2Type>();
 }
@@ -165,7 +168,7 @@ DataTable::Property::Type::T DataTable::StringProperty::type() const
     return Type::STRING;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::StringProperty::materialize() const
+std::shared_ptr<const PropertyType> DataTable::StringProperty::materialize() const
 {
     return shared<entity::StringType>();
 }
@@ -178,7 +181,7 @@ bool DataTable::StringProperty::equals(const Property* other) const
 }
 
 DataTable::ArrayProperty::ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element)
-    : element(std::move(element))
+    : element(element)
     , size(data.num_elements())
     , Property(std::move(data))
 {}
@@ -188,7 +191,7 @@ DataTable::Property::Type::T DataTable::ArrayProperty::type() const
     return Type::ARRAY;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::ArrayProperty::materialize() const
+std::shared_ptr<const PropertyType> DataTable::ArrayProperty::materialize() const
 {
     return std::make_shared<ArrayType>(this->element->materialize(), this->size);
 }
@@ -209,9 +212,16 @@ DataTable::Property::Type::T DataTable::DataTableProperty::type() const
     return Type::DATA_TABLE;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::DataTableProperty::materialize() const
+std::shared_ptr<const PropertyType> DataTable::DataTableProperty::materialize() const
 {
-    return this->data_table->materialize();
+    if (this->data_table->is_array)
+    {
+        return this->data_table->materialize_array();
+    }
+    else
+    {
+        return this->data_table->materialize();
+    }
 }
 
 bool DataTable::DataTableProperty::equals(const Property* other) const
@@ -231,7 +241,7 @@ DataTable::Property::Type::T DataTable::Int64Property::type() const
     return Type::INT64;
 }
 
-std::shared_ptr<const csgopp::common::object::Type> DataTable::Int64Property::materialize() const
+std::shared_ptr<const PropertyType> DataTable::Int64Property::materialize() const
 {
     if (this->flags & Flags::UNSIGNED)
     {
@@ -269,6 +279,64 @@ DataTable::DataTable(const CSVCMsg_SendTable& data)
     , properties(data.props_size())
 {}
 
+struct AbsoluteProperty
+{
+    const DataTable::Property* property;
+    entity::Offset offset;
+
+    AbsoluteProperty(const DataTable::Property* property, entity::Offset offset)
+        : property(property)
+        , offset(offset)
+    {}
+};
+
+void collect(
+    DataTable* data_table,
+    size_t offset,
+    const DataTable::Excludes& excludes,
+    std::vector<AbsoluteProperty>& properties
+) {
+    for (DataTable::Property* property : data_table->properties)
+    {
+        if (excludes.contains(std::make_pair(data_table->name, property->name)))
+        {
+            continue;
+        }
+
+        auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
+        if (data_table_property != nullptr)
+        {
+            collect(data_table_property->data_table, offset + property->offset.offset, excludes, properties);
+        }
+        else
+        {
+            properties.emplace_back(property, entity::Offset(property->offset.type, offset + property->offset.offset));
+        }
+    }
+}
+
+std::vector<AbsoluteProperty> collect(DataTable* data_table)
+{
+    std::vector<AbsoluteProperty> properties;
+    collect(data_table, 0, data_table->excludes, properties);
+    return properties;
+}
+
+std::shared_ptr<const ArrayType> DataTable::materialize_array()
+{
+    std::shared_ptr<const PropertyType> array_type = this->properties.at(0)->materialize();
+
+    // We have to manually set offsets since we're not materializing
+    for (size_t i = 0; i < this->properties.size(); ++i)
+    {
+        this->properties.at(i)->offset.type = array_type.get();
+        this->properties.at(i)->offset.offset = i * array_type->size();
+    }
+
+    size_t array_size = this->properties.size();
+    return std::make_shared<ArrayType>(array_type, array_size);
+}
+
 // TODO: remove recursion
 std::shared_ptr<const EntityType> DataTable::materialize()
 {
@@ -300,24 +368,19 @@ std::shared_ptr<const EntityType> DataTable::materialize()
             continue;
         }
 
-        if (auto* data_table_property = dynamic_cast<DataTableProperty*>(property))
-        {
-            if (data_table_property->data_table->is_array)
-            {
-                std::shared_ptr<const common::object::Type> array_type =
-                    data_table_property->data_table->properties.at(0)->materialize();
-                size_t array_size = data_table_property->data_table->properties.size();
-                builder.member(property->name, std::make_shared<ArrayType>(array_type, array_size));
-                continue;
-            }
-        }
-
-        builder.member(property->name, property->materialize());
+        std::shared_ptr<const PropertyType> materialized = property->materialize();
+        property->offset.type = materialized.get();
+        property->offset.offset = builder.member(property->name, materialized);
     }
 
-    // TODO: prioritized
+    auto type = std::make_shared<EntityType>(std::move(builder), this);
 
-    this->entity_type = std::make_shared<EntityType>(std::move(builder), this);
+    for (const AbsoluteProperty& property : collect(this))
+    {
+        type->prioritized.emplace_back(property.offset, property.property->name);
+    }
+
+    this->entity_type = type;
     return this->entity_type;
 }
 

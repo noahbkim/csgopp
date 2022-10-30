@@ -158,13 +158,13 @@ struct Reference
     T& is();
 };
 
-struct ValueType : public Type
+struct ValueType : public virtual Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
 };
 
-template<typename T, typename Base = ValueType>
-struct DefaultValueType : public Base
+template<typename T>
+struct DefaultValueType : public virtual ValueType
 {
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
@@ -175,7 +175,7 @@ struct DefaultValueType : public Base
     void destroy(char* address) const override;
 };
 
-struct ArrayType : public Type
+struct ArrayType : public virtual Type
 {
     std::shared_ptr<const Type> element_type;
     size_t element_size;
@@ -195,7 +195,7 @@ struct ArrayType : public Type
     [[nodiscard]] size_t at(size_t element_index) const;
 };
 
-struct ObjectType : public Type
+struct ObjectType : public virtual Type
 {
     struct Member
     {
@@ -223,7 +223,7 @@ struct ObjectType : public Type
         Builder(std::string name, const ObjectType* base);
 
         void embed(const ObjectType* other);
-        void member(std::string member_name, std::shared_ptr<const Type> member_type);
+        size_t member(std::string member_name, std::shared_ptr<const Type> member_type);
     };
 
     Members members;
@@ -476,32 +476,32 @@ T& Reference::is()
     }
 }
 
-template<typename T, typename Base>
-[[nodiscard]] size_t DefaultValueType<T, Base>::size() const
+template<typename T>
+[[nodiscard]] size_t DefaultValueType<T>::size() const
 {
     return sizeof(T);
 }
 
-template<typename T, typename Base>
-[[nodiscard]] size_t DefaultValueType<T, Base>::alignment() const
+template<typename T>
+[[nodiscard]] size_t DefaultValueType<T>::alignment() const
 {
     return alignmentof<T>();
 }
 
-template<typename T, typename Base>
-[[nodiscard]] const std::type_info& DefaultValueType<T, Base>::info() const
+template<typename T>
+[[nodiscard]] const std::type_info& DefaultValueType<T>::info() const
 {
     return typeid(T);
 }
 
-template<typename T, typename Base>
-void DefaultValueType<T, Base>::emit(code::Cursor<code::Declaration> cursor) const
+template<typename T>
+void DefaultValueType<T>::emit(code::Cursor<code::Declaration> cursor) const
 {
     cursor.target.name = typeid(T).name();
 }
 
-template<typename T, typename Base>
-void DefaultValueType<T, Base>::construct(char* address) const
+template<typename T>
+void DefaultValueType<T>::construct(char* address) const
 {
     if constexpr (std::is_constructible<T>::value)
     {
@@ -509,8 +509,8 @@ void DefaultValueType<T, Base>::construct(char* address) const
     }
 }
 
-template<typename T, typename Base>
-void DefaultValueType<T, Base>::destroy(char* address) const
+template<typename T>
+void DefaultValueType<T>::destroy(char* address) const
 {
     if constexpr (std::is_destructible<T>::value)
     {

@@ -625,7 +625,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
             {
                 if (property_data.flags() & DataTable::Property::Flags::EXCLUDE)
                 {
-                    data_table->excludes.emplace_back(property_data.dt_name(), property_data.var_name());
+                    data_table->excludes.emplace(property_data.dt_name(), property_data.var_name());
                     continue;
                 }
 

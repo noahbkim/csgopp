@@ -32,6 +32,11 @@ const size_t string_size_bits_max = 9;
 const size_t string_size_max = 1 << string_size_bits_max;
 }
 
+Offset::Offset(const struct PropertyType* type, size_t offset)
+    : type(type)
+    , offset(offset)
+{}
+
 void BitCoordinateFloatType::update(char* address, BitStream& stream) const
 {
 
@@ -86,5 +91,10 @@ EntityType::EntityType(Builder&& builder, const DataTable* data_table)
     : ObjectType(std::move(builder))
     , data_table(data_table)
 {}
+
+void EntityType::update(char* address, csgopp::common::bits::BitStream& stream) const
+{
+    // TODO
+}
 
 }
