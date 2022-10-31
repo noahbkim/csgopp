@@ -14,6 +14,7 @@
 namespace csgopp::client::data_table
 {
 
+struct Property;
 struct DataTable;
 
 }
@@ -36,6 +37,7 @@ using csgopp::common::code::Declaration;
 using csgopp::common::code::Dependencies;
 using csgopp::common::code::Cursor;
 using csgopp::client::data_table::DataTable;
+using csgopp::client::data_table::Property;
 
 // Thinner than accessor; we know what we're doing
 enum struct Precision
@@ -70,7 +72,7 @@ struct Offset
     Offset() = default;
     Offset(const PropertyType* type, size_t offset);
 
-    Offset from(size_t parent) const;
+    [[nodiscard]] Offset from(size_t parent) const;
 };
 
 template<Compression C>

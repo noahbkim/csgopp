@@ -18,23 +18,30 @@ using csgopp::client::entity::ArrayType;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Offset;
 
-DataTable::Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
+Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
     , flags(data.flags())
     , priority(data.priority())
 {}
 
-[[nodiscard]] bool DataTable::Property::equals(const Property* other) const
+void Property::build(EntityType::Builder& builder)
+{
+    std::shared_ptr<const PropertyType> materialized = this->materialize();
+    this->offset.type = materialized.get();
+    this->offset.offset = builder.member(this->name, materialized);
+}
+
+[[nodiscard]] bool Property::equals(const Property* other) const
 {
     return false;
 };
 
-[[nodiscard]] constexpr bool DataTable::Property::excluded() const
+[[nodiscard]] constexpr bool Property::excluded() const
 {
     return this->flags & Flags::EXCLUDE;
 }
 
-[[nodiscard]] constexpr bool DataTable::Property::collapsible() const
+[[nodiscard]] constexpr bool Property::collapsible() const
 {
     return this->flags & Flags::COLLAPSIBLE;
 }
@@ -241,6 +248,23 @@ std::shared_ptr<const PropertyType> DataTable::DataTableProperty::materialize() 
     }
 }
 
+void DataTable::DataTableProperty::build(EntityType::Builder& builder)
+{
+    if (this->name == "baseclass")
+    {
+        return;
+    }
+
+    if (this->collapsible())
+    {
+        std::shared_ptr<const EntityType> collapsible_type = this->data_table->materialize();
+        this->offset.type = collapsible_type.get();
+        this->offset.offset = builder.embed(collapsible_type.get());
+    }
+
+    Property::build(builder);
+}
+
 bool DataTable::DataTableProperty::equals(const Property* other) const
 {
     GUARD(this->flags == other->flags);
@@ -361,27 +385,7 @@ std::shared_ptr<const EntityType> DataTable::materialize()
 
     for (DataTable::Property* property : this->properties)
     {
-        // Skip base class
-        if (property->name == "baseclass" && dynamic_cast<DataTableProperty*>(property) != nullptr)
-        {
-            continue;
-        }
-
-        if (property->collapsible())
-        {
-            auto* data_table_property = dynamic_cast<DataTableProperty*>(property);
-            OK(data_table_property != nullptr);
-            printf("%s: %s\n", this->name.c_str(), data_table_property->data_table->name.c_str());
-
-            std::shared_ptr<const EntityType> collapsible_type = data_table_property->data_table->materialize();
-            property->offset.type = collapsible_type.get();
-            property->offset.offset = builder.embed(collapsible_type.get());
-            continue;
-        }
-
-        std::shared_ptr<const PropertyType> materialized = property->materialize();
-        property->offset.type = materialized.get();
-        property->offset.offset = builder.member(property->name, materialized);
+        property->build(builder);
     }
 
     auto type = std::make_shared<EntityType>(std::move(builder), this);

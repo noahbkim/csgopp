@@ -724,8 +724,8 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
 template<typename Observer>
 Database<ServerClass> Client<Observer>::create_server_classes(
     CodedInputStream& stream,
-    DatabaseWithName<DataTable>& new_data_tables)
-{
+    DatabaseWithName<DataTable>& new_data_tables
+) {
     uint16_t server_class_count;
     OK(demo::ReadLittleEndian16(stream, &server_class_count));
     Database<ServerClass> new_server_classes(server_class_count);

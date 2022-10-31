@@ -70,46 +70,48 @@ struct PropertyFlags
     };
 };
 
+struct Property
+{
+    struct Type
+    {
+        using T = int32_t;
+        enum E : T
+        {
+            INT32 = 0,
+            FLOAT = 1,
+            VECTOR3 = 2,
+            VECTOR2 = 3,
+            STRING = 4,
+            ARRAY = 5,
+            DATA_TABLE = 6,
+            INT64 = 7,
+        };
+    };
+
+    using Flags = PropertyFlags;
+    using Priority = int32_t;
+
+    std::string name;
+    Flags::T flags;
+    Priority priority;
+    Offset offset;
+
+    explicit Property(CSVCMsg_SendTable_sendprop_t&& data);
+    virtual ~Property() = default;
+
+    [[nodiscard]] virtual Type::T type() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<const PropertyType> materialize() const = 0;
+    virtual void build(EntityType::Builder& builder);
+
+//        virtual void emit(Cursor<Declaration> cursor) const;
+    [[nodiscard]] virtual bool equals(const Property* other) const;
+    [[nodiscard]] constexpr bool excluded() const;
+    [[nodiscard]] constexpr bool collapsible() const;
+};
 
 struct DataTable
 {
-    struct Property
-    {
-        struct Type
-        {
-            using T = int32_t;
-            enum E : T
-            {
-                INT32 = 0,
-                FLOAT = 1,
-                VECTOR3 = 2,
-                VECTOR2 = 3,
-                STRING = 4,
-                ARRAY = 5,
-                DATA_TABLE = 6,
-                INT64 = 7,
-            };
-        };
-
-        using Flags = PropertyFlags;
-        using Priority = int32_t;
-
-        std::string name;
-        Flags::T flags;
-        Priority priority;
-        Offset offset;
-
-        explicit Property(CSVCMsg_SendTable_sendprop_t&& data);
-        virtual ~Property() = default;
-
-        [[nodiscard]] virtual Type::T type() const = 0;
-        [[nodiscard]] virtual std::shared_ptr<const PropertyType> materialize() const = 0;
-
-//        virtual void emit(Cursor<Declaration> cursor) const;
-        [[nodiscard]] virtual bool equals(const Property* other) const;
-        [[nodiscard]] constexpr bool excluded() const;
-        [[nodiscard]] constexpr bool collapsible() const;
-    };
+    using Property = Property;
 
     struct Int32Property : public Property
     {
@@ -170,12 +172,13 @@ struct DataTable
 
     struct DataTableProperty : public Property
     {
-        DataTable* data_table;
+        DataTable* data_table{nullptr};
 
         // No constructor because data_table is set later on
         explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
         [[nodiscard]] Type::T type() const override;
         [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
+        void build(EntityType::Builder& builder) override;
         [[nodiscard]] bool equals(const Property* other) const override;
     };
 
