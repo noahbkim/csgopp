@@ -32,7 +32,7 @@ using csgopp::common::vector::Vector2;
 using csgopp::common::database::DatabaseWithName;
 using csgopp::common::database::Delete;
 using csgopp::common::database::NameTableMixin;
-using csgopp::common::object::Annotator;
+using csgopp::common::code::Context;
 using csgopp::common::code::Definition;
 using csgopp::common::code::Dependencies;
 using csgopp::common::code::Declaration;
@@ -71,7 +71,7 @@ struct PropertyFlags
     };
 };
 
-struct Property : Annotator
+struct Property : Context<Declaration>
 {
     struct Type
     {
@@ -104,14 +104,14 @@ struct Property : Annotator
     [[nodiscard]] virtual std::shared_ptr<const PropertyType> materialize() const = 0;
     virtual void build(EntityType::Builder& builder);
 
-    void annotate(Cursor<Declaration> declaration) const override;
+    void apply(Cursor<Declaration> declaration) const override;
 
     [[nodiscard]] virtual bool equals(const Property* other) const;
     [[nodiscard]] constexpr bool excluded() const;
     [[nodiscard]] constexpr bool collapsible() const;
 };
 
-struct DataTable
+struct DataTable : Context<Definition>
 {
     using Property = Property;
 
@@ -210,7 +210,7 @@ struct DataTable
 
     std::shared_ptr<const EntityType> materialize();
     std::shared_ptr<const ArrayType> materialize_array();
-    void emit(Cursor<Definition> cursor) const;
+    void apply(Cursor<Definition> cursor) const override;
 };
 
 using DataTableDatabase = DatabaseWithName<DataTable, Delete<DataTable>>;

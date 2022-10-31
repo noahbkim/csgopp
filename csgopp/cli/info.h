@@ -91,7 +91,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
         this->data_table_count += 1;
         if (data_table->entity_type)
         {
-            data_table->emit(generator.append(data_table->name));
+            data_table->entity_type->emit(generator.append(data_table->name));
             this->entity_type_count += 1;
             out2 << data_table->entity_type->name << std::endl;
             for (auto& [offset, name] : data_table->entity_type->prioritized)

@@ -31,7 +31,7 @@ void Property::build(EntityType::Builder& builder)
     this->offset.offset = builder.member(this->name, materialized, this);
 }
 
-void Property::annotate(Cursor<csgopp::common::code::Declaration> declaration) const
+void Property::apply(Cursor<csgopp::common::code::Declaration> declaration) const
 {
     if (this->flags != 0)
     {
@@ -389,7 +389,9 @@ std::shared_ptr<const EntityType> DataTable::materialize()
         base = this->server_class->base_class->data_table->materialize().get();
     }
 
-    EntityType::Builder builder(this->name, base);
+    EntityType::Builder builder(base);
+    builder.name = this->name;
+    builder.context = this;
 
     for (DataTable::Property* property : this->properties)
     {
@@ -434,19 +436,8 @@ std::shared_ptr<const EntityType> DataTable::materialize()
     return this->entity_type;
 }
 
-void DataTable::emit(Cursor<Definition> cursor) const
+void DataTable::apply(Cursor<Definition> cursor) const
 {
-    if (this->entity_type->base != nullptr)
-    {
-        cursor.target.base_name.emplace(this->entity_type->base->name);
-        cursor.dependencies.emplace(this->entity_type->base->name);
-    }
-
-    for (auto iterator = this->entity_type->begin_self(); iterator != this->entity_type->end(); ++iterator)
-    {
-        iterator->emit(cursor.into(cursor.target.append(iterator->name)));
-    }
-
     for (auto& [a, b] : this->excludes)
     {
         cursor.target.annotations.emplace_back(concatenate("exclude: ", a, ".", b));

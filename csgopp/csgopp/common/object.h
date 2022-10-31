@@ -195,11 +195,6 @@ struct ArrayType : public virtual Type
     [[nodiscard]] size_t at(size_t element_index) const;
 };
 
-struct Annotator
-{
-    virtual void annotate(code::Cursor<code::Declaration> cursor) const {};
-};
-
 struct ObjectType : public virtual Type
 {
     struct Member
@@ -207,9 +202,13 @@ struct ObjectType : public virtual Type
         std::shared_ptr<const Type> type;
         size_t offset;
         std::string name;
-        Annotator* annotator{nullptr};
+        code::Context<code::Declaration>* context{nullptr};
 
-        Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name, Annotator* data = nullptr);
+        Member(
+            std::shared_ptr<const Type> type,
+            size_t offset,
+            std::string&& name,
+            code::Context<code::Declaration>* context = nullptr);
 
         void emit(code::Cursor<code::Declaration>) const;
     };
@@ -224,17 +223,17 @@ struct ObjectType : public virtual Type
         size_t members_size{0};
         std::string name;
         const ObjectType* base{nullptr};
+        code::Context<code::Definition>* context;
 
         Builder() = default;
-        explicit Builder(std::string name);
-        explicit Builder(const ObjectType* base);
-        Builder(std::string name, const ObjectType* base);
+        explicit Builder(const ObjectType* base_object_type);
 
-        size_t embed(const ObjectType* other);
+        size_t embed(const ObjectType* object_type);
+        size_t member(const Member& member);
         size_t member(
             std::string member_name,
             std::shared_ptr<const Type> member_type,
-            Annotator* member_annotator = nullptr);
+            code::Context<code::Declaration>* member_context = nullptr);
     };
 
     Members members;
@@ -242,6 +241,7 @@ struct ObjectType : public virtual Type
     size_t members_size;
     std::string name;
     const ObjectType* base;
+    code::Context<code::Definition>* context;
 
     explicit ObjectType(Builder&& builder);
     [[nodiscard]] size_t size() const override;
@@ -250,7 +250,8 @@ struct ObjectType : public virtual Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    void emit(code::Cursor<code::Declaration>) const override;
+    void emit(code::Cursor<code::Declaration> cursor) const override;
+    void emit(code::Cursor<code::Definition> cursor) const;
 
     [[nodiscard]] Accessor operator[](const std::string& member_name) const override;
     [[nodiscard]] const Member& at(const std::string& member_name) const;

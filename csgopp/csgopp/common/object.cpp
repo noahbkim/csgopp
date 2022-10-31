@@ -141,33 +141,28 @@ size_t ArrayType::at(size_t element_index) const
     return element_index * this->element_size;
 }
 
-ObjectType::Member::Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name, Annotator* annotator)
+ObjectType::Member::Member(
+    std::shared_ptr<const Type> type,
+    size_t offset,
+    std::string&& name,
+    code::Context<code::Declaration>* context
+)
     : type(std::move(type))
     , offset(offset)
     , name(std::move(name))
-    , annotator(annotator)
+    , context(context)
 {}
 
 void ObjectType::Member::emit(code::Cursor<code::Declaration> cursor) const
 {
     this->type->emit(cursor);
-    if (this->annotator != nullptr)
+    if (this->context != nullptr)
     {
-        this->annotator->annotate(cursor);
+        this->context->apply(cursor);
     }
 }
 
-ObjectType::Builder::Builder(std::string name)
-    : name(std::move(name))
-{}
-
-ObjectType::Builder::Builder(const ObjectType* base)
-    : Builder("", base)
-{}
-
-ObjectType::Builder::Builder(std::string name, const ObjectType* base)
-    : name(std::move(name))
-    , base(base)
+ObjectType::Builder::Builder(const ObjectType* base) : base(base)
 {
     if (base != nullptr)
     {
@@ -184,27 +179,36 @@ size_t ObjectType::Builder::embed(const ObjectType* other)
         return 0;
     }
 
-    const Member& member = other->members.front();
-    size_t offset = this->member(member.name, member.type, member.annotator);
+    // First, get the offset since it's computed for us
+    const Member& front = other->members.front();
+    size_t offset = this->member(front);
 
-    for (const Member& member : other->members)
+    // Rest
+    for (size_t i = 1; i < other->members.size(); ++i)
     {
-        this->member(member.name, member.type, member.annotator);
+        const Member& member = other->members.at(i);
+        this->member(member);
     }
+
     return offset;
+}
+
+size_t ObjectType::Builder::member(const Member& member)
+{
+    return this->member(member.name, member.type, member.context);
 }
 
 size_t ObjectType::Builder::member(
     std::string member_name,
     std::shared_ptr<const Type> member_type,
-    Annotator* member_annotator
+    code::Context<code::Declaration>* member_context
 ) {
     // TODO: find a clean way to log if a member is hidden here
     size_t offset = align(this->members_size, member_type->alignment());
     this->members_size = offset + member_type->size();
     // Overwrite here; excludes always hide base class members, so we want to always point to child's member
     this->members_lookup[member_name] = this->members.size() - 1;
-    this->members.emplace_back(std::move(member_type), offset, std::move(member_name), member_annotator);
+    this->members.emplace_back(std::move(member_type), offset, std::move(member_name), member_context);
     return offset;
 }
 
@@ -214,6 +218,7 @@ ObjectType::ObjectType(Builder&& builder)
     , members_size(builder.members_size)
     , name(std::move(builder.name))
     , base(builder.base)
+    , context(builder.context)
 {}
 
 size_t ObjectType::size() const
@@ -246,6 +251,25 @@ void ObjectType::emit(code::Cursor<code::Declaration> cursor) const
 {
     cursor.target.type = this->name;
     cursor.dependencies.emplace(this->name);
+}
+
+void ObjectType::emit(code::Cursor<code::Definition> cursor) const
+{
+    if (this->base != nullptr)
+    {
+        cursor.target.base_name.emplace(this->base->name);
+        cursor.dependencies.emplace(this->base->name);
+    }
+
+    for (auto iterator = this->begin_self(); iterator != this->end(); ++iterator)
+    {
+        iterator->emit(cursor.into(cursor.target.append(iterator->name)));
+    }
+
+    if (this->context != nullptr)
+    {
+        this->context->apply(cursor);
+    }
 }
 
 Accessor ObjectType::operator[](const std::string &member_name) const

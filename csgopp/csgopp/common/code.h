@@ -54,6 +54,12 @@ struct Cursor
     }
 };
 
+template<typename T>
+struct Context
+{
+    virtual void apply(Cursor<T> cursor) const {};
+};
+
 struct Generator
 {
     std::vector<Definition> definitions;
