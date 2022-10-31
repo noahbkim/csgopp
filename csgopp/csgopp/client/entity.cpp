@@ -1,6 +1,4 @@
 #include "entity.h"
-#include "data_table.h"
-#include "server_class.h"
 
 namespace csgopp::client::entity
 {
@@ -36,6 +34,11 @@ Offset::Offset(const struct PropertyType* type, size_t offset)
     : type(type)
     , offset(offset)
 {}
+
+Offset Offset::from(size_t parent) const
+{
+    return Offset(this->type, parent + this->offset);
+}
 
 void BitCoordinateFloatType::update(char* address, BitStream& stream) const
 {

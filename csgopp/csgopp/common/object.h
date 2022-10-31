@@ -222,7 +222,7 @@ struct ObjectType : public virtual Type
         explicit Builder(const ObjectType* base);
         Builder(std::string name, const ObjectType* base);
 
-        void embed(const ObjectType* other);
+        size_t embed(const ObjectType* other);
         size_t member(std::string member_name, std::shared_ptr<const Type> member_type);
     };
 

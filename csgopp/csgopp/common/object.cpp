@@ -167,12 +167,14 @@ ObjectType::Builder::Builder(std::string name, const ObjectType* base)
     }
 }
 
-void ObjectType::Builder::embed(const ObjectType* other)
+size_t ObjectType::Builder::embed(const ObjectType* other)
 {
+    size_t offset = align(this->members_size, other->alignment());
     for (const Member& member : other->members)
     {
         this->member(member.name, member.type);
     }
+    return offset;
 }
 
 size_t ObjectType::Builder::member(std::string member_name, std::shared_ptr<const Type> member_type)

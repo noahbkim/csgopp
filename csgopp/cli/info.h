@@ -108,7 +108,6 @@ struct DataObserver : public ClientObserverBase<DataObserver>
 
     void report()
     {
-//        sort(this->structures);
         this->generator.write(out);
 
         std::cout << "server classes: " << this->server_class_count << std::endl;

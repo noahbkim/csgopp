@@ -69,6 +69,8 @@ struct Offset
 
     Offset() = default;
     Offset(const PropertyType* type, size_t offset);
+
+    Offset from(size_t parent) const;
 };
 
 template<Compression C>

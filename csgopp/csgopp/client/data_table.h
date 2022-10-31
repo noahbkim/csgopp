@@ -105,20 +105,10 @@ struct DataTable
         [[nodiscard]] virtual Type::T type() const = 0;
         [[nodiscard]] virtual std::shared_ptr<const PropertyType> materialize() const = 0;
 
-        [[nodiscard]] virtual bool equals(const Property* other) const
-        {
-            return false;
-        };
-
-        [[nodiscard]] constexpr bool excluded() const
-        {
-            return this->flags & Flags::EXCLUDE;
-        }
-
-        [[nodiscard]] constexpr bool collapsible() const
-        {
-            return this->flags & Flags::COLLAPSIBLE;
-        }
+//        virtual void emit(Cursor<Declaration> cursor) const;
+        [[nodiscard]] virtual bool equals(const Property* other) const;
+        [[nodiscard]] constexpr bool excluded() const;
+        [[nodiscard]] constexpr bool collapsible() const;
     };
 
     struct Int32Property : public Property

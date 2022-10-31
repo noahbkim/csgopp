@@ -16,12 +16,28 @@ using csgopp::common::object::shared;
 using csgopp::common::control::concatenate;
 using csgopp::client::entity::ArrayType;
 using csgopp::client::entity::EntityType;
+using csgopp::client::entity::Offset;
 
 DataTable::Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
     , flags(data.flags())
     , priority(data.priority())
 {}
+
+[[nodiscard]] bool DataTable::Property::equals(const Property* other) const
+{
+    return false;
+};
+
+[[nodiscard]] constexpr bool DataTable::Property::excluded() const
+{
+    return this->flags & Flags::EXCLUDE;
+}
+
+[[nodiscard]] constexpr bool DataTable::Property::collapsible() const
+{
+    return this->flags & Flags::COLLAPSIBLE;
+}
 
 DataTable::Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
     : bits(data.num_bits())
@@ -214,6 +230,7 @@ DataTable::Property::Type::T DataTable::DataTableProperty::type() const
 
 std::shared_ptr<const PropertyType> DataTable::DataTableProperty::materialize() const
 {
+
     if (this->data_table->is_array)
     {
         return this->data_table->materialize_array();
@@ -279,22 +296,12 @@ DataTable::DataTable(const CSVCMsg_SendTable& data)
     , properties(data.props_size())
 {}
 
-struct AbsoluteProperty
-{
-    const DataTable::Property* property;
-    entity::Offset offset;
-
-    AbsoluteProperty(const DataTable::Property* property, entity::Offset offset)
-        : property(property)
-        , offset(offset)
-    {}
-};
-
-void collect(
+template<typename Callback>
+void collect_properties(
     DataTable* data_table,
     size_t offset,
     const DataTable::Excludes& excludes,
-    std::vector<AbsoluteProperty>& properties
+    Callback callback
 ) {
     for (DataTable::Property* property : data_table->properties)
     {
@@ -306,20 +313,19 @@ void collect(
         auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
         if (data_table_property != nullptr)
         {
-            collect(data_table_property->data_table, offset + property->offset.offset, excludes, properties);
+            collect_properties(data_table_property->data_table, offset + property->offset.offset, excludes, callback);
         }
         else
         {
-            properties.emplace_back(property, entity::Offset(property->offset.type, offset + property->offset.offset));
+            callback(property, property->offset.from(offset));
         }
     }
 }
 
-std::vector<AbsoluteProperty> collect(DataTable* data_table)
+template<typename Callback>
+void collect_properties(DataTable* data_table, Callback callback)
 {
-    std::vector<AbsoluteProperty> properties;
-    collect(data_table, 0, data_table->excludes, properties);
-    return properties;
+    collect_properties(data_table, 0, data_table->excludes, callback);
 }
 
 std::shared_ptr<const ArrayType> DataTable::materialize_array()
@@ -363,8 +369,13 @@ std::shared_ptr<const EntityType> DataTable::materialize()
 
         if (property->collapsible())
         {
-            auto object_type = std::dynamic_pointer_cast<const common::object::ObjectType>(property->materialize());
-            builder.embed(object_type.get());
+            auto* data_table_property = dynamic_cast<DataTableProperty*>(property);
+            OK(data_table_property != nullptr);
+            printf("%s: %s\n", this->name.c_str(), data_table_property->data_table->name.c_str());
+
+            std::shared_ptr<const EntityType> collapsible_type = data_table_property->data_table->materialize();
+            property->offset.type = collapsible_type.get();
+            property->offset.offset = builder.embed(collapsible_type.get());
             continue;
         }
 
@@ -375,9 +386,36 @@ std::shared_ptr<const EntityType> DataTable::materialize()
 
     auto type = std::make_shared<EntityType>(std::move(builder), this);
 
-    for (const AbsoluteProperty& property : collect(this))
+    std::vector<Property*> prioritized_properties;
+    collect_properties(this, [&type, &prioritized_properties](Property* property, Offset absolute)
     {
-        type->prioritized.emplace_back(property.offset, property.property->name);
+        type->prioritized.emplace_back(absolute, property->name);
+        prioritized_properties.emplace_back(property);
+    });
+
+    size_t start = 0;
+    bool more = true;
+    for (size_t priority = 0; more; ++priority)
+    {
+        more = false;
+        for (size_t i = 0; i < type->prioritized.size(); ++i)
+        {
+            Property* property = prioritized_properties[i];
+            if (property->priority == priority || priority == 64 && property->flags & Property::Flags::CHANGES_OFTEN)
+            {
+                if (start != i)
+                {
+                    std::swap(prioritized_properties[start], prioritized_properties[i]);
+                    std::swap(type->prioritized[start], type->prioritized[i]);
+                    start += 1;
+                }
+            }
+
+            if (property->priority > priority)
+            {
+                more = false;
+            }
+        }
     }
 
     this->entity_type = type;
