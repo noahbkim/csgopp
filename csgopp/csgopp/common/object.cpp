@@ -141,11 +141,21 @@ size_t ArrayType::at(size_t element_index) const
     return element_index * this->element_size;
 }
 
-ObjectType::Member::Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name)
+ObjectType::Member::Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name, Annotator* annotator)
     : type(std::move(type))
     , offset(offset)
     , name(std::move(name))
+    , annotator(annotator)
 {}
+
+void ObjectType::Member::emit(code::Cursor<code::Declaration> cursor) const
+{
+    this->type->emit(cursor);
+    if (this->annotator != nullptr)
+    {
+        this->annotator->annotate(cursor);
+    }
+}
 
 ObjectType::Builder::Builder(std::string name)
     : name(std::move(name))
@@ -169,22 +179,32 @@ ObjectType::Builder::Builder(std::string name, const ObjectType* base)
 
 size_t ObjectType::Builder::embed(const ObjectType* other)
 {
-    size_t offset = align(this->members_size, other->alignment());
+    if (other->members.empty())
+    {
+        return 0;
+    }
+
+    const Member& member = other->members.front();
+    size_t offset = this->member(member.name, member.type, member.annotator);
+
     for (const Member& member : other->members)
     {
-        this->member(member.name, member.type);
+        this->member(member.name, member.type, member.annotator);
     }
     return offset;
 }
 
-size_t ObjectType::Builder::member(std::string member_name, std::shared_ptr<const Type> member_type)
-{
+size_t ObjectType::Builder::member(
+    std::string member_name,
+    std::shared_ptr<const Type> member_type,
+    Annotator* member_annotator
+) {
     // TODO: find a clean way to log if a member is hidden here
     size_t offset = align(this->members_size, member_type->alignment());
     this->members_size = offset + member_type->size();
     // Overwrite here; excludes always hide base class members, so we want to always point to child's member
     this->members_lookup[member_name] = this->members.size() - 1;
-    this->members.emplace_back(std::move(member_type), offset, std::move(member_name));
+    this->members.emplace_back(std::move(member_type), offset, std::move(member_name), member_annotator);
     return offset;
 }
 

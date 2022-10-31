@@ -34,7 +34,7 @@ void Definition::write(std::ostream& out) const
         out << ";";
         if (declaration.annotations.size() == 1)
         {
-            out << "// " << declaration.annotations.front();
+            out << "  // " << declaration.annotations.front();
         }
         out << std::endl;
     }

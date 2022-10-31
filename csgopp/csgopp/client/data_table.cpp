@@ -28,7 +28,15 @@ void Property::build(EntityType::Builder& builder)
 {
     std::shared_ptr<const PropertyType> materialized = this->materialize();
     this->offset.type = materialized.get();
-    this->offset.offset = builder.member(this->name, materialized);
+    this->offset.offset = builder.member(this->name, materialized, this);
+}
+
+void Property::annotate(Cursor<csgopp::common::code::Declaration> declaration) const
+{
+    if (this->flags != 0)
+    {
+        declaration.target.annotations.emplace_back(std::to_string(this->flags));
+    }
 }
 
 [[nodiscard]] bool Property::equals(const Property* other) const
@@ -436,7 +444,7 @@ void DataTable::emit(Cursor<Definition> cursor) const
 
     for (auto iterator = this->entity_type->begin_self(); iterator != this->entity_type->end(); ++iterator)
     {
-        iterator->type->emit(cursor.into(cursor.target.append(iterator->name)));
+        iterator->emit(cursor.into(cursor.target.append(iterator->name)));
     }
 
     for (auto& [a, b] : this->excludes)

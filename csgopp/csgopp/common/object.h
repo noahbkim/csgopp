@@ -195,6 +195,11 @@ struct ArrayType : public virtual Type
     [[nodiscard]] size_t at(size_t element_index) const;
 };
 
+struct Annotator
+{
+    virtual void annotate(code::Cursor<code::Declaration> cursor) const {};
+};
+
 struct ObjectType : public virtual Type
 {
     struct Member
@@ -202,8 +207,11 @@ struct ObjectType : public virtual Type
         std::shared_ptr<const Type> type;
         size_t offset;
         std::string name;
+        Annotator* annotator{nullptr};
 
-        Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name);
+        Member(std::shared_ptr<const Type> type, size_t offset, std::string&& name, Annotator* data = nullptr);
+
+        void emit(code::Cursor<code::Declaration>) const;
     };
 
     using Members = std::vector<Member>;
@@ -223,7 +231,10 @@ struct ObjectType : public virtual Type
         Builder(std::string name, const ObjectType* base);
 
         size_t embed(const ObjectType* other);
-        size_t member(std::string member_name, std::shared_ptr<const Type> member_type);
+        size_t member(
+            std::string member_name,
+            std::shared_ptr<const Type> member_type,
+            Annotator* member_annotator = nullptr);
     };
 
     Members members;
