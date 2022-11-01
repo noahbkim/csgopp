@@ -96,7 +96,7 @@ struct DataObserver : public ClientObserverBase<DataObserver>
             out2 << data_table->entity_type->name << std::endl;
             for (auto& [offset, name] : data_table->entity_type->prioritized)
             {
-                out2 << "  " << name << ": " << offset.offset << std::endl;
+                out2 << "  " << name << ": " << offset.priority << std::endl;
             }
         }
     }

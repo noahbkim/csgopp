@@ -483,7 +483,7 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         {
             StringTable::Entry* entry = new StringTable::Entry();
             OK(data.read_string(entry->string));
-            string_table->entries.at(j) = entry;
+            string_table->entries.emplace(entry);
 
             uint8_t has_data;
             OK(data.read(&has_data, 1));
@@ -495,7 +495,7 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
                 entry->data.resize(data_size);
                 for (uint16_t k = 0; k < data_size; ++k)
                 {
-                    OK(data.read(&entry->data.at(j), 8));
+                    OK(data.read(&entry->data.at(k), 8));
                 }
             }
         }
@@ -625,7 +625,9 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
             {
                 if (property_data.flags() & DataTable::Property::Flags::EXCLUDE)
                 {
-                    data_table->excludes.emplace(property_data.dt_name(), property_data.var_name());
+                    data_table->excludes.emplace_back(
+                        std::move(*property_data.mutable_dt_name()),
+                        std::move(*property_data.mutable_var_name()));
                     continue;
                 }
 

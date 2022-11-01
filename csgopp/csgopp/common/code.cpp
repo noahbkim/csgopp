@@ -88,6 +88,7 @@ void Generator::sort()
         }
     }
 
+    // TODO: force to terminate if missing dependencies
     while (!next.empty())
     {
         this->definitions.emplace_back(std::move(next.back()));

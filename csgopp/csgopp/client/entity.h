@@ -68,6 +68,7 @@ struct Offset
 {
     const PropertyType* type{nullptr};
     size_t offset{0};
+    size_t priority{0};
 
     Offset() = default;
     Offset(const PropertyType* type, size_t offset);

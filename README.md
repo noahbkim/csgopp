@@ -19,3 +19,9 @@ This project provides a couple things:
 - [ ] ServerInfo
 - [ ] SetConVar
 - [ ] EncryptedData
+
+## Alternatives
+
+- Go: https://github.com/markus-wa/demoinfocs-golang
+- TypeScript: https://github.com/saul/demofile
+- C++: https://github.com/ValveSoftware/csgo-demoinfo

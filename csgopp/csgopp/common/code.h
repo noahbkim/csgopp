@@ -57,6 +57,7 @@ struct Cursor
 template<typename T>
 struct Context
 {
+    virtual ~Context() = default;
     virtual void apply(Cursor<T> cursor) const {};
 };
 

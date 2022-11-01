@@ -37,7 +37,9 @@ Offset::Offset(const struct PropertyType* type, size_t offset)
 
 Offset Offset::from(size_t parent) const
 {
-    return Offset(this->type, parent + this->offset);
+    Offset result(this->type, parent + this->offset);
+    result.priority = this->priority;
+    return result;
 }
 
 void BitCoordinateFloatType::update(char* address, BitStream& stream) const
