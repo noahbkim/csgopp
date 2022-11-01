@@ -28,6 +28,7 @@ struct Definition
     std::optional<std::string> base_name;
     std::vector<Declaration> members;
     std::vector<std::string> annotations;
+    std::vector<std::string> aliases;
 
     Definition() = default;
     explicit Definition(std::string name) : name(std::move(name)) {}

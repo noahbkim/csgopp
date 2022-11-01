@@ -39,6 +39,14 @@ void Definition::write(std::ostream& out) const
         out << std::endl;
     }
     out << "};" << std::endl << std::endl;
+    if (!this->aliases.empty())
+    {
+        for (const std::string& alias : this->aliases)
+        {
+            out << "using " << alias << " = " << this->name << ";" << std::endl;
+        }
+        out << std::endl;
+    }
 }
 
 Declaration& Definition::append(std::string declaration_name)

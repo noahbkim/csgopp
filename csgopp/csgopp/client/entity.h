@@ -76,6 +76,12 @@ struct Offset
     [[nodiscard]] Offset from(size_t parent) const;
 };
 
+struct BoolType final : public virtual DefaultValueType<bool>, public virtual PropertyType
+{
+    void emit(Cursor<Declaration> cursor) const override;
+    void update(char* address, BitStream& stream) const override;
+};
+
 template<Compression C>
 struct UnsignedInt32Type final : public virtual DefaultValueType<uint32_t>, public virtual PropertyType
 {

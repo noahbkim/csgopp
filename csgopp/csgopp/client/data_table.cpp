@@ -31,15 +31,6 @@ void Property::build(EntityType::Builder& builder)
     this->offset.offset = builder.member(this->name, materialized, this);
 }
 
-void Property::apply(Cursor<csgopp::common::code::Declaration> declaration) const
-{
-    declaration.target.annotations.emplace_back(
-        concatenate(
-            std::to_string(this->priority),
-            " ",
-            (this->flags & Flags::COLLAPSIBLE) ? "collapsible" : ""));
-}
-
 [[nodiscard]] bool Property::equals(const Property* other) const
 {
     return false;
@@ -67,7 +58,11 @@ Property::Type::T Int32Property::type() const
 
 std::shared_ptr<const PropertyType> Int32Property::materialize() const
 {
-    if (this->flags & Flags::UNSIGNED)
+    if (this->bits == 1)
+    {
+        return shared<entity::BoolType>();
+    }
+    else if (this->flags & Flags::UNSIGNED)
     {
         if (this->flags & Flags::VARIABLE_INTEGER)
         {
@@ -485,18 +480,9 @@ std::shared_ptr<const EntityType> DataTable::materialize()
 
 void DataTable::apply(Cursor<Definition> cursor) const
 {
-    for (auto& [a, b] : this->excludes)
-    {
-        cursor.target.annotations.emplace_back(concatenate("exclude: ", a, ".", b));
-    }
-
     if (this->server_class != nullptr)
     {
-        cursor.target.annotations.emplace_back(concatenate("server class: ", this->server_class->name));
-    }
-    else
-    {
-        cursor.target.annotations.emplace_back("server class: none");
+        cursor.target.aliases.emplace_back(this->server_class->name);
     }
 }
 

@@ -42,6 +42,16 @@ Offset Offset::from(size_t parent) const
     return result;
 }
 
+void BoolType::update(char* address, BitStream& stream) const
+{
+
+}
+
+void BoolType::emit(Cursor<Declaration> cursor) const
+{
+    cursor.target.type = "bool";
+}
+
 void BitCoordinateFloatType::update(char* address, BitStream& stream) const
 {
 

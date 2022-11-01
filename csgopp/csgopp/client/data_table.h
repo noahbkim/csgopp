@@ -193,7 +193,7 @@ struct Property : Context<Declaration>
     /// This override is currently just a proof of concept that's helped iron
     /// out the rather circular relationship between the `DataTable` structures
     /// and the `Type` ones.
-    void apply(Cursor<Declaration> declaration) const override;
+    // void apply(Cursor<Declaration> declaration) const override;
 
     /// \brief Check if two properties have the same type.
     ///
@@ -218,6 +218,7 @@ struct Property : Context<Declaration>
     [[nodiscard]] constexpr bool changes_often() const;
 };
 
+/// \brief Represents an int32_t.
 struct Int32Property : public Property
 {
     int32_t bits;
