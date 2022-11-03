@@ -22,6 +22,7 @@ Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
     , flags(data.flags())
     , priority(data.priority())
+    , offset(nullptr, this, 0)
 {}
 
 void Property::build(EntityType::Builder& builder)
@@ -256,17 +257,18 @@ void DataTableProperty::build(EntityType::Builder& builder)
 {
     if (this->name == "baseclass")
     {
-        return;
+        // Do nothing
     }
-
-    if (this->collapsible())
+    else if (this->collapsible())
     {
         // TODO: investigate whether this is correct, DT_OverlayVars is only non-baseclass example
         std::shared_ptr<const EntityType> collapsible_type = this->data_table->materialize();
         this->offset.offset = builder.embed(collapsible_type.get());
     }
-
-    Property::build(builder);
+    else
+    {
+        Property::build(builder);
+    }
 }
 
 bool DataTableProperty::equals(const Property* other) const
@@ -335,9 +337,9 @@ template<typename Callback>
 void collect_properties_head(
     DataTable* data_table,
     size_t offset,
-    absl::flat_hash_set<std::pair<std::string_view, std::string_view>>& excludes,
+    absl::flat_hash_set<DataTable::ExcludeView>& excludes,
     Callback callback,
-    std::vector<std::pair<Property*, Offset>>& offsets)
+    std::vector<Offset>& offsets)
 {
     // TODO: this doesn't 100% reflect the recursion but I'm pretty sure it's fine
     for (const auto& item : data_table->excludes)
@@ -375,8 +377,7 @@ void collect_properties_head(
         }
         else
         {
-            property->offset.priority = property->priority;
-            offsets.emplace_back(property, property->offset.from(offset));
+            offsets.emplace_back(property->offset.from(offset));
         }
     }
 }
@@ -385,21 +386,21 @@ template<typename Callback>
 void collect_properties_tail(
     DataTable* data_table,
     size_t offset,
-    absl::flat_hash_set<std::pair<std::string_view, std::string_view>>& excludes,
+    absl::flat_hash_set<DataTable::ExcludeView>& excludes,
     Callback callback)
 {
-    std::vector<std::pair<Property*, Offset>> offsets;
+    std::vector<Offset> offsets;
     collect_properties_head(data_table, offset, excludes, callback, offsets);
-    for (auto& pair : offsets)
+    for (const Offset& absolute : offsets)
     {
-        callback(pair.first, pair.second);
+        callback(absolute);
     }
 }
 
 template<typename Callback>
 void collect_properties(DataTable* data_table, Callback callback)
 {
-    absl::flat_hash_set<std::pair<std::string_view, std::string_view>> excludes;
+    absl::flat_hash_set<DataTable::ExcludeView> excludes;
     collect_properties_tail(data_table, 0, excludes, callback);
 }
 
@@ -443,11 +444,9 @@ std::shared_ptr<const EntityType> DataTable::materialize()
 
     auto type = std::make_shared<EntityType>(std::move(builder), this);
 
-    std::vector<Property*> prioritized_properties;
-    collect_properties(this, [&type, &prioritized_properties](Property* property, Offset& absolute)
+    collect_properties(this, [&type](const Offset& absolute)
     {
-        type->prioritized.emplace_back(absolute, property->name);
-        prioritized_properties.emplace_back(property);
+        type->prioritized.emplace_back(absolute);
     });
 
     size_t start = 0;
@@ -457,12 +456,11 @@ std::shared_ptr<const EntityType> DataTable::materialize()
         more = false;
         for (size_t i = start; i < type->prioritized.size(); ++i)
         {
-            Property* property = prioritized_properties[i];
+            const Property* property = type->prioritized[i].property;
             if (property->priority == priority || priority == 64 && property->changes_often())
             {
                 if (start != i)
                 {
-                    std::swap(prioritized_properties[start], prioritized_properties[i]);
                     std::swap(type->prioritized[start], type->prioritized[i]);
                 }
                 start += 1;

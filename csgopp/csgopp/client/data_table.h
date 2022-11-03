@@ -218,7 +218,7 @@ struct Property : Context<Declaration>
     [[nodiscard]] constexpr bool changes_often() const;
 };
 
-/// \brief Represents an int32_t.
+/// \brief Represents an integer with maximum width 32 bits. Can be boolean.
 struct Int32Property : public Property
 {
     int32_t bits;
@@ -229,6 +229,7 @@ struct Int32Property : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+/// \brief Represents a float.
 struct FloatProperty : public Property
 {
     float high_value;
@@ -241,6 +242,7 @@ struct FloatProperty : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+/// \brief Represents a 3D floating point vector.
 struct Vector3Property : public Property
 {
     using Property::Property;
@@ -249,6 +251,7 @@ struct Vector3Property : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+/// \brief Represents a 2D floating point vector.
 struct Vector2Property : public Property
 {
     using Property::Property;
@@ -257,6 +260,7 @@ struct Vector2Property : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+/// \brief Represents a string of arbitrary length.
 struct StringProperty : public Property
 {
     using Property::Property;
@@ -265,6 +269,10 @@ struct StringProperty : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+/// \brief Represents a fixed-length array of a single other property type.
+///
+/// Array properties manage their own element type. It seems like arrays are
+/// mostly for short arrays (pairs, coordinates, etc.).
 struct ArrayProperty : public Property
 {
     std::unique_ptr<Property> element;
@@ -276,6 +284,15 @@ struct ArrayProperty : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+/// \brief Represents the object described by another data table.
+///
+/// `DataTable` properties are used to represent nested structs in the entity
+/// data structure. Most of the time, data tables correspond to allocated
+/// `ServerClass` instances, but they can also contain arbitrary nested data
+/// as well as represent separately serialized arrays. These cases have to be
+/// accounted for in `DataTableProperty::build()`.
+///
+/// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_send.cpp#L691
 struct DataTableProperty : public Property
 {
     DataTable* data_table{nullptr};
@@ -284,6 +301,20 @@ struct DataTableProperty : public Property
     explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
     [[nodiscard]] std::shared_ptr<const PropertyType> materialize() const override;
+
+    /// \brief Add the referenced data table as a member of the `EntityType`.
+    ///
+    /// \param builder the builder to add our member(s) to.
+    ///
+    /// There are a couple of discrete behaviors covered by this method:
+    ///
+    ///   - If this data table property represents the containing data table's
+    ///     base class (i.e. `this->name == "baseclass"`), don't do anything,
+    ///     as our materialized `EntityType` should already be set as the
+    ///     builder's `EntityType::Builder::base`.
+    ///   - If the referenced data table is collapsible, we directly embed its
+    ///     members as our own.
+    ///   - Otherwise, just add as a member normally.
     void build(EntityType::Builder& builder) override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
@@ -310,13 +341,16 @@ struct DataTable : Context<Definition>
     using ArrayProperty = ArrayProperty;
     using DataTableProperty = DataTableProperty;
     using Int64Property = Int64Property;
+
     using PropertyDatabase = DatabaseWithName<Property, Delete<Property>>;
+    using Exclude = std::pair<std::string, std::string>;
+    using ExcludeView = std::pair<std::string_view, std::string_view>;
 
     std::string name;
     PropertyDatabase properties;  // pointer stability is very convenient
     ServerClass* server_class{nullptr};
     std::shared_ptr<const EntityType> entity_type;
-    std::vector<std::pair<std::string, std::string>> excludes;
+    std::vector<Exclude> excludes;
     bool is_array{false};  // Whether we can make array when member
 
     DataTable() = default;

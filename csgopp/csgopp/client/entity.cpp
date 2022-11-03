@@ -1,7 +1,10 @@
 #include "entity.h"
+#include "data_table.h"
 
 namespace csgopp::client::entity
 {
+
+using csgopp::client::data_table::DataTable;
 
 // https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h
 
@@ -30,15 +33,15 @@ const size_t string_size_bits_max = 9;
 const size_t string_size_max = 1 << string_size_bits_max;
 }
 
-Offset::Offset(const struct PropertyType* type, size_t offset)
+Offset::Offset(const struct PropertyType* type, const DataTable::Property* property, size_t offset)
     : type(type)
+    , property(property)
     , offset(offset)
 {}
 
 Offset Offset::from(size_t parent) const
 {
-    Offset result(this->type, parent + this->offset);
-    result.priority = this->priority;
+    Offset result(this->type, this->property, parent + this->offset);
     return result;
 }
 

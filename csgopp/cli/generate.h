@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include <google/protobuf/io/coded_stream.h>
 #include <argparse/argparse.hpp>
@@ -28,7 +29,7 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
     size_t entity_type_count = 0;
     Generator generator;
 
-    using ClientObserverBase::ClientObserverBase;
+    explicit GenerateObserver(Client& client) : ClientObserverBase<GenerateObserver>(client) {}
 
     void on_data_table_creation(Client& client, const DataTable* data_table) override
     {
@@ -54,22 +55,78 @@ struct GenerateCommand
     explicit GenerateCommand(ArgumentParser& root) : name("generate"), parser(name)
     {
         this->parser.add_description("generate C++ structs for the server classes and data tables in a given demo");
-        this->parser.add_argument("-o", "--output")
-            .help("a file name to write the classes to, defaults to the protocol number")
-            .implicit_value(false);
+        this->parser.add_argument("-f", "--file")
+            .help("a file name to write the classes to, defaults to the protocol number");
+        this->parser.add_argument("-d", "--directory")
+            .help("a directory name to write output files to, may be specified with file");
         this->parser.add_argument("-i", "--include")
             .help("a series of paths to quote-include at the top of the generated file")
             .nargs(argparse::nargs_pattern::at_least_one)
-            .default_value(std::vector<std::string>{});
+            .default_value(std::vector<std::string>{})
+            .required();
         this->parser.add_argument("-n", "--namespace")
             .help("enclose the declarations in a namespace based on the network protocol")
+            .implicit_value(true)
+            .default_value(false);
+        this->parser.add_argument("-v", "--verify")
+            .help("output extra data files for debugging and verification")
             .implicit_value(true)
             .default_value(false);
         this->parser.add_argument("demo");
         root.add_subparser(this->parser);
     }
 
-    int main(ArgumentParser& root) const
+    void write_definitions(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    {
+        std::ofstream out(path);
+        bool includes_provided{false};
+        for (const std::string& include : this->parser.get<std::vector<std::string>>("-i"))
+        {
+            out << "#include \"" << include << "\"" << std::endl;
+            includes_provided = true;
+        }
+        if (!includes_provided)
+        {
+            out << "#include <cstdint>" << std::endl;
+            out << "#include <string>" << std::endl;
+            out << std::endl;
+            out << "struct Vector3 { float x; float y; float z; };" << std::endl;
+            out << "struct Vector2 { float x; float y; };" << std::endl;
+            out << std::endl;
+        }
+
+        if (this->parser.get<bool>("-n"))
+        {
+            out << "namespace csgo::protocol" << client.header().network_protocol << std::endl;
+            out << "{" << std::endl;
+            out << std::endl;
+        }
+
+        client.observer.generator.write(out);
+
+        if (this->parser.get<bool>("-n"))
+        {
+            out << "}" << std::endl;
+        }
+    }
+
+    void write_offsets(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    {
+        std::ofstream out(path);
+        for (const DataTable* data_table : client.data_tables())
+        {
+            if (data_table->entity_type)
+            {
+                out << data_table->entity_type->name << std::endl;
+                for (const csgopp::client::entity::Offset& absolute : data_table->entity_type->prioritized)
+                {
+                    out << "  " << absolute.property->name << std::endl;
+                }
+            }
+        }
+    }
+
+    [[nodiscard]] int main() const
     {
         Timer timer;
         std::string path = this->parser.get("demo");
@@ -83,41 +140,17 @@ struct GenerateCommand
             std::string network_protocol = std::to_string(client.header().network_protocol);
             std::cout << "found network protocol version " << network_protocol << std::endl;
 
-            std::string output(this->parser.present("-o").value_or(network_protocol + ".h"));
-
             // Run simulation
             while (client.advance(coded_input_stream));
 
-            std::ofstream out(output);
+            std::filesystem::path directory(this->parser.present("-d").value_or("."));
+            std::filesystem::path file(this->parser.present("-f").value_or(network_protocol + ".h"));
+            std::filesystem::path destination = directory / file;
 
-            bool includes_provided{false};
-            for (const std::string& include : this->parser.get<std::vector<std::string>>("-i"))
+            this->write_definitions(destination, client);
+            if (this->parser.get<bool>("-v"))
             {
-                out << "#include \"" << include << "\"" << std::endl;
-                includes_provided = true;
-            }
-            if (!includes_provided)
-            {
-                out << "#include <cstdint>" << std::endl;
-                out << "#include <string>" << std::endl;
-                out << std::endl;
-                out << "struct Vector3 { float x; float y; float z; };" << std::endl;
-                out << "struct Vector2 { float x; float y; };" << std::endl;
-                out << std::endl;
-            }
-
-            if (this->parser.get<bool>("-n"))
-            {
-                out << "namespace csgo::protocol" << network_protocol << std::endl;
-                out << "{" << std::endl;
-                out << std::endl;
-            }
-
-            client.observer.generator.write(out);
-
-            if (this->parser.get<bool>("-n"))
-            {
-                out << "}" << std::endl;
+                this->write_offsets(destination.replace_extension("offsets.txt"), client);
             }
 
             std::cout << "found " << client.observer.data_table_count << " data tables" << std::endl;

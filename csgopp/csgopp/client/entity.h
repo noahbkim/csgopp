@@ -67,11 +67,11 @@ struct PropertyType : public virtual Type
 struct Offset
 {
     const PropertyType* type{nullptr};
+    const Property* property{nullptr};
     size_t offset{0};
-    size_t priority{0};
 
     Offset() = default;
-    Offset(const PropertyType* type, size_t offset);
+    Offset(const PropertyType* type, const Property* property, size_t offset);
 
     [[nodiscard]] Offset from(size_t parent) const;
 };
@@ -173,7 +173,7 @@ struct EntityType final : public virtual ObjectType, public virtual PropertyType
     const DataTable* data_table;
 
     /// Flattened, reordered members used for updates
-    std::vector<std::pair<Offset, std::string>> prioritized;
+    std::vector<Offset> prioritized;
 
     EntityType(Builder&& builder, const DataTable* data_table);
 

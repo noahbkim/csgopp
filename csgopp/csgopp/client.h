@@ -272,6 +272,11 @@ public:
     [[nodiscard]] uint32_t cursor() { return this->_cursor; }
     [[nodiscard]] uint32_t tick() { return this->_tick; }
 
+    [[nodiscard]] const DataTableDatabase& data_tables() { return this->_data_tables; }
+    [[nodiscard]] const ServerClassDatabase& server_classes() { return this->_server_classes; }
+    [[nodiscard]] const StringTableDatabase& string_tables() { return this->_string_tables; }
+    [[nodiscard]] const EntityDatabase& entities() { return this->_entities; }
+
     Observer observer;
 
 protected:

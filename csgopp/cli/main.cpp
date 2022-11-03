@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
     if (parser.is_subcommand_used(generate.name))
     {
-        return generate.main(parser);
+        return generate.main();
     }
     else
     {
