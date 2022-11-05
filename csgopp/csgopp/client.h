@@ -324,8 +324,6 @@ bool Client<Observer>::advance(CodedInputStream& stream)
     switch (command)
     {
         case demo::Command::SIGN_ON:
-            this->advance_packets(stream);
-            break;
         case demo::Command::PACKET:
             this->advance_packets(stream);
             break;
@@ -351,6 +349,7 @@ bool Client<Observer>::advance(CodedInputStream& stream)
             break;
         default:
             this->advance_unknown(stream, command);
+            break;
     }
 
     this->_cursor += 1;
