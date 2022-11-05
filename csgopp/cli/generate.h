@@ -79,6 +79,12 @@ struct GenerateCommand
     void write_definitions(const std::filesystem::path& path, Client<GenerateObserver>& client) const
     {
         std::ofstream out(path);
+        if (!out)
+        {
+            std::cerr << "failed to open " << path << std::endl;
+            return;
+        }
+
         bool includes_provided{false};
         for (const std::string& include : this->parser.get<std::vector<std::string>>("-i"))
         {
@@ -108,11 +114,19 @@ struct GenerateCommand
         {
             out << "}" << std::endl;
         }
+
+        std::cout << "wrote " << client.observer.entity_type_count << " structs to " << path << std::endl;
     }
 
     void write_offsets(const std::filesystem::path& path, Client<GenerateObserver>& client) const
     {
         std::ofstream out(path);
+        if (!out)
+        {
+            std::cerr << "failed to open " << path << std::endl;
+            return;
+        }
+
         for (const DataTable* data_table : client.data_tables())
         {
             if (data_table->entity_type)
@@ -124,6 +138,8 @@ struct GenerateCommand
                 }
             }
         }
+
+        std::cout << "wrote offsets to " << path << std::endl;
     }
 
     [[nodiscard]] int main() const
@@ -145,17 +161,16 @@ struct GenerateCommand
 
             std::filesystem::path directory(this->parser.present("-d").value_or("."));
             std::filesystem::path file(this->parser.present("-f").value_or(network_protocol + ".h"));
-            std::filesystem::path destination = directory / file;
+            std::filesystem::path destination = std::filesystem::absolute(directory / file);
+
+            std::cout << "found " << client.observer.data_table_count << " data tables" << std::endl;
+            std::cout << "found " << client.observer.server_class_count << " server classes" << std::endl;
 
             this->write_definitions(destination, client);
             if (this->parser.get<bool>("-v"))
             {
                 this->write_offsets(destination.replace_extension("offsets.txt"), client);
             }
-
-            std::cout << "found " << client.observer.data_table_count << " data tables" << std::endl;
-            std::cout << "found " << client.observer.server_class_count << " server classes" << std::endl;
-            std::cout << "wrote " << client.observer.entity_type_count << " structs" << std::endl;
         }
         catch (const csgopp::error::GameError& error)
         {

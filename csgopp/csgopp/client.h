@@ -1031,6 +1031,9 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
 template<typename Observer>
 void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 {
+    advance_packet_skip(stream);
+    return;
+
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     OK(limit > 0);
 
