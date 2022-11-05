@@ -13,12 +13,17 @@ struct Timer
 {
     std::chrono::time_point<std::chrono::system_clock> origin = std::chrono::system_clock::now();
     std::chrono::time_point<std::chrono::system_clock> last = origin;
+
+    auto elapsed()
+    {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - this->last).count();
+        this->last = std::chrono::system_clock::now();
+        return elapsed;
+    }
 };
 
 std::ostream& operator<<(std::ostream& out, Timer& timer)
 {
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now() - timer.last).count();
-    timer.last = std::chrono::system_clock::now();
-    return out << elapsed << " ms";
+    return out << timer.elapsed() << " ms";
 }

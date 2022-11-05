@@ -1031,9 +1031,6 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
 template<typename Observer>
 void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 {
-    advance_packet_skip(stream);
-    return;
-
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     OK(limit > 0);
 
@@ -1078,15 +1075,15 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 }
 
 template<typename Observer>
-Entity* Client<Observer>::create_entity(size_t id, BitStream& data)
+Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
 {
     size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size());
     ServerClass::Id server_class_id;
-    OK(data.read(&server_class_id, server_class_index_size));
+    OK(stream.read(&server_class_id, server_class_index_size));
     ServerClass* server_class = this->_server_classes.at(server_class_id);
 
     uint16_t serial_number;
-    OK(data.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
+    OK(stream.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
 
 //    Entity* entity = new Entity(id, server_class);
 //    for (DataTable::Property* property : server_class->properties)
@@ -1103,36 +1100,37 @@ Entity* Client<Observer>::create_entity(size_t id, BitStream& data)
 }
 
 template<typename Observer>
-void Client<Observer>::update_entity(Entity* entity, BitStream& data)
+void Client<Observer>::update_entity(Entity* entity, BitStream& stream)
 {
-    uint8_t small_entity_optimization;
-    OK(data.read(&small_entity_optimization, 1));
+    uint8_t small_increment_optimization;
+    OK(stream.read(&small_increment_optimization, 1));
 
-    uint16_t auto_index = 0;
+    uint16_t index = 0;
     while (true)
     {
         uint16_t jump;
-        if (!small_entity_optimization)
+        if (!small_increment_optimization)
         {
-            data.read_compressed_uint16(&jump);
+            stream.read_compressed_uint16(&jump);
         }
         else
         {
             uint8_t use_auto_index;
-            OK(data.read(&use_auto_index, 1));
+            OK(stream.read(&use_auto_index, 1));
             if (use_auto_index)
             {
                 jump = 0;
             }
             else
             {
-                OK(data.read(&jump, 3));
+                OK(stream.read(&jump, 3));
             }
         }
 
-        // Update property
+        // Actually update the field
+        entity->type->prioritized.at(index).type->update(entity->address, stream);
 
-        auto_index += jump;
+        index += jump;
     }
 }
 
