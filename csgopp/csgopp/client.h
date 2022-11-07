@@ -766,7 +766,6 @@ Database<ServerClass> Client<Observer>::create_server_classes(
                     OK(data_table_property->data_table != nullptr);
                     OK(data_table_property->data_table->server_class != nullptr);
                     server_class->base_class = data_table_property->data_table->server_class;
-                    data_table_property->data_table->server_class->is_base_class = true;
                 }
             }
         }
