@@ -738,8 +738,8 @@ Database<ServerClass> Client<Observer>::create_server_classes(
 
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
-        ServerClass* server_class = new ServerClass();
-        OK(csgopp::demo::ReadLittleEndian16(stream, &server_class->id));
+        auto* server_class = new ServerClass();
+        OK(csgopp::demo::ReadLittleEndian16(stream, &server_class->index));
         OK(csgopp::demo::ReadCStyleString(stream, &server_class->name));
 
         std::string data_table_name;
@@ -799,7 +799,7 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     for (ServerClass* server_class : new_server_classes)
     {
         BEFORE(Observer, ServerClassCreationObserver);
-        this->_server_classes.emplace(server_class);
+        this->_server_classes.emplace(server_class->index, server_class);
         AFTER(ServerClassCreationObserver, std::as_const(server_class));
     }
 }
@@ -1079,7 +1079,7 @@ template<typename Observer>
 Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
 {
     size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size());
-    ServerClass::Id server_class_id;
+    ServerClass::Index server_class_id;
     OK(stream.read(&server_class_id, server_class_index_size));
     ServerClass* server_class = this->_server_classes.at(server_class_id);
 

@@ -17,20 +17,20 @@ namespace csgopp::client::server_class
 using google::protobuf::io::CodedInputStream;
 using csgopp::common::database::Delete;
 using csgopp::common::database::Database;
-using csgopp::common::database::DatabaseWithNameId;
+using csgopp::common::database::DatabaseWithName;
 using csgopp::error::GameError;
 using csgopp::client::data_table::DataTable;
 
 struct ServerClass
 {
-    using Id = uint16_t;
+    using Index = uint16_t;
 
-    Id id{};
+    Index index{};
     std::string name;
     DataTable* data_table{nullptr};
     ServerClass* base_class{nullptr};
 };
 
-using ServerClassDatabase = DatabaseWithNameId<ServerClass, Delete<ServerClass>>;
+using ServerClassDatabase = DatabaseWithName<ServerClass, Delete<ServerClass>>;
 
 }
