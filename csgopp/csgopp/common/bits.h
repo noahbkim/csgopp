@@ -183,6 +183,7 @@ public:
                 ok = this->read(&buffer, 32 - 4);
                 break;
             default:
+                ok = false;  // TODO: double check
                 buffer = 0;
         }
 
@@ -211,6 +212,7 @@ public:
                 ok = this->read(&buffer, 7);
                 break;
             default:
+                ok = false;  // TODO: double check
                 buffer = 0;
         }
 
