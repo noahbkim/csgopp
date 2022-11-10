@@ -14,7 +14,7 @@ namespace csgopp::client::data_table
 using csgopp::error::GameError;
 using csgopp::common::object::shared;
 using csgopp::common::control::concatenate;
-using csgopp::client::entity::ArrayType;
+using csgopp::client::entity::PropertyArrayType;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Offset;
 
@@ -27,7 +27,7 @@ Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
 
 void Property::build(EntityType::Builder& builder)
 {
-    std::shared_ptr<const PropertyType> materialized = this->materialize();
+    std::shared_ptr<const PropertyValueType> materialized = this->materialize();
     this->offset.type = materialized.get();
     this->offset.offset = builder.member(this->name, materialized, this);
 }
@@ -57,7 +57,7 @@ Property::Type::T Int32Property::type() const
     return Type::INT32;
 }
 
-std::shared_ptr<const PropertyType> Int32Property::materialize() const
+std::shared_ptr<const PropertyValueType> Int32Property::materialize() const
 {
     if (this->bits == 1)
     {
@@ -65,25 +65,11 @@ std::shared_ptr<const PropertyType> Int32Property::materialize() const
     }
     else if (this->flags & Flags::UNSIGNED)
     {
-        if (this->flags & Flags::VARIABLE_INTEGER)
-        {
-            return shared<entity::UnsignedInt32Type<entity::Compression::Variable>>();
-        }
-        else
-        {
-            return shared<entity::UnsignedInt32Type<entity::Compression::Fixed>>();
-        }
+        return shared<entity::UnsignedInt32Type>();
     }
     else
     {
-        if (this->flags & Flags::VARIABLE_INTEGER)
-        {
-            return shared<entity::SignedInt32Type<entity::Compression::Variable>>();
-        }
-        else
-        {
-            return shared<entity::SignedInt32Type<entity::Compression::Fixed>>();
-        }
+        return shared<entity::SignedInt32Type>();
     }
 }
 
@@ -106,48 +92,9 @@ Property::Type::T FloatProperty::type() const
     return Type::FLOAT;
 }
 
-std::shared_ptr<const PropertyType> FloatProperty::materialize() const
+std::shared_ptr<const PropertyValueType> FloatProperty::materialize() const
 {
-    if (this->flags & Flags::COORDINATES)
-    {
-        return shared<entity::BitCoordinateFloatType>();
-    }
-    else if (this->flags & Flags::COORDINATES_MULTIPLAYER)
-    {
-        return shared<entity::MultiplayerBitCoordinateFloatType<entity::Precision::Normal>>();
-    }
-    else if (this->flags & Flags::COORDINATES_MULTIPLAYER_LOW_PRECISION)
-    {
-        return shared<entity::MultiplayerBitCoordinateFloatType<entity::Precision::Low>>();
-    }
-    else if (this->flags & Flags::COORDINATES_MULTIPLAYER_INTEGRAL)
-    {
-        return shared<entity::MultiplayerBitCoordinateFloatType<entity::Precision::Integral>>();
-    }
-    else if (this->flags & Flags::NO_SCALE)
-    {
-        return shared<entity::FloatType<entity::Serialization::Native>>();
-    }
-    else if (this->flags & Flags::NORMAL)
-    {
-        return shared<entity::BitNormalFloatType>();
-    }
-    else if (this->flags & Flags::CELL_COORDINATES)
-    {
-        return shared<entity::BitCellCoordinateFloatType<entity::Precision::Normal>>();
-    }
-    else if (this->flags & Flags::CELL_COORDINATES_LOW_PRECISION)
-    {
-        return shared<entity::BitCellCoordinateFloatType<entity::Precision::Low>>();
-    }
-    else if (this->flags & Flags::CELL_COORDINATES_INTEGRAL)
-    {
-        return shared<entity::BitCellCoordinateFloatType<entity::Precision::Integral>>();
-    }
-    else
-    {
-        return shared<entity::FloatType<entity::Serialization::Optimized>>();
-    }
+    return shared<entity::FloatType>();
 }
 
 bool FloatProperty::equals(const Property* other) const
@@ -162,7 +109,7 @@ Property::Type::T Vector3Property::type() const
     return Type::VECTOR3;
 }
 
-std::shared_ptr<const PropertyType> Vector3Property::materialize() const
+std::shared_ptr<const PropertyValueType> Vector3Property::materialize() const
 {
     return shared<entity::Vector3Type>();
 }
@@ -179,7 +126,7 @@ Property::Type::T Vector2Property::type() const
     return Type::VECTOR2;
 }
 
-std::shared_ptr<const PropertyType> Vector2Property::materialize() const
+std::shared_ptr<const PropertyValueType> Vector2Property::materialize() const
 {
     return shared<entity::Vector2Type>();
 }
@@ -196,7 +143,7 @@ Property::Type::T StringProperty::type() const
     return Type::STRING;
 }
 
-std::shared_ptr<const PropertyType> StringProperty::materialize() const
+std::shared_ptr<const PropertyValueType> StringProperty::materialize() const
 {
     return shared<entity::StringType>();
 }
@@ -219,9 +166,9 @@ Property::Type::T ArrayProperty::type() const
     return Type::ARRAY;
 }
 
-std::shared_ptr<const PropertyType> ArrayProperty::materialize() const
+std::shared_ptr<const PropertyValueType> ArrayProperty::materialize() const
 {
-    return std::make_shared<ArrayType>(this->element->materialize(), this->size);
+    return std::make_shared<PropertyArrayType>(this->element->materialize(), this->size);
 }
 
 bool ArrayProperty::equals(const Property* other) const
@@ -240,7 +187,7 @@ Property::Type::T DataTableProperty::type() const
     return Type::DATA_TABLE;
 }
 
-std::shared_ptr<const PropertyType> DataTableProperty::materialize() const
+std::shared_ptr<const PropertyValueType> DataTableProperty::materialize() const
 {
 
     if (this->data_table->is_array)
@@ -288,29 +235,15 @@ Property::Type::T Int64Property::type() const
     return Type::INT64;
 }
 
-std::shared_ptr<const PropertyType> Int64Property::materialize() const
+std::shared_ptr<const PropertyValueType> Int64Property::materialize() const
 {
     if (this->flags & Flags::UNSIGNED)
     {
-        if (this->flags & Flags::VARIABLE_INTEGER)
-        {
-            return shared<entity::UnsignedInt64Type<entity::Compression::Variable>>();
-        }
-        else
-        {
-            return shared<entity::UnsignedInt64Type<entity::Compression::Fixed>>();
-        }
+        return shared<entity::UnsignedInt64Type>();
     }
     else
     {
-        if (this->flags & Flags::VARIABLE_INTEGER)
-        {
-            return shared<entity::SignedInt64Type<entity::Compression::Variable>>();
-        }
-        else
-        {
-            return shared<entity::SignedInt64Type<entity::Compression::Fixed>>();
-        }
+        return shared<entity::SignedInt64Type>();
     }
 }
 
@@ -404,9 +337,9 @@ void collect_properties(DataTable* data_table, Callback callback)
     collect_properties_tail(data_table, 0, excludes, callback);
 }
 
-std::shared_ptr<const ArrayType> DataTable::materialize_array()
+std::shared_ptr<const PropertyArrayType> DataTable::materialize_array()
 {
-    std::shared_ptr<const PropertyType> array_type = this->properties.at(0)->materialize();
+    std::shared_ptr<const PropertyValueType> array_type = this->properties.at(0)->materialize();
 
     // We have to manually set offsets since we're not materializing
     for (size_t i = 0; i < this->properties.size(); ++i)
@@ -416,7 +349,7 @@ std::shared_ptr<const ArrayType> DataTable::materialize_array()
     }
 
     size_t array_size = this->properties.size();
-    return std::make_shared<ArrayType>(array_type, array_size);
+    return std::make_shared<PropertyArrayType>(array_type, array_size);
 }
 
 // TODO: remove recursion

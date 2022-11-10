@@ -75,6 +75,7 @@ public:
         this->bit_index = 0;
     }
 
+    // TODO: make this work with non-integral types via bitset or something
     template<typename T>
     bool read(T* value, size_t bits)
     {
@@ -134,7 +135,7 @@ public:
     }
 
     template<typename T>
-    bool read_variable_int(T* value)
+    bool read_variable_unsigned_int(T* value)
     {
         *value = 0;
         constexpr size_t limit = (sizeof(T) * 8 + 6) / 7;
@@ -150,6 +151,14 @@ public:
             *value |= static_cast<T>(cursor & 0x7F) << (7 * i);
             ++i;
         } while ((cursor & 0x80) && i < limit);
+        return true;
+    }
+
+    template<typename T>
+    bool read_variable_signed_int(T* value)
+    {
+        this->read_variable_unsigned_int(value);
+        *value = (*value >> 1) ^ -(*value & 1);
         return true;
     }
 

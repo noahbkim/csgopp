@@ -99,7 +99,7 @@ TEST(BitStream, deserialize_variable_size_simple)
 {
     BitStream reader(std::string("\x2a\x00", 2));
     int32_t value;
-    EXPECT_TRUE(reader.read_variable_int(&value));
+    EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, 42);
 }
 
@@ -107,7 +107,7 @@ TEST(BitStream, deserialize_variable_size_complex)
 {
     BitStream reader(std::string("\xaa\x00", 2));
     int32_t value;
-    EXPECT_TRUE(reader.read_variable_int(&value));
+    EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, 42);
 }
 
@@ -115,7 +115,7 @@ TEST(BitStream, deserialize_variable_size_zero)
 {
     BitStream reader(std::string("\x00", 1));
     int32_t value;
-    EXPECT_TRUE(reader.read_variable_int(&value));
+    EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, 0);
 }
 
@@ -123,7 +123,7 @@ TEST(BitStream, deserialize_variable_size_max)
 {
     BitStream reader("\xFF\xFF\xFF\xFF\xFF\x07");
     uint32_t value;
-    EXPECT_TRUE(reader.read_variable_int(&value));
+    EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, std::numeric_limits<uint32_t>::max());
 }
 
@@ -131,6 +131,6 @@ TEST(BitStream, deserialize_variable_size_max_bad)
 {
     BitStream reader("\xFF\xFF\xFF\xFF\xFF\xFF");
     uint32_t value;
-    EXPECT_TRUE(reader.read_variable_int(&value));
+    EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, std::numeric_limits<uint32_t>::max());
 }

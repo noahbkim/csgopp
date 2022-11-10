@@ -164,12 +164,11 @@ struct ValueType : public virtual Type
 };
 
 template<typename T>
-struct DefaultValueType : public virtual ValueType
+struct DefaultValueType : public ValueType
 {
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
     [[nodiscard]] const std::type_info& info() const override;
-    void emit(code::Cursor<code::Declaration>) const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
@@ -223,7 +222,7 @@ struct ObjectType : public virtual Type
         size_t members_size{0};
         std::string name;
         const ObjectType* base{nullptr};
-        code::Context<code::Definition>* context;
+        code::Context<code::Definition>* context{nullptr};
 
         Builder() = default;
         explicit Builder(const ObjectType* base_object_type);
@@ -241,7 +240,7 @@ struct ObjectType : public virtual Type
     size_t members_size;
     std::string name;
     const ObjectType* base;
-    code::Context<code::Definition>* context;
+    code::Context<code::Definition>* context{nullptr};
 
     explicit ObjectType(Builder&& builder);
     [[nodiscard]] size_t size() const override;
@@ -504,12 +503,6 @@ template<typename T>
 [[nodiscard]] const std::type_info& DefaultValueType<T>::info() const
 {
     return typeid(T);
-}
-
-template<typename T>
-void DefaultValueType<T>::emit(code::Cursor<code::Declaration> cursor) const
-{
-    cursor.target.name = typeid(T).name();
 }
 
 template<typename T>
