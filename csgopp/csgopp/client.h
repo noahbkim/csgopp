@@ -1027,6 +1027,7 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
 }
 
 /// \sa https://github.com/markus-wa/demoinfocs-golang/blob/1b196ffaaf93c531cdae5897091692e14ead19d2/pkg/demoinfocs/parsing.go#L330
+/// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/net_messages.go#L15
 template<typename Observer>
 void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 {
@@ -1053,12 +1054,9 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
             {
                 this->delete_entity(auto_increment);
             }
-
-            LOG("delete entity %u", auto_increment);
         }
         else
         {
-            LOG("start update entity %u", auto_increment);
             Entity* entity;
             if (command & 0b10)
             {
@@ -1070,7 +1068,6 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
             }
 
             this->update_entity(entity, entity_data);
-            LOG("update entity %u", auto_increment);
         }
     }
 
@@ -1094,7 +1091,6 @@ Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
 
     this->_entities.emplace(id, entity);
 
-    LOG("create entity of type %s", server_class->name.c_str());
     return entity;
 }
 
@@ -1151,13 +1147,10 @@ void Client<Observer>::update_entity(Entity* entity, BitStream& stream)
         index += 1;
     }
 
-    LOG("%zd indices", indices.size());
-
     for (uint16_t i : indices)
     {
         // Actually update the field
         const entity::Offset& offset = entity->type->prioritized.at(i);
-        printf("%s %s %d\n", offset.property->name.c_str(), typeid(*offset.type).name(), offset.property->flags);
         offset.type->update(entity->address + offset.offset, stream, offset.property);
     }
 }

@@ -135,7 +135,7 @@ inline void update_float_coordinates(char* address, BitStream& stream)
         if (has_integral)
         {
             OK(stream.read(&buffer, coordinates::INTEGER_BITS));
-            value += static_cast<float>(buffer);
+            value += static_cast<float>(buffer) + 1;
         }
 
         if (has_fractional)
@@ -305,7 +305,7 @@ constexpr float interpolate(float a, float b, float x)
 template<typename Underlying>
 inline void update_float_scaled(char* address, BitStream& stream, const Property* property)
 {
-    const auto* float_property = dynamic_cast<const DataTable::FloatProperty*>(property);
+    const auto* float_property = dynamic_cast<const Underlying*>(property);
     OK(float_property != nullptr);
 
     uint32_t buffer;
@@ -313,7 +313,7 @@ inline void update_float_scaled(char* address, BitStream& stream, const Property
     *reinterpret_cast<float*>(address) = interpolate(
         float_property->low_value,
         float_property->high_value,
-        static_cast<float>(buffer) / static_cast<float>(1 << (float_property->bits - 1)));
+        static_cast<float>(buffer) / static_cast<float>((1 << float_property->bits) - 1));
 }
 
 template<typename Underlying = DataTable::FloatProperty>
@@ -388,6 +388,13 @@ void Vector3Type::update(char* address, BitStream& stream, const Property* prope
         {
             value->z = 0;
         };
+
+        uint8_t is_negative;
+        OK(stream.read(&is_negative, 1));
+        if (is_negative)
+        {
+            value->z = -value->z;
+        }
     }
     else
     {
@@ -461,7 +468,7 @@ void PropertyArrayType::update(char* address, BitStream& stream, const Property*
     OK(array_property != nullptr);
 
     // Count how many elements we're receiving
-    uint8_t size_bits = common::bits::width(this->length);
+    uint8_t size_bits = common::bits::width(this->length) + 1;
     size_t data_length;
     OK(stream.read(&data_length, size_bits));
 
