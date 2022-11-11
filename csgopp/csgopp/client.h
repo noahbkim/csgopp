@@ -1026,12 +1026,10 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
     advance_packet_skip(stream);
 }
 
+/// \sa https://github.com/markus-wa/demoinfocs-golang/blob/1b196ffaaf93c531cdae5897091692e14ead19d2/pkg/demoinfocs/parsing.go#L330
 template<typename Observer>
 void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 {
-    advance_packet_skip(stream);
-    return;
-
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     OK(limit > 0);
 
@@ -1040,7 +1038,7 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 
     BitStream entity_data(data.entity_data());
     uint32_t auto_increment = 0;
-    for (uint32_t i = 0; i < data.updated_entries(); ++i)
+    for (uint32_t i = 0; i < data.updated_entries(); ++i, ++auto_increment)
     {
         uint32_t auto_increment_skip;
         entity_data.read_compressed_uint32(&auto_increment_skip);
@@ -1051,7 +1049,10 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 
         if (command & 0b1)
         {
-            this->delete_entity(auto_increment);
+            if (command & 0b10)
+            {
+                this->delete_entity(auto_increment);
+            }
         }
         else
         {
@@ -1066,9 +1067,8 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
             }
 
             this->update_entity(entity, entity_data);
+            LOG("update entity %u", auto_increment);
         }
-
-        auto_increment += 1;
     }
 
     OK(stream.BytesUntilLimit() == 0);
@@ -1086,35 +1086,29 @@ Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
     uint16_t serial_number;
     OK(stream.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
 
-//    Entity* entity = new Entity(id, server_class);
-//    for (DataTable::Property* property : server_class->properties)
-//    {
-//        Entity::Member* member = (property);
-        // todo default
-//        entity->members.emplace(member);
-//    }
+    OK(server_class->data_table->entity_type != nullptr);
+    Entity* entity = csgopp::common::object::instantiate(server_class->data_table->entity_type);
 
-    // todo emplace entity
+    this->_entities.emplace(id, entity);
 
     LOG("create entity of type %s", server_class->name.c_str());
-    return nullptr;
+    return entity;
 }
 
+/// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
 template<typename Observer>
 void Client<Observer>::update_entity(Entity* entity, BitStream& stream)
 {
     uint8_t small_increment_optimization;
     OK(stream.read(&small_increment_optimization, 1));
 
+    std::vector<uint16_t> indices;
+
     uint16_t index = 0;
     while (true)
     {
         uint16_t jump;
-        if (!small_increment_optimization)
-        {
-            stream.read_compressed_uint16(&jump);
-        }
-        else
+        if (small_increment_optimization)
         {
             uint8_t use_auto_index;
             OK(stream.read(&use_auto_index, 1));
@@ -1124,21 +1118,55 @@ void Client<Observer>::update_entity(Entity* entity, BitStream& stream)
             }
             else
             {
-                OK(stream.read(&jump, 3));
+                uint8_t is_small_jump;
+                OK(stream.read(&is_small_jump, 1));
+                if (is_small_jump)
+                {
+                    OK(stream.read(&jump, 3));
+                }
+                else
+                {
+                    OK(stream.read_compressed_uint16(&jump));
+                }
             }
         }
+        else
+        {
+            OK(stream.read_compressed_uint16(&jump));
+        }
 
+        if (jump == 0xFFF)
+        {
+            break;
+        }
+        else
+        {
+            index += jump;
+        }
+
+        indices.emplace_back(index);
+        index += 1;
+    }
+
+    LOG("%zd indices", indices.size());
+
+    for (uint16_t i : indices)
+    {
         // Actually update the field
-//        entity->type->prioritized.at(index).type->update(entity->address, stream);
-
-        index += jump;
+        const entity::Offset& offset = entity->type->prioritized.at(i);
+        LOG("%d", offset.property->flags);
+        offset.type->update(entity->address + offset.offset, stream, offset.property);
     }
 }
 
 template<typename Observer>
 void Client<Observer>::delete_entity(size_t index)
 {
-
+    if (index < this->_entities.size())
+    {
+        delete this->_entities.at(index);
+        this->_entities.at(index) = nullptr;
+    }
 }
 
 template<typename Observer>

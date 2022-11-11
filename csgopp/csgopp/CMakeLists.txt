@@ -13,9 +13,9 @@ add_library(csgopp STATIC
         common/magic.h common/bits.h
         client/string_table.cpp client/string_table.h
         common/ring.h
-        common/reader.h common/database.h common/control.h common/object.h common/hash.h
-        common/object.h common/owned.h common/object.cpp
-        game/user.h game/user.cpp common/code.h common/code.cpp common/control.cpp)
+        common/reader.h common/database.h common/control.h common/object.h
+        common/object.h common/object.cpp
+        game/user.h game/user.cpp common/code.h common/code.cpp common/control.cpp common/layout.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(csgopp PRIVATE cxx_std_17)

@@ -134,6 +134,30 @@ public:
         return true;
     }
 
+    bool read_string_from(std::string& string, size_t size)
+    {
+        do
+        {
+            string.push_back(0);
+            if (!this->read(&string.back(), 8))
+            {
+                return false;
+            }
+            if (size > 0)
+            {
+                size -= 1;
+            }
+        } while (string.back() != 0);
+        string.pop_back();
+
+        if (size > 0)
+        {
+            this->skip(size * 8);
+        }
+
+        return true;
+    }
+
     template<typename T>
     bool read_variable_unsigned_int(T* value)
     {
@@ -169,6 +193,11 @@ public:
             return false;
         }
 
+        if ((*value & 0b110000) == 0)
+        {
+            return true;
+        }
+
         uint32_t buffer;
         bool ok;
         switch (*value & 0b110000)
@@ -182,9 +211,6 @@ public:
             case 0b110000:
                 ok = this->read(&buffer, 32 - 4);
                 break;
-            default:
-                ok = false;  // TODO: double check
-                buffer = 0;
         }
 
         *value = (*value & 0b1111) | (buffer << 4);
@@ -196,6 +222,11 @@ public:
         if (!this->read(value, 7))
         {
             return false;
+        }
+
+        if ((*value & 0b1100000) == 0)
+        {
+            return true;
         }
 
         uint32_t buffer;
@@ -211,9 +242,6 @@ public:
             case 0b1100000:
                 ok = this->read(&buffer, 7);
                 break;
-            default:
-                ok = false;  // TODO: double check
-                buffer = 0;
         }
 
         *value = (*value & 0b11111) | (buffer << 5);

@@ -10,6 +10,7 @@
 #include <absl/container/flat_hash_map.h>
 
 #include "code.h"
+#include "layout.h"
 
 namespace csgopp::common::object
 {
@@ -45,7 +46,7 @@ static constexpr size_t align(size_t offset, size_t alignment)
 {
     if (alignment == 0)
     {
-        return 0;
+        return offset;
     }
     else
     {
@@ -132,7 +133,8 @@ struct Type
     [[nodiscard]] virtual Accessor operator[](const std::string& member_name) const;
     [[nodiscard]] virtual Accessor operator[](size_t element_index) const;
 
-    virtual void emit(code::Cursor<code::Declaration>) const = 0;
+    virtual void emit(code::Cursor<code::Declaration>&) const = 0;
+    virtual void emit(layout::Cursor&) const = 0;
 };
 
 struct Reference
@@ -161,11 +163,14 @@ struct Reference
 struct ValueType : public virtual Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
+    void emit(layout::Cursor&) const override;
 };
 
 template<typename T>
 struct DefaultValueType : public ValueType
 {
+    using Value = T;
+
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
     [[nodiscard]] const std::type_info& info() const override;
@@ -187,7 +192,8 @@ struct ArrayType : public virtual Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    void emit(code::Cursor<code::Declaration>) const override;
+    void emit(code::Cursor<code::Declaration>&) const override;
+    void emit(layout::Cursor&) const override;
 
     [[nodiscard]] Accessor operator[](size_t element_index) const override;
 
@@ -249,8 +255,9 @@ struct ObjectType : public virtual Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    void emit(code::Cursor<code::Declaration> cursor) const override;
-    void emit(code::Cursor<code::Definition> cursor) const;
+    void emit(code::Cursor<code::Declaration>& cursor) const override;
+    void emit(code::Cursor<code::Definition>& cursor) const;
+    void emit(layout::Cursor& cursor) const override;
 
     [[nodiscard]] Accessor operator[](const std::string& member_name) const override;
     [[nodiscard]] const Member& at(const std::string& member_name) const;

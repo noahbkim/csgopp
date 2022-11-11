@@ -27,8 +27,8 @@ Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
 
 void Property::build(EntityType::Builder& builder)
 {
-    std::shared_ptr<const PropertyValueType> materialized = this->materialize();
-    this->offset.type = materialized.get();
+    std::shared_ptr<const common::object::Type> materialized = this->materialize();
+    this->offset.type = dynamic_cast<const entity::PropertyValueType*>(materialized.get());
     this->offset.offset = builder.member(this->name, materialized, this);
 }
 
@@ -57,7 +57,7 @@ Property::Type::T Int32Property::type() const
     return Type::INT32;
 }
 
-std::shared_ptr<const PropertyValueType> Int32Property::materialize() const
+std::shared_ptr<const common::object::Type> Int32Property::materialize() const
 {
     if (this->bits == 1)
     {
@@ -92,7 +92,7 @@ Property::Type::T FloatProperty::type() const
     return Type::FLOAT;
 }
 
-std::shared_ptr<const PropertyValueType> FloatProperty::materialize() const
+std::shared_ptr<const common::object::Type> FloatProperty::materialize() const
 {
     return shared<entity::FloatType>();
 }
@@ -104,12 +104,19 @@ bool FloatProperty::equals(const Property* other) const
     return EQUAL(as, high_value) && EQUAL(as, low_value) && EQUAL(as, bits);
 }
 
+Vector3Property::Vector3Property(CSVCMsg_SendTable_sendprop_t&& data)
+    : high_value(data.high_value())
+    , low_value(data.low_value())
+    , bits(data.num_bits())
+    , Property(std::move(data))
+{}
+
 Property::Type::T Vector3Property::type() const
 {
     return Type::VECTOR3;
 }
 
-std::shared_ptr<const PropertyValueType> Vector3Property::materialize() const
+std::shared_ptr<const common::object::Type> Vector3Property::materialize() const
 {
     return shared<entity::Vector3Type>();
 }
@@ -121,12 +128,19 @@ bool Vector3Property::equals(const Property* other) const
     return true;
 }
 
+Vector2Property::Vector2Property(CSVCMsg_SendTable_sendprop_t&& data)
+    : high_value(data.high_value())
+    , low_value(data.low_value())
+    , bits(data.num_bits())
+    , Property(std::move(data))
+{}
+
 Property::Type::T Vector2Property::type() const
 {
     return Type::VECTOR2;
 }
 
-std::shared_ptr<const PropertyValueType> Vector2Property::materialize() const
+std::shared_ptr<const common::object::Type> Vector2Property::materialize() const
 {
     return shared<entity::Vector2Type>();
 }
@@ -143,7 +157,7 @@ Property::Type::T StringProperty::type() const
     return Type::STRING;
 }
 
-std::shared_ptr<const PropertyValueType> StringProperty::materialize() const
+std::shared_ptr<const common::object::Type> StringProperty::materialize() const
 {
     return shared<entity::StringType>();
 }
@@ -166,7 +180,7 @@ Property::Type::T ArrayProperty::type() const
     return Type::ARRAY;
 }
 
-std::shared_ptr<const PropertyValueType> ArrayProperty::materialize() const
+std::shared_ptr<const common::object::Type> ArrayProperty::materialize() const
 {
     return std::make_shared<PropertyArrayType>(this->element->materialize(), this->size);
 }
@@ -187,7 +201,7 @@ Property::Type::T DataTableProperty::type() const
     return Type::DATA_TABLE;
 }
 
-std::shared_ptr<const PropertyValueType> DataTableProperty::materialize() const
+std::shared_ptr<const common::object::Type> DataTableProperty::materialize() const
 {
 
     if (this->data_table->is_array)
@@ -235,7 +249,7 @@ Property::Type::T Int64Property::type() const
     return Type::INT64;
 }
 
-std::shared_ptr<const PropertyValueType> Int64Property::materialize() const
+std::shared_ptr<const common::object::Type> Int64Property::materialize() const
 {
     if (this->flags & Flags::UNSIGNED)
     {
@@ -339,12 +353,12 @@ void collect_properties(DataTable* data_table, Callback callback)
 
 std::shared_ptr<const PropertyArrayType> DataTable::materialize_array()
 {
-    std::shared_ptr<const PropertyValueType> array_type = this->properties.at(0)->materialize();
+    std::shared_ptr<const common::object::Type> array_type = this->properties.at(0)->materialize();
 
     // We have to manually set offsets since we're not materializing
     for (size_t i = 0; i < this->properties.size(); ++i)
     {
-        this->properties.at(i)->offset.type = array_type.get();
+        this->properties.at(i)->offset.type = dynamic_cast<const entity::PropertyValueType*>(array_type.get());
         this->properties.at(i)->offset.offset = i * array_type->size();
     }
 

@@ -66,7 +66,7 @@ struct PropertyValueType : public virtual Type
 
 struct Offset
 {
-    const PropertyValueType* type{nullptr};
+    const PropertyValueType*    type{nullptr};
     const Property* property{nullptr};
     size_t offset{0};
 
@@ -78,55 +78,55 @@ struct Offset
 
 struct BoolType final : public DefaultValueType<bool>, public PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct UnsignedInt32Type final : public DefaultValueType<uint32_t>, public PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct SignedInt32Type final : public DefaultValueType<int32_t>, public PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct FloatType final : public DefaultValueType<float>, public virtual PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct Vector3Type final : public DefaultValueType<Vector3>, public virtual PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct Vector2Type final : public DefaultValueType<Vector2>, public virtual PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct StringType final : public DefaultValueType<std::string>, public virtual PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct UnsignedInt64Type final : public DefaultValueType<uint64_t>, public virtual PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 struct SignedInt64Type final : public DefaultValueType<int64_t>, public virtual PropertyValueType
 {
-    void emit(Cursor<Declaration> cursor) const override;
+    void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
@@ -136,7 +136,7 @@ struct PropertyArrayType final : public ArrayType, public virtual PropertyValueT
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
-struct EntityType final : public ObjectType, public virtual PropertyValueType
+struct EntityType final : public ObjectType
 {
     /// Fine
     const DataTable* data_table;
@@ -145,8 +145,6 @@ struct EntityType final : public ObjectType, public virtual PropertyValueType
     std::vector<Offset> prioritized;
 
     EntityType(Builder&& builder, const DataTable* data_table);
-
-    void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
 using Entity = Instance<EntityType>;

@@ -43,7 +43,6 @@ using csgopp::common::code::Declaration;
 using csgopp::common::code::Cursor;
 using csgopp::client::server_class::ServerClass;
 using csgopp::client::entity::PropertyArrayType;
-using csgopp::client::entity::PropertyValueType;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Offset;
 
@@ -184,7 +183,7 @@ struct Property : Context<Declaration>
     ///
     /// \sa `csgopp::client::entity`
     /// \sa `csgopp::common::object`
-    [[nodiscard]] virtual std::shared_ptr<const PropertyValueType> materialize() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<const common::object::Type> materialize() const = 0;
 
     /// \brief Attach this property to an `EntityType`
     ///
@@ -238,18 +237,18 @@ struct Property : Context<Declaration>
 };
 
 /// \brief Represents an integer with maximum width 32 bits. Can be boolean.
-struct Int32Property : public Property
+struct Int32Property final : public Property
 {
     int32_t bits;
 
     explicit Int32Property(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
 /// \brief Represents a float.
-struct FloatProperty : public Property
+struct FloatProperty final : public Property
 {
     float high_value;
     float low_value;
@@ -257,34 +256,42 @@ struct FloatProperty : public Property
 
     explicit FloatProperty(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
 /// \brief Represents a 3D floating point vector.
-struct Vector3Property : public Property
+struct Vector3Property final : public Property
 {
-    using Property::Property;
+    float high_value;
+    float low_value;
+    int32_t bits;
+
+    explicit Vector3Property(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
 /// \brief Represents a 2D floating point vector.
-struct Vector2Property : public Property
+struct Vector2Property final : public Property
 {
-    using Property::Property;
+    float high_value;
+    float low_value;
+    int32_t bits;
+
+    explicit Vector2Property(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
 /// \brief Represents a string of arbitrary length.
-struct StringProperty : public Property
+struct StringProperty final : public Property
 {
     using Property::Property;
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -292,14 +299,14 @@ struct StringProperty : public Property
 ///
 /// Array properties manage their own element type. It seems like arrays are
 /// mostly for short arrays (pairs, coordinates, etc.).
-struct ArrayProperty : public Property
+struct ArrayProperty final : public Property
 {
     std::unique_ptr<Property> element;
     int32_t size;
 
     explicit ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -312,14 +319,14 @@ struct ArrayProperty : public Property
 /// accounted for in `DataTableProperty::build()`.
 ///
 /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_send.cpp#L691
-struct DataTableProperty : public Property
+struct DataTableProperty final : public Property
 {
     DataTable* data_table{nullptr};
 
     // No constructor because data_table is set later on
     explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
 
     /// \brief Add the referenced data table as a member of the `EntityType`.
     ///
@@ -340,13 +347,13 @@ struct DataTableProperty : public Property
 };
 
 /// \brief Represents an integer with maximum width 64 bits.
-struct Int64Property : public Property
+struct Int64Property final : public Property
 {
     int32_t bits;
 
     explicit Int64Property(CSVCMsg_SendTable_sendprop_t&& data);
     [[nodiscard]] Type::T type() const override;
-    [[nodiscard]] std::shared_ptr<const PropertyValueType> materialize() const override;
+    [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 

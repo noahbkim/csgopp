@@ -4,6 +4,8 @@
 namespace csgopp::client::entity
 {
 
+using common::vector::Vector3;
+using common::vector::Vector2;
 using csgopp::client::data_table::DataTable;
 
 // https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h
@@ -27,10 +29,10 @@ const size_t DENOMINATOR = 1 << (FRACTION_BITS - 1);
 const float RESOLUTION = DENOMINATOR;
 }
 
-namespace data_table
+namespace string
 {
-const size_t string_size_bits_max = 9;
-const size_t string_size_max = 1 << string_size_bits_max;
+const size_t STRING_SIZE_BITS_MAX = 9;
+const uint32_t STRING_SIZE_MAX = 1 << STRING_SIZE_BITS_MAX;
 }
 
 Offset::Offset(const struct PropertyValueType* type, const DataTable::Property* property, size_t offset)
@@ -45,7 +47,7 @@ Offset Offset::from(size_t parent) const
     return result;
 }
 
-void BoolType::emit(Cursor<Declaration> cursor) const
+void BoolType::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "bool";
 }
@@ -57,70 +59,60 @@ void BoolType::update(char* address, BitStream& stream, const Property* property
     *reinterpret_cast<bool*>(address) = value;
 }
 
-void UnsignedInt32Type::emit(Cursor<Declaration> cursor) const
+void UnsignedInt32Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "uint32_t";
 }
 
-inline void update_unsigned_int32_variable(char* address, BitStream& stream, const Property* property)
+template<typename T>
+inline void update_int_variable(char* address, BitStream& stream)
 {
-    stream.read_variable_unsigned_int(reinterpret_cast<uint32_t*>(address));
+    stream.read_variable_unsigned_int(reinterpret_cast<T*>(address));
 }
 
-inline void update_unsigned_int32(char* address, BitStream& stream, const Property* property)
+template<typename T, typename Underlying>
+inline void update_int_fixed(char* address, BitStream& stream, const Property* property)
 {
-    const auto* int32_property = reinterpret_cast<const DataTable::Int32Property*>(property);
-    OK(int32_property != nullptr);
-    OK(stream.read(reinterpret_cast<uint32_t*>(address), int32_property->bits));
+    const auto* int_property = reinterpret_cast<const Underlying*>(property);
+    OK(int_property != nullptr);
+    OK(stream.read(reinterpret_cast<T*>(address), int_property->bits));
 }
 
 void UnsignedInt32Type::update(char* address, BitStream& stream, const Property* property) const
 {
     if (property->flags & Property::Flags::VARIABLE_INTEGER)
     {
-        update_unsigned_int32_variable(address, stream, property);
+        update_int_variable<uint32_t>(address, stream);
     }
     else
     {
-        update_unsigned_int32(address, stream, property);
+        update_int_fixed<uint32_t, DataTable::Int32Property>(address, stream, property);
     }
 }
 
-void SignedInt32Type::emit(Cursor<Declaration> cursor) const
+void SignedInt32Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "int32_t";
-}
-
-inline void update_signed_int32_variable(char* address, BitStream& stream, const Property* property)
-{
-    OK(stream.read_variable_signed_int(reinterpret_cast<int32_t*>(address)));
-}
-
-inline void update_signed_int32(char* address, BitStream& stream, const Property* property)
-{
-    const auto* int32_property = reinterpret_cast<const DataTable::Int32Property*>(property);
-    OK(int32_property != nullptr);
-    OK(stream.read(reinterpret_cast<int32_t*>(address), int32_property->bits));
 }
 
 void SignedInt32Type::update(char* address, BitStream& stream, const Property* property) const
 {
     if (property->flags & Property::Flags::VARIABLE_INTEGER)
     {
-        update_signed_int32_variable(address, stream, property);
+        update_int_variable<int32_t>(address, stream);
     }
     else
     {
-        update_signed_int32(address, stream, property);
+        update_int_fixed<int32_t, DataTable::Int32Property>(address, stream, property);
     }
 }
 
-void FloatType::emit(Cursor<Declaration> cursor) const
+void FloatType::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "float";
 }
 
-inline void update_float_coordinates(char* address, BitStream& stream, const Property* property)
+inline void update_float_coordinates(char* address, BitStream& stream)
 {
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
@@ -159,7 +151,7 @@ inline void update_float_coordinates(char* address, BitStream& stream, const Pro
     }
 }
 
-inline void update_float_normal(char* address, BitStream& stream, const Property* property)
+inline void update_float_normal(char* address, BitStream& stream)
 {
     uint8_t is_negative;
     OK(stream.read(&is_negative, 1));
@@ -177,7 +169,7 @@ inline void update_float_normal(char* address, BitStream& stream, const Property
 }
 
 template<Precision P = Precision::Normal>
-inline void update_float_coordinates_multiplayer(char* address, BitStream& stream, const Property* property)
+inline void update_float_coordinates_multiplayer(char* address, BitStream& stream)
 {
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
@@ -226,7 +218,7 @@ inline void update_float_coordinates_multiplayer(char* address, BitStream& strea
     }
 }
 
-inline void update_float_coordinates_multiplayer_integral(char* address, BitStream& stream, const Property* property)
+inline void update_float_coordinates_multiplayer_integral(char* address, BitStream& stream)
 {
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
@@ -262,17 +254,17 @@ inline void update_float_coordinates_multiplayer_integral(char* address, BitStre
     }
 }
 
-template<Precision P = Precision::Normal>
+template<typename Underlying, Precision P = Precision::Normal>
 inline void update_float_cell_coordinates(char* address, BitStream& stream, const Property* property)
 {
-    // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
 
-    const auto* float_property = dynamic_cast<const DataTable::FloatProperty*>(property);
+    const auto* float_property = dynamic_cast<const Underlying*>(property);
+    OK(float_property != nullptr);
 
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
-    value += static_cast<float>(buffer);
+    value = static_cast<float>(buffer);
 
     if constexpr (P == Precision::Low)
     {
@@ -286,16 +278,20 @@ inline void update_float_cell_coordinates(char* address, BitStream& stream, cons
     }
 }
 
+template<typename Underlying>
 inline void update_float_cell_coordinates_integral(char* address, BitStream& stream, const Property* property)
 {
-    const auto* float_property = dynamic_cast<const DataTable::FloatProperty*>(property);
+    float& value = *reinterpret_cast<float*>(address);
+
+    const auto* float_property = dynamic_cast<const Underlying*>(property);
+    OK(float_property != nullptr);
 
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
     *reinterpret_cast<float*>(address) = static_cast<float>(buffer);
 }
 
-inline void update_float_no_scale(char* address, BitStream& stream, const Property* property)
+inline void update_float_no_scale(char* address, BitStream& stream)
 {
     // Yes, it's a float, but our read only works with integral types; just use the same size
     OK(stream.read(reinterpret_cast<uint32_t*>(address), 32));
@@ -306,9 +302,11 @@ constexpr float interpolate(float a, float b, float x)
     return a + (b - a) * x;
 }
 
-inline void update_float(char* address, BitStream& stream, const Property* property)
+template<typename Underlying>
+inline void update_float_scaled(char* address, BitStream& stream, const Property* property)
 {
     const auto* float_property = dynamic_cast<const DataTable::FloatProperty*>(property);
+    OK(float_property != nullptr);
 
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
@@ -318,112 +316,168 @@ inline void update_float(char* address, BitStream& stream, const Property* prope
         static_cast<float>(buffer) / static_cast<float>(1 << (float_property->bits - 1)));
 }
 
-void FloatType::update(char* address, BitStream& stream, const Property* property) const
+template<typename Underlying = DataTable::FloatProperty>
+inline void update_float(char* address, BitStream& stream, const Property* property)
 {
     if (property->flags & Property::Flags::NO_SCALE)
     {
-        update_float_no_scale(address, stream, property);
-        return;
+        update_float_no_scale(address, stream);
     }
-
-    switch (property->flags & Property::Flags::FLOAT_FLAGS)
+    else
     {
-        using Flags = Property::Flags;
-        case 0:
-            update_float(address, stream, property);
-            break;
-        case Flags::COORDINATES:
-            update_float_coordinates(address, stream, property);
-            break;
-        case Flags::NORMAL:
-            update_float_normal(address, stream, property);
-            break;
-        case Flags::COORDINATES_MULTIPLAYER:
-            update_float_coordinates_multiplayer(address, stream, property);
-            break;
-        case Flags::COORDINATES_MULTIPLAYER_LOW_PRECISION:
-            update_float_coordinates_multiplayer<Precision::Low>(address, stream, property);
-            break;
-        case Flags::COORDINATES_MULTIPLAYER_INTEGRAL:
-            update_float_coordinates_multiplayer_integral(address, stream, property);
-            break;
-        case Flags::CELL_COORDINATES:
-            update_float_cell_coordinates(address, stream, property);
-            break;
-        case Flags::CELL_COORDINATES_LOW_PRECISION:
-            update_float_cell_coordinates<Precision::Low>(address, stream, property);
-            break;
-        case Flags::CELL_COORDINATES_INTEGRAL:
-            update_float_cell_coordinates_integral(address, stream, property);
-            break;
-        default:
-            throw csgopp::error::GameError("invalid float flag set " + std::to_string(property->flags));
+        switch (property->flags & Property::Flags::FLOAT_FLAGS)
+        {
+            using Flags = Property::Flags;
+            case 0:
+                update_float_scaled<Underlying>(address, stream, property);
+                break;
+            case Flags::COORDINATES:
+                update_float_coordinates(address, stream);
+                break;
+            case Flags::NORMAL:
+                update_float_normal(address, stream);
+                break;
+            case Flags::COORDINATES_MULTIPLAYER:
+                update_float_coordinates_multiplayer(address, stream);
+                break;
+            case Flags::COORDINATES_MULTIPLAYER_LOW_PRECISION:
+                update_float_coordinates_multiplayer<Precision::Low>(address, stream);
+                break;
+            case Flags::COORDINATES_MULTIPLAYER_INTEGRAL:
+                update_float_coordinates_multiplayer_integral(address, stream);
+                break;
+            case Flags::CELL_COORDINATES:
+                update_float_cell_coordinates<Underlying>(address, stream, property);
+                break;
+            case Flags::CELL_COORDINATES_LOW_PRECISION:
+                update_float_cell_coordinates<Underlying, Precision::Low>(address, stream, property);
+                break;
+            case Flags::CELL_COORDINATES_INTEGRAL:
+                update_float_cell_coordinates_integral<Underlying>(address, stream, property);
+                break;
+            default:
+                throw csgopp::error::GameError("invalid float flag set " + std::to_string(property->flags));
+        }
     }
 }
 
-void Vector3Type::emit(Cursor<Declaration> cursor) const
+void FloatType::update(char* address, BitStream& stream, const Property* property) const
+{
+    update_float(address, stream, property);
+}
+
+void Vector3Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "Vector3";
 }
 
 void Vector3Type::update(char* address, BitStream& stream, const Property* property) const
 {
+    auto* value = reinterpret_cast<Vector3*>(address);
+    update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->x), stream, property);
+    update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->y), stream, property);
 
+    if (property->flags & Property::Flags::NORMAL)
+    {
+        float magnitude = value->x * value->x + value->y * value->y;
+        if (magnitude < 1)
+        {
+            value->z = std::sqrt(1 - magnitude);
+        }
+        else
+        {
+            value->z = 0;
+        };
+    }
+    else
+    {
+        update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->z), stream, property);
+    }
 }
 
-void Vector2Type::emit(Cursor<Declaration> cursor) const
+void Vector2Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "Vector2";
 }
 
 void Vector2Type::update(char* address, BitStream& stream, const Property* property) const
 {
-
+    auto* value = reinterpret_cast<Vector3*>(address);
+    update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->x), stream, property);
+    update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->y), stream, property);
 }
 
-void StringType::emit(Cursor<Declaration> cursor) const
+void StringType::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "std::string";
 }
 
 void StringType::update(char* address, BitStream& stream, const Property* property) const
 {
+    std::string& value = *reinterpret_cast<std::string*>(address);
 
+    uint32_t size;
+    stream.read(&size, string::STRING_SIZE_BITS_MAX);
+    stream.read_string_from(value, std::min(string::STRING_SIZE_MAX, size));
 }
 
-void UnsignedInt64Type::emit(Cursor<Declaration> cursor) const
+void UnsignedInt64Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "uint64_t";
 }
 
 void UnsignedInt64Type::update(char* address, BitStream& stream, const Property* property) const
 {
-
+    if (property->flags & Property::Flags::VARIABLE_INTEGER)
+    {
+        update_int_variable<uint64_t>(address, stream);
+    }
+    else
+    {
+        update_int_fixed<uint64_t, DataTable::Int64Property>(address, stream, property);
+    }
 }
 
-void SignedInt64Type::emit(Cursor<Declaration> cursor) const
+void SignedInt64Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "int64_t";
 }
 
 void SignedInt64Type::update(char* address, BitStream& stream, const Property* property) const
 {
-
+    if (property->flags & Property::Flags::VARIABLE_INTEGER)
+    {
+        update_int_variable<int64_t>(address, stream);
+    }
+    else
+    {
+        update_int_fixed<int64_t, DataTable::Int64Property>(address, stream, property);
+    }
 }
 
 void PropertyArrayType::update(char* address, BitStream& stream, const Property* property) const
 {
+    const auto* array_property = dynamic_cast<const DataTable::ArrayProperty*>(property);
+    OK(array_property != nullptr);
 
+    // Count how many elements we're receiving
+    uint8_t size_bits = common::bits::width(this->length);
+    size_t data_length;
+    OK(stream.read(&data_length, size_bits));
+
+    // Inner type cannot be an object; this has to be a runtime invariant
+    const auto* value_type = dynamic_cast<const PropertyValueType*>(this->element_type.get());
+    OK(value_type != nullptr);
+
+    for (size_t i = 0; i < data_length; ++i)
+    {
+        value_type->update(address + this->at(i), stream, array_property->element.get());
+    }
 }
 
 EntityType::EntityType(Builder&& builder, const DataTable* data_table)
     : ObjectType(std::move(builder))
     , data_table(data_table)
 {}
-
-void EntityType::update(char* address, BitStream& stream, const Property* property) const
-{
-
-}
 
 }

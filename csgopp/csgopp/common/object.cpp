@@ -52,6 +52,10 @@ Reference Reference::operator[](size_t element_index) const
     }
 }
 
+void ValueType::emit(layout::Cursor& cursor) const
+{
+    cursor.note(this->info().name());
+}
 
 Accessor::Accessor(const Type* origin, const Type* type, size_t offset)
     : origin(origin)
@@ -120,10 +124,20 @@ void ArrayType::destroy(char *address) const
     }
 }
 
-void ArrayType::emit(code::Cursor<code::Declaration> cursor) const
+void ArrayType::emit(code::Cursor<code::Declaration>& cursor) const
 {
     this->element_type->emit(cursor);
     cursor.target.array_sizes.push_back(this->length);
+}
+
+void ArrayType::emit(layout::Cursor& cursor) const
+{
+    for (size_t i = 0; i < this->length; ++i)
+    {
+        size_t relative = this->element_size * i;
+        cursor.write(std::to_string(i), relative);
+        this->element_type->emit(cursor.indent(relative));
+    }
 }
 
 Accessor ArrayType::operator[](size_t element_index) const
@@ -176,7 +190,7 @@ size_t ObjectType::Builder::embed(const ObjectType* other)
 {
     if (other->members.empty())
     {
-        return 0;
+        return this->members_size;
     }
 
     // First, get the offset since it's computed for us
@@ -247,13 +261,13 @@ void ObjectType::destroy(char *address) const
     });
 }
 
-void ObjectType::emit(code::Cursor<code::Declaration> cursor) const
+void ObjectType::emit(code::Cursor<code::Declaration>& cursor) const
 {
     cursor.target.type = this->name;
     cursor.dependencies.emplace(this->name);
 }
 
-void ObjectType::emit(code::Cursor<code::Definition> cursor) const
+void ObjectType::emit(code::Cursor<code::Definition>& cursor) const
 {
     if (this->base != nullptr)
     {
@@ -269,6 +283,15 @@ void ObjectType::emit(code::Cursor<code::Definition> cursor) const
     if (this->context != nullptr)
     {
         this->context->apply(cursor);
+    }
+}
+
+void ObjectType::emit(layout::Cursor& cursor) const
+{
+    for (const Member& member : this->members)
+    {
+        cursor.write(member.name, member.offset);
+        member.type->emit(cursor.indent(member.offset));
     }
 }
 

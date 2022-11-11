@@ -8,6 +8,7 @@
 #include <argparse/argparse.hpp>
 
 #include <csgopp/common/code.h>
+#include <csgopp/common/layout.h>
 #include <csgopp/client/data_table.h>
 #include <csgopp/client/server_class.h>
 #include <csgopp/client.h>
@@ -118,7 +119,7 @@ struct GenerateCommand
         std::cout << "wrote " << client.observer.entity_type_count << " structs to " << path << std::endl;
     }
 
-    void write_offsets(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    void write_prioritized(const std::filesystem::path& path, Client<GenerateObserver>& client) const
     {
         std::ofstream out(path);
         if (!out)
@@ -139,7 +140,30 @@ struct GenerateCommand
             }
         }
 
-        std::cout << "wrote offsets to " << path << std::endl;
+        std::cout << "wrote prioritized to " << path << std::endl;
+    }
+
+    void write_layout(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    {
+        std::ofstream out(path);
+        if (!out)
+        {
+            std::cerr << "failed to open " << path << std::endl;
+            return;
+        }
+
+        for (const DataTable* data_table : client.data_tables())
+        {
+            if (data_table->entity_type)
+            {
+                out << data_table->entity_type->name;  // Newline is added
+                csgopp::common::layout::Cursor cursor(out);
+                data_table->entity_type->emit(cursor);
+                out << std::endl;
+            }
+        }
+
+        std::cout << "wrote layout to " << path << std::endl;
     }
 
     [[nodiscard]] int main() const
@@ -169,7 +193,12 @@ struct GenerateCommand
             this->write_definitions(destination, client);
             if (this->parser.get<bool>("-v"))
             {
-                this->write_offsets(destination.replace_extension("offsets.txt"), client);
+                this->write_prioritized(
+                    std::filesystem::path(destination).replace_extension("prioritized.txt"),
+                    client);
+                this->write_layout(
+                    std::filesystem::path(destination.replace_extension("layout.txt")),
+                    client);
             }
         }
         catch (const csgopp::error::GameError& error)

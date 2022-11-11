@@ -82,7 +82,7 @@ struct Database
 template<typename T>
 struct NameTableMixin
 {
-    using NameTable = absl::flat_hash_map<std::string_view, T *>;
+    using NameTable = absl::flat_hash_map<std::string, T *>;
     NameTable by_name{};
 
     NameTableMixin() = default;
