@@ -1053,9 +1053,12 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
             {
                 this->delete_entity(auto_increment);
             }
+
+            LOG("delete entity %u", auto_increment);
         }
         else
         {
+            LOG("start update entity %u", auto_increment);
             Entity* entity;
             if (command & 0b10)
             {
@@ -1078,7 +1081,7 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 template<typename Observer>
 Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
 {
-    size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size());
+    size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size()) + 1;
     ServerClass::Index server_class_id;
     OK(stream.read(&server_class_id, server_class_index_size));
     ServerClass* server_class = this->_server_classes.at(server_class_id);
@@ -1154,7 +1157,7 @@ void Client<Observer>::update_entity(Entity* entity, BitStream& stream)
     {
         // Actually update the field
         const entity::Offset& offset = entity->type->prioritized.at(i);
-        LOG("%d", offset.property->flags);
+        printf("%s %s %d\n", offset.property->name.c_str(), typeid(*offset.type).name(), offset.property->flags);
         offset.type->update(entity->address + offset.offset, stream, offset.property);
     }
 }

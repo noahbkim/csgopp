@@ -136,19 +136,33 @@ public:
 
     bool read_string_from(std::string& string, size_t size)
     {
-        do
+        string.clear();
+        if (size == 0)
+        {
+            return true;
+        }
+
+        while (true)
         {
             string.push_back(0);
             if (!this->read(&string.back(), 8))
             {
                 return false;
             }
-            if (size > 0)
+
+            size -= 1;
+
+            if (string.back() == 0)
             {
-                size -= 1;
+                string.pop_back();
+                break;
             }
-        } while (string.back() != 0);
-        string.pop_back();
+
+            if (size == 0)
+            {
+                return true;
+            }
+        }
 
         if (size > 0)
         {
