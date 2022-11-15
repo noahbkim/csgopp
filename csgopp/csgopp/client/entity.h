@@ -19,6 +19,13 @@ struct DataTable;
 
 }
 
+namespace csgopp::client::server_class
+{
+
+struct ServerClass;
+
+}
+
 namespace csgopp::client::entity
 {
 
@@ -39,6 +46,7 @@ using csgopp::common::code::Dependencies;
 using csgopp::common::code::Cursor;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::Property;
+using csgopp::client::server_class::ServerClass;
 
 // Thinner than accessor; we know what we're doing
 enum struct Precision
@@ -147,7 +155,18 @@ struct EntityType final : public ObjectType
     EntityType(Builder&& builder, const DataTable* data_table);
 };
 
-using Entity = Instance<EntityType>;
+struct Entity : public Instance<EntityType>
+{
+    using Id = uint32_t;
+
+    Id id;
+    const ServerClass* server_class;
+
+    Entity(const EntityType* type, char* address, Id id, const ServerClass* server_class);
+
+    void update(BitStream& stream);
+};
+
 using EntityDatabase = Database<Entity, Delete<Entity>>;
 
 }

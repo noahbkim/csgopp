@@ -271,9 +271,11 @@ template<typename T>
 struct Instance
 {
     const T* type;
-    char address[];
+    char* address;
 
+    Instance(const T* type, char* address);
     ~Instance();
+
     Instance(Instance& other) = delete;
     Instance(Instance&& other) = delete;
     Instance& operator=(Instance& other) = delete;
@@ -296,40 +298,18 @@ struct Instance
     typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& is();
 
 private:
-    template<typename U>
-    friend Instance<U>* instantiate(std::shared_ptr<const U> type);
-
-    template<typename U>
-    friend Instance<U>* instantiate(std::shared_ptr<U> type);
-
-    template<typename U>
-    friend Instance<U>* instantiate(const U* type);
-
-    explicit Instance(const T* type);
+    template<typename T, typename I = Instance<T>, typename... Args>
+    I* instantiate(const T* type);
 };
 
 using Object = Instance<ObjectType>;
 using Array = Instance<ArrayType>;
 
-template<typename T>
-Instance<T>* instantiate(std::shared_ptr<const T> type)
+template<typename T, typename I = Instance<T>, typename... Args>
+I* instantiate(const T* type, Args&&... args)
 {
-    char* address = new char[sizeof(Instance<T>) + type->size()];
-    return new (address) Instance<T>(type.get());
-}
-
-template<typename T>
-Instance<T>* instantiate(std::shared_ptr<T> type)
-{
-    char* address = new char[sizeof(Instance<T>) + type->size()];
-    return new (address) Instance<T>(type.get());
-}
-
-template<typename T>
-Instance<T>* instantiate(const T* type)
-{
-    char* address = new char[sizeof(Instance<T>) + type->size()];
-    return new (address) Instance<T>(type);
+    char* address = new char[sizeof(I) + type->size()];
+    return new (address) I(type, address + sizeof(I), args...);
 }
 
 template<typename T>
@@ -531,8 +511,9 @@ void DefaultValueType<T>::destroy(char* address) const
 }
 
 template<typename T>
-Instance<T>::Instance(const T* type)
+Instance<T>::Instance(const T* type, char* address)
     : type(type)
+    , address(address)
 {
     this->type->construct(this->address);
 }

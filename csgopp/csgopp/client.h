@@ -36,6 +36,7 @@ using csgopp::common::ring::Ring;
 using csgopp::common::control::lookup;
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
+using csgopp::common::object::instantiate;
 using csgopp::error::GameError;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::is_array_index;
@@ -184,6 +185,48 @@ struct ClientObserverBase
             client.observer.on_string_table_update(client, string_table);
         }
     };
+
+    /// Called by the default server class update observer.
+    virtual void on_entity_creation(Client& client, const Entity* entity) {}
+
+    /// \brief This event is emitted when a network string table is created.
+    struct EntityCreationObserver
+    {
+        EntityCreationObserver() = default;
+        explicit EntityCreationObserver(Client& client, Entity::Id id, const ServerClass* server_class) {}
+        virtual void handle(Client& client, const Entity* entity)
+        {
+            client.observer.on_entity_creation(client, entity);
+        }
+    };
+
+    /// Called by the default server class update observer.
+    virtual void on_entity_update(Client& client, const Entity* entity) {}
+
+    /// \brief This event is emitted when a network string table is created.
+    struct EntityUpdateObserver
+    {
+        EntityUpdateObserver() = default;
+        explicit EntityUpdateObserver(Client& client, const Entity* entity) {}
+        virtual void handle(Client& client, const Entity* entity)
+        {
+            client.observer.on_entity_update(client, entity);
+        }
+    };
+
+    /// Called by the default server class update observer.
+    virtual void on_entity_deletion(Client& client, const Entity* entity) {}
+
+    /// \brief This event is emitted when a network string table is created.
+    struct EntityDeletionObserver
+    {
+        EntityDeletionObserver() = default;
+        explicit EntityDeletionObserver(Client& client, const Entity* entity) {}
+        virtual void handle(Client& client, const Entity* entity)
+        {
+            client.observer.on_entity_creation(client, entity);
+        }
+    };
 };
 
 /// \brief The core DEMO parser and game client.
@@ -293,9 +336,9 @@ protected:
     DatabaseWithName<DataTable> create_data_tables(CodedInputStream& stream);
     Database<ServerClass> create_server_classes(CodedInputStream& stream, DatabaseWithName<DataTable>& new_data_tables);
     void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
-    Entity* create_entity(size_t index, BitStream& data);
-    void update_entity(Entity* entity, BitStream& data);
-    void delete_entity(size_t index);
+    void create_entity(Entity::Id id, BitStream& stream);
+    void update_entity(Entity::Id id, BitStream& stream);
+    void delete_entity(Entity::Id id);
 
 private:
     /// Cast this as a const reference for template constructors.
@@ -1038,12 +1081,12 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
     OK(data.ParseFromCodedStream(&stream));
 
     BitStream entity_data(data.entity_data());
-    uint32_t auto_increment = 0;
-    for (uint32_t i = 0; i < data.updated_entries(); ++i, ++auto_increment)
+    Entity::Id entity_id = 0;
+    for (uint32_t i = 0; i < data.updated_entries(); ++i, ++entity_id)
     {
         uint32_t auto_increment_skip;
         entity_data.read_compressed_uint32(&auto_increment_skip);
-        auto_increment += auto_increment_skip;
+        entity_id += auto_increment_skip;
 
         uint8_t command;
         entity_data.read(&command, 2);
@@ -1052,7 +1095,7 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
         {
             if (command & 0b10)
             {
-                this->delete_entity(auto_increment);
+                this->delete_entity(entity_id);
             }
         }
         else
@@ -1060,14 +1103,12 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
             Entity* entity;
             if (command & 0b10)
             {
-                entity = this->create_entity(auto_increment, entity_data);
+                this->create_entity(entity_id, entity_data);
             }
             else
             {
-                entity = this->_entities.at(auto_increment);
+                this->update_entity(entity_id, entity_data);
             }
-
-            this->update_entity(entity, entity_data);
         }
     }
 
@@ -1076,7 +1117,7 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 }
 
 template<typename Observer>
-Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
+void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 {
     size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size()) + 1;
     ServerClass::Index server_class_id;
@@ -1086,82 +1127,37 @@ Entity* Client<Observer>::create_entity(size_t id, BitStream& stream)
     uint16_t serial_number;
     OK(stream.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
 
+    BEFORE(Observer, EntityCreationObserver, id, std::as_const(server_class));
+
     OK(server_class->data_table->entity_type != nullptr);
-    Entity* entity = csgopp::common::object::instantiate(server_class->data_table->entity_type);
+    Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->entity_type.get(), id, server_class);
+    entity->update(stream);
+
+    AFTER(EntityCreationObserver, std::as_const(entity))
 
     this->_entities.emplace(id, entity);
-
-    return entity;
 }
 
 /// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
 template<typename Observer>
-void Client<Observer>::update_entity(Entity* entity, BitStream& stream)
+void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 {
-    uint8_t small_increment_optimization;
-    OK(stream.read(&small_increment_optimization, 1));
-
-    std::vector<uint16_t> indices;
-
-    uint16_t index = 0;
-    while (true)
-    {
-        uint16_t jump;
-        if (small_increment_optimization)
-        {
-            uint8_t use_auto_index;
-            OK(stream.read(&use_auto_index, 1));
-            if (use_auto_index)
-            {
-                jump = 0;
-            }
-            else
-            {
-                uint8_t is_small_jump;
-                OK(stream.read(&is_small_jump, 1));
-                if (is_small_jump)
-                {
-                    OK(stream.read(&jump, 3));
-                }
-                else
-                {
-                    OK(stream.read_compressed_uint16(&jump));
-                }
-            }
-        }
-        else
-        {
-            OK(stream.read_compressed_uint16(&jump));
-        }
-
-        if (jump == 0xFFF)
-        {
-            break;
-        }
-        else
-        {
-            index += jump;
-        }
-
-        indices.emplace_back(index);
-        index += 1;
-    }
-
-    for (uint16_t i : indices)
-    {
-        // Actually update the field
-        const entity::Offset& offset = entity->type->prioritized.at(i);
-        offset.type->update(entity->address + offset.offset, stream, offset.property);
-    }
+    Entity* entity = this->_entities.at(id);
+    BEFORE(Observer, EntityUpdateObserver, std::as_const(entity));
+    entity->update(stream);
+    AFTER(EntityUpdateObserver, std::as_const(entity));
 }
 
 template<typename Observer>
-void Client<Observer>::delete_entity(size_t index)
+void Client<Observer>::delete_entity(Entity::Id index)
 {
     if (index < this->_entities.size())
     {
-        delete this->_entities.at(index);
+        Entity* entity = this->_entities.at(index);
+        BEFORE(Observer, EntityDeletionObserver, std::as_const(entity));
         this->_entities.at(index) = nullptr;
+        AFTER(EntityDeletionObserver, std::as_const(entity));
+        delete entity;
     }
 }
 
