@@ -1066,7 +1066,14 @@ void Client<Observer>::advance_packet_entity_message(CodedInputStream& stream)
 template<typename Observer>
 void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
 {
-    advance_packet_skip(stream);
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    OK(limit > 0);
+
+    csgo::message::net::CSVCMsg_GameEvent data;
+    data.ParseFromCodedStream(&stream);
+
+    OK(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
 }
 
 /// \sa https://github.com/markus-wa/demoinfocs-golang/blob/1b196ffaaf93c531cdae5897091692e14ead19d2/pkg/demoinfocs/parsing.go#L330
@@ -1100,7 +1107,6 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
         }
         else
         {
-            Entity* entity;
             if (command & 0b10)
             {
                 this->create_entity(entity_id, entity_data);
@@ -1149,16 +1155,16 @@ void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 }
 
 template<typename Observer>
-void Client<Observer>::delete_entity(Entity::Id index)
+void Client<Observer>::delete_entity(Entity::Id id)
 {
-    if (index < this->_entities.size())
-    {
-        Entity* entity = this->_entities.at(index);
-        BEFORE(Observer, EntityDeletionObserver, std::as_const(entity));
-        this->_entities.at(index) = nullptr;
-        AFTER(EntityDeletionObserver, std::as_const(entity));
-        delete entity;
-    }
+    OK(id < this->_entities.size());
+    Entity* entity = this->_entities.at(id);
+    OK(entity != nullptr);
+
+    BEFORE(Observer, EntityDeletionObserver, std::as_const(entity));
+    this->_entities.at(id) = nullptr;
+    AFTER(EntityDeletionObserver, std::as_const(entity));
+    delete entity;
 }
 
 template<typename Observer>

@@ -43,6 +43,7 @@ constexpr S width(T t)
     return width;
 }
 
+// todo: https://github.com/ValveSoftware/csgo-demoinfo/blob/master/demoinfogo/demofilebitbuf.cpp
 class BitStream
 {
 public:

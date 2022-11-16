@@ -504,6 +504,7 @@ void Entity::update(BitStream& stream)
     static std::vector<uint16_t> indices;
     indices.clear();
 
+    // It's honestly probably more efficient to read through this twice than it is to allocate and make copies
     uint16_t index = 0;
     while (true)
     {
