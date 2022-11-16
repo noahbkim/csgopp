@@ -52,6 +52,11 @@ Reference Reference::operator[](size_t element_index) const
     }
 }
 
+void ValueType::emit(code::Cursor<code::Declaration>& cursor) const
+{
+    cursor.target.type = this->info().name();
+}
+
 void ValueType::emit(layout::Cursor& cursor) const
 {
     cursor.note(this->info().name());

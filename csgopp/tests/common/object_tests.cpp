@@ -52,7 +52,7 @@ TEST(Object, integration)
         Entity entities[2];
     };
 
-    std::shared_ptr<Object> engine(instantiate(engine_T));
+    std::shared_ptr<Object> engine(instantiate(engine_T.get()));
     Object& e = *engine;
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
@@ -97,7 +97,7 @@ TEST(Object, null)
     ObjectType::Builder builder;
     std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
     EXPECT_EQ(type->size(), 0);
-    std::shared_ptr<Object> object(instantiate(type));
+    std::shared_ptr<Object> object(instantiate(type.get()));
     EXPECT_EQ(object->type, type.get());
 }
 
@@ -107,7 +107,7 @@ TEST(Object, one_field_primitive)
     builder.member("value", uint32_T);
     std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(uint32_t));
-    std::shared_ptr<Object> object(instantiate(type));
+    std::shared_ptr<Object> object(instantiate(type.get()));
     (*object)["value"].is<uint32_t>() = 69;
     EXPECT_EQ((*object)["value"].is<uint32_t>(), 69);
 }
@@ -118,7 +118,7 @@ TEST(Object, one_field_allocating)
     builder.member("value", string_T);
     std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(std::string));
-    std::shared_ptr<Object> object(instantiate(type));
+    std::shared_ptr<Object> object(instantiate(type.get()));
     EXPECT_EQ((*object)["value"].is<std::string>(), "");
     (*object)["value"].is<std::string>() = "hello, world!";
     EXPECT_EQ((*object)["value"].is<std::string>(), "hello, world!");

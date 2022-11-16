@@ -500,7 +500,9 @@ void Entity::update(BitStream& stream)
     uint8_t small_increment_optimization;
     OK(stream.read(&small_increment_optimization, 1));
 
-    std::vector<uint16_t> indices;
+    // Keeping this static GREATLY reduces the number of spurious allocations
+    static std::vector<uint16_t> indices;
+    indices.clear();
 
     uint16_t index = 0;
     while (true)

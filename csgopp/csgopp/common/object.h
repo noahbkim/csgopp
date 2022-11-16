@@ -163,6 +163,7 @@ struct Reference
 struct ValueType : public virtual Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
+    void emit(code::Cursor<code::Declaration>&) const override;
     void emit(layout::Cursor&) const override;
 };
 
