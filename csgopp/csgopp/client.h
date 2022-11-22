@@ -5,6 +5,7 @@
 #include <absl/container/flat_hash_set.h>
 #include <google/protobuf/io/coded_stream.h>
 
+#include "common/macro.h"
 #include "common/lookup.h"
 #include "common/bits.h"
 #include "common/interface.h"
@@ -21,6 +22,25 @@
 #define LOCAL(EVENT) _event_##EVENT
 #define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, ## __VA_ARGS__);
 #define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
+
+
+#ifdef NDEBUG
+#define DEBUG(STATEMENT)
+#define NOTE(FMT, ...)
+#define VERIFY(CONDITION, ...) OK(CONDITION)
+#else
+#define DEBUG(STATEMENT) STATEMENT;
+#define NOTE(FMT, ...) fprintf(stderr, "  " FMT "\n", __VA_ARGS__);
+#define VERIFY(CONDITION, ...) do \
+{ \
+    if (!(CONDITION)) \
+    { \
+        fprintf(stderr, WHERE() "\n  condition: " #CONDITION "\n  cursor: %d\n  tick: %d\n", this->cursor(), this->tick()); \
+        __VA_ARGS__; \
+        throw csgopp::error::GameError("failed assertion " #CONDITION); \
+    } \
+} while (false)
+#endif
 
 /// Most notably, this namespace defines the `ClientObserverBase` and
 /// `Client`, which together form the basis of csgopp's demo parsing and
@@ -314,7 +334,6 @@ public:
     [[nodiscard]] const demo::Header& header() { return this->_header; }
     [[nodiscard]] uint32_t cursor() { return this->_cursor; }
     [[nodiscard]] uint32_t tick() { return this->_tick; }
-
     [[nodiscard]] const DataTableDatabase& data_tables() { return this->_data_tables; }
     [[nodiscard]] const ServerClassDatabase& server_classes() { return this->_server_classes; }
     [[nodiscard]] const StringTableDatabase& string_tables() { return this->_string_tables; }
@@ -360,9 +379,9 @@ bool Client<Observer>::advance(CodedInputStream& stream)
     BEFORE(Observer, FrameObserver);
 
     char command;
-    OK(stream.ReadRaw(&command, 1));
-    OK(stream.ReadLittleEndian32(&this->_tick));
-    OK(stream.Skip(1));  // player slot
+    VERIFY(stream.ReadRaw(&command, 1));
+    VERIFY(stream.ReadLittleEndian32(&this->_tick));
+    VERIFY(stream.Skip(1));  // player slot
 
     switch (command)
     {
@@ -404,10 +423,10 @@ template<typename Observer>
 void Client<Observer>::advance_packets(CodedInputStream& stream)
 {
     // Arbitrary player data, seems useless
-    OK(stream.Skip(152 + 4 + 4));
+    VERIFY(stream.Skip(152 + 4 + 4));
 
     uint32_t size;
-    OK(stream.ReadLittleEndian32(&size));
+    VERIFY(stream.ReadLittleEndian32(&size));
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
     while (stream.BytesUntilLimit() > 0)
@@ -415,7 +434,7 @@ void Client<Observer>::advance_packets(CodedInputStream& stream)
         this->advance_packet(stream);
     }
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -476,29 +495,29 @@ template<typename Observer>
 void Client<Observer>::advance_console_command(CodedInputStream& stream)
 {
     uint32_t size;
-    OK(stream.ReadLittleEndian32(&size));
-    OK(stream.Skip(size));
+    VERIFY(stream.ReadLittleEndian32(&size));
+    VERIFY(stream.Skip(size));
 }
 
 template<typename Observer>
 void Client<Observer>::advance_user_command(CodedInputStream& stream)
 {
-    OK(stream.Skip(4));
+    VERIFY(stream.Skip(4));
     uint32_t size;
-    OK(stream.ReadLittleEndian32(&size));
-    OK(stream.Skip(size));
+    VERIFY(stream.ReadLittleEndian32(&size));
+    VERIFY(stream.Skip(size));
 }
 
 template<typename Observer>
 void Client<Observer>::advance_data_tables(CodedInputStream& stream)
 {
     uint32_t size;
-    OK(stream.ReadLittleEndian32(&size));
+    VERIFY(stream.ReadLittleEndian32(&size));
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
     this->create_data_tables_and_server_classes(stream);
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -508,41 +527,42 @@ template<typename Observer>
 void Client<Observer>::advance_string_tables(CodedInputStream& stream)
 {
     uint32_t size;
-    OK(stream.ReadLittleEndian32(&size));
+    VERIFY(stream.ReadLittleEndian32(&size));
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
+    DEBUG(int current_position = stream.CurrentPosition());
     BitStream data(stream, size);
 
     uint8_t count;
-    OK(data.read(&count, 8));
+    VERIFY(data.read(&count, 8));
     for (uint8_t i = 0; i < count; ++i)
     {
         BEFORE(Observer, StringTableCreationObserver);
 
         std::string name;
-        OK(data.read_string(name));
+        VERIFY(data.read_string(name));
         uint16_t entry_count;
-        OK(data.read(&entry_count, 16));
+        VERIFY(data.read(&entry_count, 16));
 
         StringTable* string_table = new StringTable(std::move(name), entry_count);
 
         for (uint16_t j = 0; j < entry_count; ++j)
         {
             StringTable::Entry* entry = new StringTable::Entry();
-            OK(data.read_string(entry->string));
+            VERIFY(data.read_string(entry->string));
             string_table->entries.emplace(entry);
 
             uint8_t has_data;
-            OK(data.read(&has_data, 1));
+            VERIFY(data.read(&has_data, 1));
             if (has_data)
             {
                 uint16_t data_size;
-                OK(data.read(&data_size, 16));
+                VERIFY(data.read(&data_size, 16));
 
                 entry->data.resize(data_size);
                 for (uint16_t k = 0; k < data_size; ++k)
                 {
-                    OK(data.read(&entry->data.at(k), 8));
+                    VERIFY(data.read(&entry->data.at(k), 8));
                 }
             }
         }
@@ -550,7 +570,10 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         AFTER(StringTableCreationObserver, std::as_const(string_table));
     }
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(data.bytes_until_end() < 1,
+           NOTE("bytes until end: %zd", data.bytes_until_end())
+           NOTE("stream index: %d", current_position));
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -649,9 +672,9 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
     {
         // This code isn't encapsulated because the final DataTable, which returns true from data.is_end(), is
         // always empty besides that flag; we don't want to bother initializing a bunch of resources for that.
-        OK(stream.ExpectTag(csgo::message::net::SVC_Messages::svc_SendTable));
+        VERIFY(stream.ExpectTag(csgo::message::net::SVC_Messages::svc_SendTable));
         CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-        OK(limit > 0);
+        VERIFY(limit > 0);
 
         // Break if we're at the end of the origin.
         data.ParseFromCodedStream(&stream);
@@ -698,7 +721,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                         property = new DataTable::StringProperty(std::move(property_data));
                         break;
                     case Type::ARRAY:
-                        OK(preceding_array_element != nullptr);
+                        VERIFY(preceding_array_element != nullptr);
                         property = new DataTable::ArrayProperty(std::move(property_data), preceding_array_element);
                         preceding_array_element = nullptr;
                         break;
@@ -737,7 +760,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 // If there's an array property, the element_type type always precedes it; don't both adding
                 if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                 {
-                    OK(preceding_array_element == nullptr);
+                    VERIFY(preceding_array_element == nullptr);
                     preceding_array_element = property;
                 }
                 else
@@ -748,12 +771,12 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
 
             data_table->is_array = data_table->properties.size() > 0 && is_coalesced_array;
 
-            OK(preceding_array_element == nullptr);
+            VERIFY(preceding_array_element == nullptr);
             new_data_tables.emplace(data_table);
         }
 
         // Related to inline parsing at start of block
-        OK(stream.BytesUntilLimit() == 0);
+        VERIFY(stream.BytesUntilLimit() == 0);
         stream.PopLimit(limit);
     } while (!data.is_end());
 
@@ -776,17 +799,17 @@ Database<ServerClass> Client<Observer>::create_server_classes(
     DatabaseWithName<DataTable>& new_data_tables
 ) {
     uint16_t server_class_count;
-    OK(demo::ReadLittleEndian16(stream, &server_class_count));
+    VERIFY(demo::ReadLittleEndian16(stream, &server_class_count));
     Database<ServerClass> new_server_classes(server_class_count);
 
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
         auto* server_class = new ServerClass();
-        OK(csgopp::demo::ReadLittleEndian16(stream, &server_class->index));
-        OK(csgopp::demo::ReadCStyleString(stream, &server_class->name));
+        VERIFY(csgopp::demo::ReadLittleEndian16(stream, &server_class->index));
+        VERIFY(csgopp::demo::ReadCStyleString(stream, &server_class->name));
 
         std::string data_table_name;
-        OK(csgopp::demo::ReadCStyleString(stream, &data_table_name));
+        VERIFY(csgopp::demo::ReadCStyleString(stream, &data_table_name));
         server_class->data_table = lookup(
             new_data_tables.by_name,
             this->_data_tables.by_name,
@@ -805,9 +828,9 @@ Database<ServerClass> Client<Observer>::create_server_classes(
                 if (auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property))
                 {
                     ASSERT(server_class->base_class == nullptr, "received two base classes for one server class");
-                    OK(data_table_property != nullptr);
-                    OK(data_table_property->data_table != nullptr);
-                    OK(data_table_property->data_table->server_class != nullptr);
+                    VERIFY(data_table_property != nullptr);
+                    VERIFY(data_table_property->data_table != nullptr);
+                    VERIFY(data_table_property->data_table->server_class != nullptr);
                     server_class->base_class = data_table_property->data_table->server_class;
                 }
             }
@@ -851,11 +874,11 @@ template<typename Observer>
 void Client<Observer>::advance_packet_send_table(CodedInputStream& stream)
 {
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit != 0);
+    VERIFY(limit != 0);
 
     this->create_data_tables_and_server_classes(stream);
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -876,10 +899,10 @@ template<typename Observer>
 void Client<Observer>::advance_packet_create_string_table(CodedInputStream& stream)
 {
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit > 0);
+    VERIFY(limit > 0);
 
     csgo::message::net::CSVCMsg_CreateStringTable data;
-    OK(data.ParseFromCodedStream(&stream));
+    VERIFY(data.ParseFromCodedStream(&stream));
 
     BEFORE(Observer, StringTableCreationObserver);
     StringTable* string_table = new StringTable(data);
@@ -887,7 +910,7 @@ void Client<Observer>::advance_packet_create_string_table(CodedInputStream& stre
     this->_string_tables.emplace(string_table);
     AFTER(StringTableCreationObserver, std::as_const(string_table));
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -895,10 +918,10 @@ template<typename Observer>
 void Client<Observer>::advance_packet_update_string_table(CodedInputStream& stream)
 {
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit > 0);
+    VERIFY(limit > 0);
 
     csgo::message::net::CSVCMsg_UpdateStringTable data;
-    OK(data.ParseFromCodedStream(&stream));
+    VERIFY(data.ParseFromCodedStream(&stream));
 
     size_t index = data.table_id();
     StringTable* string_table = this->_string_tables.at(index);  // TODO revisit if we remove
@@ -908,7 +931,7 @@ void Client<Observer>::advance_packet_update_string_table(CodedInputStream& stre
     this->populate_string_table(string_table, data.string_data(), data.num_changed_entries());
     AFTER(StringTableUpdateObserver, std::as_const(string_table));
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -918,7 +941,7 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
     BitStream string_data(blob);
     uint8_t verification_bit;
     string_data.read(&verification_bit, 1);
-    OK(verification_bit == 0);
+    VERIFY(verification_bit == 0);
 
     Ring<std::string_view, 32> string_table_entry_history;  // 32 appears to be constant
 
@@ -927,10 +950,10 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
     for (int32_t i = 0; i < count; ++i)
     {
         uint8_t use_auto_increment;
-        OK(string_data.read(&use_auto_increment, 1));
+        VERIFY(string_data.read(&use_auto_increment, 1));
         if (!use_auto_increment)
         {
-            OK(string_data.read(&auto_increment, index_size));
+            VERIFY(string_data.read(&auto_increment, index_size));
         }
 
         // Append
@@ -950,45 +973,45 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
         }
 
         uint8_t has_string;
-        OK(string_data.read(&has_string, 1));
+        VERIFY(string_data.read(&has_string, 1));
         if (has_string)
         {
             entry->string.clear();
 
             uint8_t append_to_existing;
-            OK(string_data.read(&append_to_existing, 1));
+            VERIFY(string_data.read(&append_to_existing, 1));
             if (append_to_existing)
             {
                 uint8_t history_index;
-                OK(string_data.read(&history_index, 5));
+                VERIFY(string_data.read(&history_index, 5));
                 uint8_t bytes_to_copy;
-                OK(string_data.read(&bytes_to_copy, 5));
+                VERIFY(string_data.read(&bytes_to_copy, 5));
                 entry->string.append(string_table_entry_history.at(history_index), 0, bytes_to_copy);
             }
 
             // Read a c-style string; take until null
-            OK(string_data.read_string(entry->string));
+            VERIFY(string_data.read_string(entry->string));
         }
 
         string_table_entry_history.push_back_overwrite(entry->string);
         uint8_t has_data;
-        OK(string_data.read(&has_data, 1));
+        VERIFY(string_data.read(&has_data, 1));
         if (has_data)
         {
             if (string_table->data_fixed)  // < 8 bits
             {
-                OK(string_table->data_size_bits <= 8);
+                VERIFY(string_table->data_size_bits <= 8);
                 entry->data.push_back(0);
                 string_data.read(&entry->data.back(), string_table->data_size_bits);
             }
             else
             {
                 uint16_t data_size;
-                OK(string_data.read(&data_size, 14));
+                VERIFY(string_data.read(&data_size, 14));
                 entry->data.resize(data_size);
                 for (uint16_t j = 0; j < data_size; ++j)
                 {
-                    OK(string_data.read(&entry->data.at(j), 8));
+                    VERIFY(string_data.read(&entry->data.at(j), 8));
                 }
             }
         }
@@ -1067,12 +1090,12 @@ template<typename Observer>
 void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
 {
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit > 0);
+    VERIFY(limit > 0);
 
     csgo::message::net::CSVCMsg_GameEvent data;
     data.ParseFromCodedStream(&stream);
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -1082,10 +1105,11 @@ template<typename Observer>
 void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
 {
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
-    OK(limit > 0);
+    VERIFY(limit > 0);
 
+    DEBUG(int current_position = stream.CurrentPosition());
     csgo::message::net::CSVCMsg_PacketEntities data;
-    OK(data.ParseFromCodedStream(&stream));
+    VERIFY(data.ParseFromCodedStream(&stream));
 
     BitStream entity_data(data.entity_data());
     Entity::Id entity_id = 0;
@@ -1118,7 +1142,10 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
         }
     }
 
-    OK(stream.BytesUntilLimit() == 0);
+    VERIFY(entity_data.bytes_until_end() <= 1,
+           NOTE("bytes until end: %zd", entity_data.bytes_until_end())
+           NOTE("stream index: %d", current_position));
+    VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
 
@@ -1127,16 +1154,30 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 {
     size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size()) + 1;
     ServerClass::Index server_class_id;
-    OK(stream.read(&server_class_id, server_class_index_size));
+    VERIFY(stream.read(&server_class_id, server_class_index_size));
     ServerClass* server_class = this->_server_classes.at(server_class_id);
 
     uint16_t serial_number;
-    OK(stream.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
+    VERIFY(stream.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
 
     BEFORE(Observer, EntityCreationObserver, id, std::as_const(server_class));
 
-    OK(server_class->data_table->entity_type != nullptr);
+    VERIFY(server_class->data_table->entity_type != nullptr);
     Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->entity_type.get(), id, server_class);
+
+    // Update from baseline in string table
+    for (StringTable::Entry* entry : this->_string_tables.at("instancebaseline")->entries)
+    {
+        if (std::stoi(entry->string) == server_class->index)
+        {
+//            printf("********************** %s -> %zd\n", server_class->name.c_str(), entry->data.size());
+//            BitStream baseline(entry->data);
+//            entity->update(baseline);
+//            break;
+        }
+    }
+
+    // Update from provided data
     entity->update(stream);
 
     AFTER(EntityCreationObserver, std::as_const(entity))
@@ -1157,9 +1198,9 @@ void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 template<typename Observer>
 void Client<Observer>::delete_entity(Entity::Id id)
 {
-    OK(id < this->_entities.size());
+    VERIFY(id < this->_entities.size());
     Entity* entity = this->_entities.at(id);
-    OK(entity != nullptr);
+    VERIFY(entity != nullptr);
 
     BEFORE(Observer, EntityDeletionObserver, std::as_const(entity));
     this->_entities.at(id) = nullptr;

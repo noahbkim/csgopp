@@ -10,7 +10,7 @@ This project provides a couple things:
 
 ## To Do
 
-- [ ] PacketEntities
+- [x] PacketEntities
 - [ ] GameEventList
 - [ ] GameEvent
 - [x] CreateStringTable

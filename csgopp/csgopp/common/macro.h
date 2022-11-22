@@ -4,7 +4,13 @@
 
 #include "../error.h"
 
-#define LOG(FMT, ...) fprintf(stderr, "[%s:%d] " FMT "\n", __FILE__, __LINE__, ## __VA_ARGS__);
+// Two levels ensures expansion
+#define STR_(VALUE) #VALUE
+#define STR(VALUE) STR_(VALUE)
+
+#define WHERE() __FILE__ ":" STR(__LINE__)
+
+#define LOG(FMT, ...) fprintf(stderr, WHERE() " " FMT "\n", ## __VA_ARGS__);
 
 #define ASSERT(CONDITION, FMT, ...) do \
 { \

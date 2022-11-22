@@ -76,6 +76,11 @@ public:
         this->bit_index = 0;
     }
 
+    size_t bytes_until_end()
+    {
+        return this->data.size() - this->byte_index;
+    }
+
     // TODO: make this work with non-integral types via bitset or something
     template<typename T>
     bool read(T* value, size_t bits)

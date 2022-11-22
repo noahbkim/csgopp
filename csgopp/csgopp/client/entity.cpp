@@ -1,6 +1,8 @@
 #include "entity.h"
 #include "data_table.h"
 
+#define PRINT(...) // printf(__VA_ARGS__)
+
 namespace csgopp::client::entity
 {
 
@@ -54,6 +56,7 @@ void BoolType::emit(Cursor<Declaration>& cursor) const
 
 void BoolType::update(char* address, BitStream& stream, const Property* property) const
 {
+    PRINT("bool\n");
     uint8_t value;
     OK(stream.read(&value, 1));
     *reinterpret_cast<bool*>(address) = value;
@@ -67,12 +70,14 @@ void UnsignedInt32Type::emit(Cursor<Declaration>& cursor) const
 template<typename T>
 inline void update_int_variable(char* address, BitStream& stream)
 {
+    PRINT("int_variable\n");
     stream.read_variable_unsigned_int(reinterpret_cast<T*>(address));
 }
 
 template<typename T, typename Underlying>
 inline void update_int_fixed(char* address, BitStream& stream, const Property* property)
 {
+    PRINT("int_fixed\n");
     const auto* int_property = reinterpret_cast<const Underlying*>(property);
     OK(int_property != nullptr);
     OK(stream.read(reinterpret_cast<T*>(address), int_property->bits));
@@ -114,6 +119,8 @@ void FloatType::emit(Cursor<Declaration>& cursor) const
 
 inline void update_float_coordinates(char* address, BitStream& stream)
 {
+    PRINT("float_coordinates\n");
+
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
     value = 0;
@@ -153,6 +160,8 @@ inline void update_float_coordinates(char* address, BitStream& stream)
 
 inline void update_float_normal(char* address, BitStream& stream)
 {
+    PRINT("float_normal\n");
+
     uint8_t is_negative;
     OK(stream.read(&is_negative, 1));
 
@@ -171,6 +180,8 @@ inline void update_float_normal(char* address, BitStream& stream)
 template<Precision P = Precision::Normal>
 inline void update_float_coordinates_multiplayer(char* address, BitStream& stream)
 {
+    PRINT("float_coordinates_multiplayer\n");
+
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
     value = 0;
@@ -220,6 +231,8 @@ inline void update_float_coordinates_multiplayer(char* address, BitStream& strea
 
 inline void update_float_coordinates_multiplayer_integral(char* address, BitStream& stream)
 {
+    PRINT("float_coordinates_multiplayer_integral\n");
+
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
     value = 0;
@@ -257,6 +270,8 @@ inline void update_float_coordinates_multiplayer_integral(char* address, BitStre
 template<typename Underlying, Precision P = Precision::Normal>
 inline void update_float_cell_coordinates(char* address, BitStream& stream, const Property* property)
 {
+    PRINT("float_cell_coordinates\n");
+
     float& value = *reinterpret_cast<float*>(address);
 
     const auto* float_property = dynamic_cast<const Underlying*>(property);
@@ -281,6 +296,8 @@ inline void update_float_cell_coordinates(char* address, BitStream& stream, cons
 template<typename Underlying>
 inline void update_float_cell_coordinates_integral(char* address, BitStream& stream, const Property* property)
 {
+    PRINT("float_cell_coordinates_integral\n");
+
     float& value = *reinterpret_cast<float*>(address);
 
     const auto* float_property = dynamic_cast<const Underlying*>(property);
@@ -293,6 +310,8 @@ inline void update_float_cell_coordinates_integral(char* address, BitStream& str
 
 inline void update_float_no_scale(char* address, BitStream& stream)
 {
+    PRINT("float_no_scale\n");
+
     // Yes, it's a float, but our read only works with integral types; just use the same size
     OK(stream.read(reinterpret_cast<uint32_t*>(address), 32));
 }
@@ -305,6 +324,8 @@ constexpr float interpolate(float a, float b, float x)
 template<typename Underlying>
 inline void update_float_scaled(char* address, BitStream& stream, const Property* property)
 {
+    PRINT("float_scaled\n");
+
     const auto* float_property = dynamic_cast<const Underlying*>(property);
     OK(float_property != nullptr);
 
@@ -373,6 +394,8 @@ void Vector3Type::emit(Cursor<Declaration>& cursor) const
 
 void Vector3Type::update(char* address, BitStream& stream, const Property* property) const
 {
+    PRINT("vector3\n");
+
     auto* value = reinterpret_cast<Vector3*>(address);
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->x), stream, property);
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->y), stream, property);
@@ -409,6 +432,8 @@ void Vector2Type::emit(Cursor<Declaration>& cursor) const
 
 void Vector2Type::update(char* address, BitStream& stream, const Property* property) const
 {
+    PRINT("vector2\n");
+
     auto* value = reinterpret_cast<Vector3*>(address);
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->x), stream, property);
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->y), stream, property);
@@ -421,6 +446,8 @@ void StringType::emit(Cursor<Declaration>& cursor) const
 
 void StringType::update(char* address, BitStream& stream, const Property* property) const
 {
+    PRINT("string\n");
+
     std::string& value = *reinterpret_cast<std::string*>(address);
 
     uint32_t size;
