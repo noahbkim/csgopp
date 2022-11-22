@@ -570,9 +570,9 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         AFTER(StringTableCreationObserver, std::as_const(string_table));
     }
 
-    VERIFY(data.bytes_until_end() < 1,
-           NOTE("bytes until end: %zd", data.bytes_until_end())
-           NOTE("stream index: %d", current_position));
+//    VERIFY(data.bytes_until_end() < 1,
+//           NOTE("bytes until end: %zd", data.bytes_until_end())
+//           NOTE("stream index: %d", current_position));
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
@@ -1142,9 +1142,9 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
         }
     }
 
-    VERIFY(entity_data.bytes_until_end() <= 1,
-           NOTE("bytes until end: %zd", entity_data.bytes_until_end())
-           NOTE("stream index: %d", current_position));
+//    VERIFY(entity_data.bytes_until_end() <= 1,
+//           NOTE("bytes until end: %zd", entity_data.bytes_until_end())
+//           NOTE("stream index: %d", current_position));
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }

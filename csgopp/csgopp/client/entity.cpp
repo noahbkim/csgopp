@@ -1,7 +1,7 @@
 #include "entity.h"
 #include "data_table.h"
 
-#define PRINT(...) // printf(__VA_ARGS__)
+#define PRINT(...) printf(__VA_ARGS__)
 
 namespace csgopp::client::entity
 {
@@ -27,8 +27,8 @@ const size_t INTEGER_BITS = 14;
 namespace normal
 {
 const size_t FRACTION_BITS = 11;
-const size_t DENOMINATOR = 1 << (FRACTION_BITS - 1);
-const float RESOLUTION = DENOMINATOR;
+const size_t DENOMINATOR = (1 << FRACTION_BITS) - 1;
+const float RESOLUTION = 1.0 / DENOMINATOR;
 }
 
 namespace string
@@ -56,10 +56,10 @@ void BoolType::emit(Cursor<Declaration>& cursor) const
 
 void BoolType::update(char* address, BitStream& stream, const Property* property) const
 {
-    PRINT("bool\n");
     uint8_t value;
     OK(stream.read(&value, 1));
     *reinterpret_cast<bool*>(address) = value;
+    PRINT("uint32_fixed %d\n", value);
 }
 
 void UnsignedInt32Type::emit(Cursor<Declaration>& cursor) const
@@ -70,17 +70,78 @@ void UnsignedInt32Type::emit(Cursor<Declaration>& cursor) const
 template<typename T>
 inline void update_int_variable(char* address, BitStream& stream)
 {
-    PRINT("int_variable\n");
     stream.read_variable_unsigned_int(reinterpret_cast<T*>(address));
+    if constexpr (std::is_same<T, int32_t>::value)
+    {
+        PRINT("int32_var %d\n", *reinterpret_cast<T*>(address));
+    }
+    else if constexpr (std::is_same<T, uint32_t>::value)
+    {
+        PRINT("uint32_var %u\n", *reinterpret_cast<T*>(address));
+    }
+    else if constexpr (std::is_same<T, int64_t>::value)
+    {
+        PRINT("int64_var %lld\n", *reinterpret_cast<T*>(address));
+    }
+    else if constexpr (std::is_same<T, uint64_t>::value)
+    {
+        PRINT("uint64_var %llu\n", *reinterpret_cast<T*>(address));
+    }
 }
 
 template<typename T, typename Underlying>
 inline void update_int_fixed(char* address, BitStream& stream, const Property* property)
 {
-    PRINT("int_fixed\n");
     const auto* int_property = reinterpret_cast<const Underlying*>(property);
     OK(int_property != nullptr);
     OK(stream.read(reinterpret_cast<T*>(address), int_property->bits));
+
+    if constexpr (std::is_same<T, uint32_t>::value)
+    {
+        PRINT("uint32_fixed %u\n", *reinterpret_cast<T*>(address));
+    }
+    else if constexpr (std::is_same<T, uint64_t>::value)
+    {
+        PRINT("uint64_fixed %llu\n", *reinterpret_cast<T*>(address));
+    }
+}
+
+template<>
+inline void update_int_fixed<int32_t, data_table::Int32Property>(
+    char* address,
+    BitStream& stream,
+    const Property* property)
+{
+    const auto* int_property = reinterpret_cast<const data_table::Int32Property*>(property);
+    int32_t& value = *reinterpret_cast<int32_t*>(address);
+    OK(int_property != nullptr);
+    OK(stream.read(&value, int_property->bits));
+
+    // Sign extend
+    value <<= 32 - int_property->bits;
+    value >>= 32 - int_property->bits;
+
+    PRINT("int32_fixed %d\n", value);
+}
+
+template<>
+inline void update_int_fixed<int64_t, data_table::Int64Property>(
+    char* address,
+    BitStream& stream,
+    const Property* property)
+{
+    const auto* int_property = reinterpret_cast<const data_table::Int64Property*>(property);
+    int64_t& value = *reinterpret_cast<int64_t*>(address);
+    uint8_t is_negative;
+    OK(stream.read(&is_negative, 1));
+    OK(stream.read(&value, int_property->bits));
+
+    if (is_negative)
+    {
+        value = -value;
+    }
+
+    PRINT("int64_fixed %lld\n", value);
 }
 
 void UnsignedInt32Type::update(char* address, BitStream& stream, const Property* property) const
@@ -119,8 +180,6 @@ void FloatType::emit(Cursor<Declaration>& cursor) const
 
 inline void update_float_coordinates(char* address, BitStream& stream)
 {
-    PRINT("float_coordinates\n");
-
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
     value = 0;
@@ -156,12 +215,12 @@ inline void update_float_coordinates(char* address, BitStream& stream)
             value = -value;
         }
     }
+
+    PRINT("coord %f\n", value);
 }
 
 inline void update_float_normal(char* address, BitStream& stream)
 {
-    PRINT("float_normal\n");
-
     uint8_t is_negative;
     OK(stream.read(&is_negative, 1));
 
@@ -175,13 +234,13 @@ inline void update_float_normal(char* address, BitStream& stream)
     {
         value = -value;
     }
+
+    PRINT("float_normal %f\n", value);
 }
 
 template<Precision P = Precision::Normal>
 inline void update_float_coordinates_multiplayer(char* address, BitStream& stream)
 {
-    PRINT("float_coordinates_multiplayer\n");
-
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
     value = 0;
@@ -227,12 +286,19 @@ inline void update_float_coordinates_multiplayer(char* address, BitStream& strea
     {
         value = -value;
     }
+
+    if constexpr (P == Precision::Normal)
+    {
+        PRINT("coord_mp %f\n", value);
+    }
+    else
+    {
+        PRINT("coord_mp_low %f\n", value);
+    }
 }
 
 inline void update_float_coordinates_multiplayer_integral(char* address, BitStream& stream)
 {
-    PRINT("float_coordinates_multiplayer_integral\n");
-
     // Always clear value to zero; if we get no data it means zero
     float& value = *reinterpret_cast<float*>(address);
     value = 0;
@@ -265,13 +331,13 @@ inline void update_float_coordinates_multiplayer_integral(char* address, BitStre
             value = -value;
         }
     }
+
+    PRINT("coord_mp_integral %f\n", value);
 }
 
 template<typename Underlying, Precision P = Precision::Normal>
 inline void update_float_cell_coordinates(char* address, BitStream& stream, const Property* property)
 {
-    PRINT("float_cell_coordinates\n");
-
     float& value = *reinterpret_cast<float*>(address);
 
     const auto* float_property = dynamic_cast<const Underlying*>(property);
@@ -291,13 +357,20 @@ inline void update_float_cell_coordinates(char* address, BitStream& stream, cons
         OK(stream.read(&buffer, coordinates::FRACTIONAL_BITS_MP));
         value += static_cast<float>(buffer) * coordinates::RESOLUTION;
     }
+
+    if constexpr (P == Precision::Normal)
+    {
+        PRINT("cell_coord %f\n", value);
+    }
+    else
+    {
+        PRINT("cell_coord_low %f\n", value);
+    }
 }
 
 template<typename Underlying>
 inline void update_float_cell_coordinates_integral(char* address, BitStream& stream, const Property* property)
 {
-    PRINT("float_cell_coordinates_integral\n");
-
     float& value = *reinterpret_cast<float*>(address);
 
     const auto* float_property = dynamic_cast<const Underlying*>(property);
@@ -306,14 +379,16 @@ inline void update_float_cell_coordinates_integral(char* address, BitStream& str
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
     *reinterpret_cast<float*>(address) = static_cast<float>(buffer);
+
+    PRINT("cell_coord_integral %f\n", *reinterpret_cast<float*>(address));
 }
 
 inline void update_float_no_scale(char* address, BitStream& stream)
 {
-    PRINT("float_no_scale\n");
-
     // Yes, it's a float, but our read only works with integral types; just use the same size
     OK(stream.read(reinterpret_cast<uint32_t*>(address), 32));
+
+    PRINT("float_no_scale %f\n", *reinterpret_cast<float*>(address));
 }
 
 constexpr float interpolate(float a, float b, float x)
@@ -324,8 +399,6 @@ constexpr float interpolate(float a, float b, float x)
 template<typename Underlying>
 inline void update_float_scaled(char* address, BitStream& stream, const Property* property)
 {
-    PRINT("float_scaled\n");
-
     const auto* float_property = dynamic_cast<const Underlying*>(property);
     OK(float_property != nullptr);
 
@@ -335,6 +408,8 @@ inline void update_float_scaled(char* address, BitStream& stream, const Property
         float_property->low_value,
         float_property->high_value,
         static_cast<float>(buffer) / static_cast<float>((1 << float_property->bits) - 1));
+
+    PRINT("float_scaled %f\n", *reinterpret_cast<float*>(address));
 }
 
 template<typename Underlying = DataTable::FloatProperty>
@@ -446,13 +521,13 @@ void StringType::emit(Cursor<Declaration>& cursor) const
 
 void StringType::update(char* address, BitStream& stream, const Property* property) const
 {
-    PRINT("string\n");
-
     std::string& value = *reinterpret_cast<std::string*>(address);
 
     uint32_t size;
     stream.read(&size, string::STRING_SIZE_BITS_MAX);
     stream.read_string_from(value, std::min(string::STRING_SIZE_MAX, size));
+
+    PRINT("string %zd\n", value.size());
 }
 
 void UnsignedInt64Type::emit(Cursor<Declaration>& cursor) const
@@ -491,6 +566,8 @@ void SignedInt64Type::update(char* address, BitStream& stream, const Property* p
 
 void PropertyArrayType::update(char* address, BitStream& stream, const Property* property) const
 {
+    PRINT("array\n");
+
     const auto* array_property = dynamic_cast<const DataTable::ArrayProperty*>(property);
     OK(array_property != nullptr);
 
