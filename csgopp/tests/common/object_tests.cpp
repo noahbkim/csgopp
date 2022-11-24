@@ -4,24 +4,24 @@
 
 using namespace csgopp::common::object;
 
-auto bool_T = shared<DefaultValueType<bool>>();
-auto uint8_T = shared<DefaultValueType<uint8_t>>();
-auto uint32_T = shared<DefaultValueType<uint32_t>>();
-auto string_T = shared<DefaultValueType<std::string>>();
+#define BOOL std::make_shared<DefaultValueType<bool>>()
+#define UINT8 std::make_shared<DefaultValueType<uint8_t>>()
+#define UINT32 std::make_shared<DefaultValueType<uint32_t>>()
+#define STRING std::make_shared<DefaultValueType<std::string>>()
 
 struct Vector3
 {
     double x, y, z;
 };
 
-auto vector3_T = shared<DefaultValueType<Vector3>>();
+#define VECTOR std::make_shared<DefaultValueType<Vector3>>()
 
 TEST(Object, integration)
 {
     ObjectType::Builder entity_builder;
-    entity_builder.member("id", uint32_T);
-    entity_builder.member("name", string_T);
-    entity_builder.member("position", vector3_T);
+    entity_builder.member("id", UINT32);
+    entity_builder.member("name", STRING);
+    entity_builder.member("position", VECTOR);
     std::shared_ptr<ObjectType> entity_T = std::make_shared<ObjectType>(std::move(entity_builder));
 
     struct Entity
@@ -40,8 +40,8 @@ TEST(Object, integration)
     EXPECT_EQ(entity_array_T->size(), sizeof(Entity) * 2);
 
     ObjectType::Builder engine_builder;
-    engine_builder.member("alive", bool_T);
-    engine_builder.member("flags", uint32_T);
+    engine_builder.member("alive", BOOL);
+    engine_builder.member("flags", UINT32);
     engine_builder.member("entities", entity_array_T);
     std::shared_ptr<ObjectType> engine_T = std::make_shared<ObjectType>(std::move(engine_builder));
 
@@ -104,7 +104,7 @@ TEST(Object, null)
 TEST(Object, one_field_primitive)
 {
     ObjectType::Builder builder;
-    builder.member("value", uint32_T);
+    builder.member("value", UINT32);
     std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(uint32_t));
     std::shared_ptr<Object> object(instantiate(type.get()));
@@ -115,7 +115,7 @@ TEST(Object, one_field_primitive)
 TEST(Object, one_field_allocating)
 {
     ObjectType::Builder builder;
-    builder.member("value", string_T);
+    builder.member("value", STRING);
     std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(std::string));
     std::shared_ptr<Object> object(instantiate(type.get()));
@@ -127,11 +127,11 @@ TEST(Object, one_field_allocating)
 TEST(Object, inherit_simple)
 {
     ObjectType::Builder parent_builder;
-    parent_builder.member("first", uint8_T);
-    parent_builder.member("second", uint32_T);
+    parent_builder.member("first", UINT8);
+    parent_builder.member("second", UINT32);
     std::shared_ptr<ObjectType> parent(std::make_shared<ObjectType>(std::move(parent_builder)));
     ObjectType::Builder child_builder(parent.get());
-    child_builder.member("third", string_T);
+    child_builder.member("third", STRING);
     std::shared_ptr<ObjectType> child(std::make_shared<ObjectType>(std::move(child_builder)));
     EXPECT_EQ(child->members.at(0).name, "first");
     EXPECT_EQ(child->members.at(1).name, "second");

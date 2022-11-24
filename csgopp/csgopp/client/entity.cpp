@@ -353,7 +353,7 @@ inline void update_float_scaled(char* address, BitStream& stream, const Property
 template<typename Underlying = DataTable::FloatProperty>
 inline void update_float(char* address, BitStream& stream, const Property* property)
 {
-    if (property->flags & Property::Flags::NO_SCALE)
+    if (property->flags & Property::Flags::NO_SCALE && !(property->flags & Property::Flags::HIGH_PRIORITY_FLOAT_FLAGS))
     {
         update_float_no_scale(address, stream);
     }
@@ -503,6 +503,7 @@ void PropertyArrayType::update(char* address, BitStream& stream, const Property*
 
     // Count how many elements we're receiving
     uint8_t size_bits = common::bits::width(this->length) + 1;
+
     size_t data_length;
     OK(stream.read(&data_length, size_bits));
 

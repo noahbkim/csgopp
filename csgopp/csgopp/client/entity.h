@@ -48,23 +48,10 @@ using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::Property;
 using csgopp::client::server_class::ServerClass;
 
-// Thinner than accessor; we know what we're doing
 enum struct Precision
 {
     Normal,
     Low,
-};
-
-enum struct Compression
-{
-    Fixed,
-    Variable,
-};
-
-enum struct Serialization
-{
-    Native,
-    Optimized,
 };
 
 struct PropertyValueType : public virtual Type
@@ -74,7 +61,7 @@ struct PropertyValueType : public virtual Type
 
 struct Offset
 {
-    const PropertyValueType*    type{nullptr};
+    const PropertyValueType* type{nullptr};
     const Property* property{nullptr};
     size_t offset{0};
 

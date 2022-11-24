@@ -87,6 +87,11 @@ struct PropertyFlags
             | CELL_COORDINATES
             | CELL_COORDINATES_LOW_PRECISION
             | CELL_COORDINATES_INTEGRAL,
+
+        HIGH_PRIORITY_FLOAT_FLAGS = COORDINATES
+            | COORDINATES_MULTIPLAYER
+            | COORDINATES_MULTIPLAYER_LOW_PRECISION
+            | COORDINATES_MULTIPLAYER_INTEGRAL,
     };
 };
 
@@ -302,9 +307,9 @@ struct StringProperty final : public Property
 struct ArrayProperty final : public Property
 {
     std::unique_ptr<Property> element;
-    int32_t size;
+    int32_t length;
 
-    explicit ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element);
+    ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element);
     [[nodiscard]] Type::T type() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
@@ -344,6 +349,8 @@ struct DataTableProperty final : public Property
     void build(EntityType::Builder& builder) override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
+
+    void apply(Cursor<Declaration> declaration) const override;
 };
 
 /// \brief Represents an integer with maximum width 64 bits.

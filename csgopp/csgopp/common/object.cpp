@@ -141,7 +141,8 @@ void ArrayType::emit(layout::Cursor& cursor) const
     {
         size_t relative = this->element_size * i;
         cursor.write(std::to_string(i), relative);
-        this->element_type->emit(cursor.indent(relative));
+        layout::Cursor indented(cursor.indent(relative));
+        this->element_type->emit(indented);
     }
 }
 
@@ -226,7 +227,7 @@ size_t ObjectType::Builder::member(
     size_t offset = align(this->members_size, member_type->alignment());
     this->members_size = offset + member_type->size();
     // Overwrite here; excludes always hide base class members, so we want to always point to child's member
-    this->members_lookup[member_name] = this->members.size() - 1;
+    this->members_lookup[member_name] = this->members.size();
     this->members.emplace_back(std::move(member_type), offset, std::move(member_name), member_context);
     return offset;
 }
@@ -296,7 +297,8 @@ void ObjectType::emit(layout::Cursor& cursor) const
     for (const Member& member : this->members)
     {
         cursor.write(member.name, member.offset);
-        member.type->emit(cursor.indent(member.offset));
+        layout::Cursor indented(cursor.indent(member.offset));
+        member.type->emit(indented);
     }
 }
 
@@ -311,6 +313,7 @@ const ObjectType::Member& ObjectType::at(const std::string& member_name) const
     MembersLookup::const_iterator find = this->members_lookup.find(member_name);
     if (find != this->members_lookup.end())
     {
+        // Can be left unchecked; we create the indices
         return this->members[find->second];
     }
     else

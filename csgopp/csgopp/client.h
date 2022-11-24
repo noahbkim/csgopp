@@ -1142,9 +1142,6 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
         }
     }
 
-//    VERIFY(entity_data.bytes_until_end() <= 1,
-//           NOTE("bytes until end: %zd", entity_data.bytes_until_end())
-//           NOTE("stream index: %d", current_position));
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
@@ -1170,10 +1167,9 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
     {
         if (std::stoi(entry->string) == server_class->index)
         {
-//            printf("********************** %s -> %zd\n", server_class->name.c_str(), entry->data.size());
-//            BitStream baseline(entry->data);
-//            entity->update(baseline);
-//            break;
+            BitStream baseline(entry->data);
+            entity->update(baseline);
+            break;
         }
     }
 

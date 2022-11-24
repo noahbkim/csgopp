@@ -76,9 +76,14 @@ public:
         this->bit_index = 0;
     }
 
-    size_t bytes_until_end()
+    size_t size() const
     {
-        return this->data.size() - this->byte_index;
+        return this->data.size();
+    }
+
+    size_t index() const
+    {
+        return this->byte_index;
     }
 
     // TODO: make this work with non-integral types via bitset or something
@@ -270,8 +275,8 @@ public:
 
 private:
     std::vector<uint8_t> data;
-    size_t byte_index{};
-    uint8_t bit_index{};
+    size_t byte_index{0};
+    uint8_t bit_index{0};
 };
 
 }

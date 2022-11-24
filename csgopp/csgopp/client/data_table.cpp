@@ -171,7 +171,7 @@ bool StringProperty::equals(const Property* other) const
 
 ArrayProperty::ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element)
     : element(element)
-    , size(data.num_elements())
+    , length(data.num_elements())
     , Property(std::move(data))
 {}
 
@@ -182,14 +182,22 @@ Property::Type::T ArrayProperty::type() const
 
 std::shared_ptr<const common::object::Type> ArrayProperty::materialize() const
 {
-    return std::make_shared<PropertyArrayType>(this->element->materialize(), this->size);
+    return std::make_shared<PropertyArrayType>(this->element->materialize(), this->length);
 }
 
 bool ArrayProperty::equals(const Property* other) const
 {
     GUARD(this->flags == other->flags);
     CAST(as, ArrayProperty, other);
-    return this->element->equals(as->element.get()) && EQUAL(as, size);
+    return this->element->equals(as->element.get()) && EQUAL(as, length);
+}
+
+void DataTableProperty::apply(Cursor<Declaration> declaration) const
+{
+    if (this->flags & Flags::PROXY_ALWAYS_YES)
+    {
+        declaration.target.annotations.emplace_back("proxy");
+    }
 }
 
 DataTableProperty::DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data)
