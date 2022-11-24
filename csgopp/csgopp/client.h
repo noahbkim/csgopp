@@ -531,7 +531,9 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
     CodedInputStream::Limit limit = stream.PushLimit(size);
 
     DEBUG(int current_position = stream.CurrentPosition());
-    BitStream data(stream, size);
+    char* raw_data = new char[size];
+    stream.ReadRaw(raw_data, size);
+    BitStream data(raw_data, size);
 
     uint8_t count;
     VERIFY(data.read(&count, 8));

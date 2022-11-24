@@ -4,14 +4,41 @@
 
 using namespace csgopp::common::bits;
 
-TEST(BitStream, one)
+using Decoder = BitDecoder<BitView>;
+
+TEST(Decoder, one)
 {
-    BitStream stream(std::vector<uint8_t>{1});
+    Decoder stream(std::vector<uint8_t>{1});
 }
 
-TEST(BitStream, bit)
+TEST(Decoder, endian)
 {
-    BitStream stream(std::vector<uint8_t>{0b1010'1010});
+    std::vector<uint8_t> data{0xAA, 0xBB, 0xCC, 0xDD};
+    Decoder stream(data);
+    uint8_t byte;
+    EXPECT_TRUE(stream.read(&byte, 8));
+    EXPECT_EQ(0xAA, byte);
+
+    stream.reset();
+    uint16_t word;
+    EXPECT_TRUE(stream.read(&word, 16));
+    EXPECT_EQ(0xBBAA, word);
+
+    stream.reset();
+    uint32_t dword;
+    EXPECT_TRUE(stream.read(&dword, 32));
+    EXPECT_EQ(0xDDCCBBAA, dword);
+
+    stream.reset();
+    uint64_t size;
+    EXPECT_FALSE(stream.read(&size, 64));
+}
+
+TEST(Decoder, bit)
+{
+    // It needs to be 32 bit lmao
+    std::vector<uint8_t> data{0b10101010};
+    Decoder stream(data);
 
     uint8_t value;
     for (uint8_t i = 0; i < 8; ++i)
@@ -23,9 +50,10 @@ TEST(BitStream, bit)
     EXPECT_FALSE(stream.read(&value, 1));
 }
 
-TEST(BitStream, bits)
+TEST(Decoder, bits)
 {
-    BitStream stream(std::vector<uint8_t>{0b0101'0101, 0b0101'0101});
+    std::vector<uint8_t> data{0b0101'0101, 0b0101'0101};
+    Decoder stream(data);
     uint16_t compare = 0b0101'0101'0101'0101;
     uint16_t value;
 
@@ -37,9 +65,10 @@ TEST(BitStream, bits)
     }
 }
 
-TEST(BitStream, bits_split)
+TEST(Decoder, bits_split)
 {
-    BitStream stream(std::vector<uint8_t>{0b0101'0101, 0b011'0011});
+    std::vector<uint8_t> data{0b0101'0101, 0b011'0011};
+    Decoder stream(data);
     uint16_t compare = 0b0011'0011'0101'0101;
     uint16_t value;
 
@@ -53,9 +82,10 @@ TEST(BitStream, bits_split)
     }
 }
 
-TEST(BitStream, bounds)
+TEST(Decoder, bounds)
 {
-    BitStream stream(std::vector<uint8_t>{0b0101'0101, 0b0101'0101});
+    std::vector<uint8_t> data{0b0101'0101, 0b0101'0101};
+    Decoder stream(data);
     uint32_t value;
     EXPECT_FALSE(stream.read(&value, 17));
     EXPECT_FALSE(stream.read(&value, 32));
@@ -63,17 +93,19 @@ TEST(BitStream, bounds)
     EXPECT_FALSE(stream.skip(32));
 }
 
-TEST(BitStream, string)
+TEST(Decoder, string)
 {
-    BitStream stream(std::vector<uint8_t>{'a', 'b', 'c', 0});
+    std::vector<uint8_t> data{'a', 'b', 'c', 0};
+    Decoder stream(data);
     std::string value;
     EXPECT_TRUE(stream.read_string(value));
     EXPECT_EQ(value, "abc");
 }
 
-TEST(BitStream, string_unterminated)
+TEST(Decoder, string_unterminated)
 {
-    BitStream stream(std::vector<uint8_t>{'a', 'b', 'c'});
+    std::vector<uint8_t> data{'a', 'b', 'c'};
+    Decoder stream(data);
     std::string value;
     EXPECT_FALSE(stream.read_string(value));
 }
@@ -84,9 +116,10 @@ TEST(BitStream, string_unterminated)
 //		print("0b" + b[-8:])
 //		b = b[:-8]
 
-TEST(BitStream, string_offset)
+TEST(Decoder, string_offset)
 {
-    BitStream stream(std::vector<uint8_t>{0b11000011, 0b11000100, 0b11000110, 0b00000000, 0b00000000});
+    std::vector<uint8_t> data{0b11000011, 0b11000100, 0b11000110, 0b00000000, 0b00000000};
+    Decoder stream(data);
     std::uint8_t offset;
     std::string value;
     EXPECT_TRUE(stream.read(&offset, 1));
@@ -95,41 +128,46 @@ TEST(BitStream, string_offset)
     EXPECT_EQ(value, "abc");
 }
 
-TEST(BitStream, deserialize_variable_size_simple)
+TEST(Decoder, deserialize_variable_size_simple)
 {
-    BitStream reader(std::string("\x2a\x00", 2));
+    std::string data("\x2a\x00", 4);
+    Decoder reader(data);
     int32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, 42);
 }
 
-TEST(BitStream, deserialize_variable_size_complex)
+TEST(Decoder, deserialize_variable_size_complex)
 {
-    BitStream reader(std::string("\xaa\x00", 2));
+    std::string data("\xaa\x00", 4);
+    Decoder reader(data);
     int32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, 42);
 }
 
-TEST(BitStream, deserialize_variable_size_zero)
+TEST(Decoder, deserialize_variable_size_zero)
 {
-    BitStream reader(std::string("\x00", 1));
+    std::string data("\x00\x00", 4);
+    Decoder reader(data);
     int32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, 0);
 }
 
-TEST(BitStream, deserialize_variable_size_max)
+TEST(Decoder, deserialize_variable_size_max)
 {
-    BitStream reader("\xFF\xFF\xFF\xFF\xFF\x07");
+    std::string data("\xFF\xFF\xFF\xFF\xFF\x07", 8);
+    Decoder reader(data);
     uint32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, std::numeric_limits<uint32_t>::max());
 }
 
-TEST(BitStream, deserialize_variable_size_max_bad)
+TEST(Decoder, deserialize_variable_size_max_bad)
 {
-    BitStream reader("\xFF\xFF\xFF\xFF\xFF\xFF");
+    std::string data("\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+    Decoder reader(data);
     uint32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
     EXPECT_EQ(value, std::numeric_limits<uint32_t>::max());
