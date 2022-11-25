@@ -247,6 +247,18 @@ struct ClientObserverBase
             client.observer.on_entity_creation(client, entity);
         }
     };
+
+    virtual void on_game_event(Client& client, csgo::message::net::CSVCMsg_GameEvent&& event) {}
+
+    struct GameEventObserver
+    {
+        GameEventObserver() = default;
+        explicit GameEventObserver(Client& client) {}
+        virtual void handle(Client& client, csgo::message::net::CSVCMsg_GameEvent&& event)
+        {
+            client.observer.on_game_event(client, std::move(event));
+        }
+    };
 };
 
 /// \brief The core DEMO parser and game client.
@@ -355,6 +367,8 @@ protected:
     DatabaseWithName<DataTable> create_data_tables(CodedInputStream& stream);
     Database<ServerClass> create_server_classes(CodedInputStream& stream, DatabaseWithName<DataTable>& new_data_tables);
     void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
+
+    void _update_entity(Entity* entity, BitStream& stream);
     void create_entity(Entity::Id id, BitStream& stream);
     void update_entity(Entity::Id id, BitStream& stream);
     void delete_entity(Entity::Id id);
@@ -572,9 +586,6 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         AFTER(StringTableCreationObserver, std::as_const(string_table));
     }
 
-//    VERIFY(data.bytes_until_end() < 1,
-//           NOTE("bytes until end: %zd", data.bytes_until_end())
-//           NOTE("stream index: %d", current_position));
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
 }
@@ -1094,8 +1105,10 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
     CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
     VERIFY(limit > 0);
 
+    BEFORE(Observer, GameEventObserver);
     csgo::message::net::CSVCMsg_GameEvent data;
     data.ParseFromCodedStream(&stream);
+    AFTER(GameEventObserver, std::move(data));
 
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
@@ -1148,6 +1161,70 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
+/// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
+template<typename Observer>
+void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
+{
+    uint8_t small_increment_optimization;
+    OK(stream.read(&small_increment_optimization, 1));
+
+    // Keeping this static GREATLY reduces the number of spurious allocations
+    static std::vector<uint16_t> indices;
+    indices.clear();
+
+    // It's honestly probably more efficient to read through this twice than it is to allocate and make copies
+    uint16_t index = 0;
+    while (true)
+    {
+        uint16_t jump;
+        if (small_increment_optimization)
+        {
+            uint8_t use_auto_index;
+            VERIFY(stream.read(&use_auto_index, 1));
+            if (use_auto_index)
+            {
+                jump = 0;
+            }
+            else
+            {
+                uint8_t is_small_jump;
+                VERIFY(stream.read(&is_small_jump, 1));
+                if (is_small_jump)
+                {
+                    VERIFY(stream.read(&jump, 3));
+                }
+                else
+                {
+                    VERIFY(stream.read_compressed_uint16(&jump));
+                }
+            }
+        }
+        else
+        {
+            VERIFY(stream.read_compressed_uint16(&jump));
+        }
+
+        if (jump == 0xFFF)
+        {
+            break;
+        }
+        else
+        {
+            index += jump;
+        }
+
+        indices.emplace_back(index);
+        index += 1;
+    }
+
+    for (uint16_t i : indices)
+    {
+        // Actually update the field
+        const entity::Offset& offset = entity->type->prioritized.at(i);
+        offset.type->update(entity->address + offset.offset, stream, offset.property);
+    }
+}
+
 template<typename Observer>
 void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 {
@@ -1170,17 +1247,15 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
         if (std::stoi(entry->string) == server_class->index)
         {
             BitStream baseline(entry->data);
-            entity->update(baseline);
+            this->_update_entity(entity, baseline);
             break;
         }
     }
 
     // Update from provided data
-    entity->update(stream);
-
-    AFTER(EntityCreationObserver, std::as_const(entity))
-
+    this->_update_entity(entity, stream);
     this->_entities.emplace(id, entity);
+    AFTER(EntityCreationObserver, std::as_const(entity))
 }
 
 /// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
@@ -1189,7 +1264,7 @@ void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 {
     Entity* entity = this->_entities.at(id);
     BEFORE(Observer, EntityUpdateObserver, std::as_const(entity));
-    entity->update(stream);
+    this->_update_entity(entity, stream);
     AFTER(EntityUpdateObserver, std::as_const(entity));
 }
 

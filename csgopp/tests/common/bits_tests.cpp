@@ -6,11 +6,6 @@ using namespace csgopp::common::bits;
 
 using Decoder = BitDecoder<BitView>;
 
-TEST(Decoder, one)
-{
-    Decoder stream(std::vector<uint8_t>{1});
-}
-
 TEST(Decoder, endian)
 {
     std::vector<uint8_t> data{0xAA, 0xBB, 0xCC, 0xDD};
@@ -110,12 +105,6 @@ TEST(Decoder, string_unterminated)
     EXPECT_FALSE(stream.read_string(value));
 }
 
-// def address(s, b):
-//	for c in s:
-//		b = bin(ord(c))[2:].rjust(8, "0") + b
-//		print("0b" + b[-8:])
-//		b = b[:-8]
-
 TEST(Decoder, string_offset)
 {
     std::vector<uint8_t> data{0b11000011, 0b11000100, 0b11000110, 0b00000000, 0b00000000};
@@ -130,7 +119,7 @@ TEST(Decoder, string_offset)
 
 TEST(Decoder, deserialize_variable_size_simple)
 {
-    std::string data("\x2a\x00", 4);
+    std::string data("\x2a\x00", 2);
     Decoder reader(data);
     int32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
@@ -139,7 +128,7 @@ TEST(Decoder, deserialize_variable_size_simple)
 
 TEST(Decoder, deserialize_variable_size_complex)
 {
-    std::string data("\xaa\x00", 4);
+    std::string data("\xaa\x00", 2);
     Decoder reader(data);
     int32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
@@ -148,7 +137,7 @@ TEST(Decoder, deserialize_variable_size_complex)
 
 TEST(Decoder, deserialize_variable_size_zero)
 {
-    std::string data("\x00\x00", 4);
+    std::string data("\x00\x00", 2);
     Decoder reader(data);
     int32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
@@ -157,7 +146,7 @@ TEST(Decoder, deserialize_variable_size_zero)
 
 TEST(Decoder, deserialize_variable_size_max)
 {
-    std::string data("\xFF\xFF\xFF\xFF\xFF\x07", 8);
+    std::string data("\xFF\xFF\xFF\xFF\xFF\x07", 6);
     Decoder reader(data);
     uint32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));
@@ -166,7 +155,7 @@ TEST(Decoder, deserialize_variable_size_max)
 
 TEST(Decoder, deserialize_variable_size_max_bad)
 {
-    std::string data("\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+    std::string data("\xFF\xFF\xFF\xFF\xFF\xFF", 6);
     Decoder reader(data);
     uint32_t value;
     EXPECT_TRUE(reader.read_variable_unsigned_int(&value));

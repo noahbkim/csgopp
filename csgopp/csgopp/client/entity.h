@@ -150,8 +150,6 @@ struct Entity : public Instance<EntityType>
     const ServerClass* server_class;
 
     Entity(const EntityType* type, char* address, Id id, const ServerClass* server_class);
-
-    void update(BitStream& stream);
 };
 
 using EntityDatabase = Database<Entity, Delete<Entity>>;
