@@ -17,6 +17,7 @@
 #include "client/server_class.h"
 #include "client/string_table.h"
 #include "client/entity.h"
+#include "client/game_event.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -64,6 +65,7 @@ using csgopp::client::server_class::ServerClass;
 using csgopp::client::string_table::StringTable;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Entity;
+using csgopp::client::game_event::GameEventType;
 
 constexpr size_t MAX_EDICT_BITS = 11;
 constexpr size_t ENTITY_HANDLE_INDEX_MASK = (1 << MAX_EDICT_BITS) - 1;
@@ -259,6 +261,18 @@ struct ClientObserverBase
             client.observer.on_game_event(client, std::move(event));
         }
     };
+
+    virtual void on_game_event_type_creation(Client& client, const GameEventType* event) {}
+
+    struct GameEventTypeCreationObserver
+    {
+        GameEventTypeCreationObserver() = default;
+        explicit GameEventTypeCreationObserver(Client& client) {}
+        virtual void handle(Client& client, const GameEventType* event)
+        {
+            client.observer.on_game_event_type_creation(client, event);
+        }
+    };
 };
 
 /// \brief The core DEMO parser and game client.
@@ -280,6 +294,7 @@ public:
     using ServerClassDatabase = csgopp::client::server_class::ServerClassDatabase;
     using StringTableDatabase = csgopp::client::string_table::StringTableDatabase;
     using EntityDatabase = csgopp::client::entity::EntityDatabase;
+    using GameEventTypeDatabase = csgopp::client::game_event::GameEventTypeDatabase;
 
     /// Instantiate a new client with an observer.
     ///
@@ -350,6 +365,7 @@ public:
     [[nodiscard]] const ServerClassDatabase& server_classes() { return this->_server_classes; }
     [[nodiscard]] const StringTableDatabase& string_tables() { return this->_string_tables; }
     [[nodiscard]] const EntityDatabase& entities() { return this->_entities; }
+    [[nodiscard]] const GameEventTypeDatabase& game_event_types() { return this->_game_event_types; }
 
     Observer observer;
 
@@ -361,6 +377,7 @@ protected:
     ServerClassDatabase _server_classes;
     StringTableDatabase _string_tables;
     EntityDatabase _entities;
+    GameEventTypeDatabase _game_event_types;
 
     /// Helpers
     void create_data_tables_and_server_classes(CodedInputStream& stream);
@@ -1302,7 +1319,21 @@ void Client<Observer>::advance_packet_menu(CodedInputStream& stream)
 template<typename Observer>
 void Client<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
 {
-    advance_packet_skip(stream);
+    CodedInputStream::Limit limit = stream.ReadLengthAndPushLimit();
+    VERIFY(limit > 0);
+
+    csgo::message::net::CSVCMsg_GameEventList data;
+    data.ParseFromCodedStream(&stream);
+    for (csgo::message::net::CSVCMsg_GameEventList_descriptor_t& descriptor : *data.mutable_descriptors())
+    {
+        BEFORE(Observer, GameEventTypeCreationObserver);
+        GameEventType* game_event_type = GameEventType::build(std::move(descriptor));
+        this->_game_event_types.emplace(game_event_type);
+        AFTER(GameEventTypeCreationObserver, std::as_const(game_event_type));
+    }
+
+    VERIFY(stream.BytesUntilLimit() == 0);
+    stream.PopLimit(limit);
 }
 
 template<typename Observer>

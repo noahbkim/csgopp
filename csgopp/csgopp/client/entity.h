@@ -142,7 +142,7 @@ struct EntityType final : public ObjectType
     EntityType(Builder&& builder, const DataTable* data_table);
 };
 
-struct Entity : public Instance<EntityType>
+struct Entity final : public Instance<EntityType>
 {
     using Id = uint32_t;
 

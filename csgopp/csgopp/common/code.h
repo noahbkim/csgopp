@@ -68,7 +68,7 @@ struct Generator
 
     Cursor<Definition> append(std::string name);
 
-    void write(std::ostream& out);
+    void write(std::ostream& out, bool sort = true);
 
 private:
     absl::flat_hash_map<std::string, absl::flat_hash_set<std::string>> dependencies;

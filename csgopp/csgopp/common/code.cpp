@@ -60,9 +60,12 @@ Cursor<Definition> Generator::append(std::string definition_name)
     return Cursor(definition, this->dependencies[definition.name]);
 }
 
-void Generator::write(std::ostream& out)
+void Generator::write(std::ostream& out, bool sort)
 {
-    this->sort();
+    if (sort)
+    {
+        this->sort();
+    }
     for (auto& definition : this->definitions)
     {
         definition.write(out);

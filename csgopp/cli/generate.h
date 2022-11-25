@@ -20,6 +20,7 @@ using csgopp::common::code::Generator;
 using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
+using csgopp::client::GameEventType;
 using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 
@@ -28,7 +29,9 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
     size_t server_class_count = 0;
     size_t data_table_count = 0;
     size_t entity_type_count = 0;
-    Generator generator;
+    size_t game_event_type_count = 0;
+    Generator class_type_generator;
+    Generator game_event_type_generator;
 
     explicit GenerateObserver(Client& client) : ClientObserverBase<GenerateObserver>(client) {}
 
@@ -37,7 +40,7 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
         this->data_table_count += 1;
         if (data_table->entity_type)
         {
-            data_table->entity_type->emit(generator.append(data_table->name));
+            data_table->entity_type->emit(class_type_generator.append(data_table->name));
             this->entity_type_count += 1;
         }
     }
@@ -45,6 +48,12 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
     void on_server_class_creation(Client& client, const ServerClass* server_class) override
     {
         this->server_class_count += 1;
+    }
+
+    void on_game_event_type_creation(Client& client, const GameEventType* game_event_type) override
+    {
+        game_event_type->emit(game_event_type_generator.append(game_event_type->name));
+        this->game_event_type_count += 1;
     }
 };
 
@@ -104,19 +113,48 @@ struct GenerateCommand
 
         if (this->parser.get<bool>("-n"))
         {
-            out << "namespace csgo::protocol" << client.header().network_protocol << std::endl;
+            out << "namespace csgo::protocol" << client.header().network_protocol << "::classes" << std::endl;
             out << "{" << std::endl;
             out << std::endl;
         }
 
-        client.observer.generator.write(out);
+        client.observer.class_type_generator.write(out);
 
         if (this->parser.get<bool>("-n"))
         {
             out << "}" << std::endl;
         }
 
-        std::cout << "wrote " << client.observer.entity_type_count << " structs to " << path << std::endl;
+        std::cout << "wrote " << client.observer.entity_type_count << " server class structs to " << path << std::endl;
+    }
+
+    void write_events(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    {
+        std::ofstream out(path);
+        if (!out)
+        {
+            std::cerr << "failed to open " << path << std::endl;
+            return;
+        }
+
+        out << "#include <string>" << std::endl;
+        out << std::endl;
+
+        if (this->parser.get<bool>("-n"))
+        {
+            out << "namespace csgo::protocol" << client.header().network_protocol << "::classes" << std::endl;
+            out << "{" << std::endl;
+            out << std::endl;
+        }
+
+        client.observer.game_event_type_generator.write(out, false);
+
+        if (this->parser.get<bool>("-n"))
+        {
+            out << "}" << std::endl;
+        }
+
+        std::cout << "wrote " << client.observer.game_event_type_count << " event structs to " << path << std::endl;
     }
 
     void write_prioritized(const std::filesystem::path& path, Client<GenerateObserver>& client) const
@@ -183,22 +221,19 @@ struct GenerateCommand
             // Run simulation
             while (client.advance(coded_input_stream));
 
-            std::filesystem::path directory(this->parser.present("-d").value_or("."));
-            std::filesystem::path file(this->parser.present("-f").value_or(network_protocol + ".h"));
-            std::filesystem::path destination = std::filesystem::absolute(directory / file);
+            std::filesystem::path directory(std::filesystem::absolute(this->parser.present("-d").value_or(".")));
+            std::string file(this->parser.present("-f").value_or(network_protocol));
 
             std::cout << "found " << client.observer.data_table_count << " data tables" << std::endl;
             std::cout << "found " << client.observer.server_class_count << " server classes" << std::endl;
 
-            this->write_definitions(destination, client);
+            this->write_definitions(directory / (file + ".classes.h"), client);
+            this->write_events(directory / (file + ".events.h"), client);
+
             if (this->parser.get<bool>("-v"))
             {
-                this->write_prioritized(
-                    std::filesystem::path(destination).replace_extension("prioritized.txt"),
-                    client);
-                this->write_layout(
-                    std::filesystem::path(destination.replace_extension("layout.txt")),
-                    client);
+                this->write_prioritized(directory / (file + ".prioritized.txt"), client);
+                this->write_layout(directory / (file + ".layout.txt"), client);
             }
         }
         catch (const csgopp::error::GameError& error)
