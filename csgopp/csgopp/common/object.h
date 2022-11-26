@@ -222,7 +222,8 @@ struct ObjectType : public virtual Type
     using Members = std::vector<Member>;
     using MembersLookup = absl::flat_hash_map<std::string, size_t>;
 
-    struct Builder
+    struct
+    Builder
     {
         Members members;
         MembersLookup members_lookup;
@@ -298,9 +299,7 @@ struct Instance
     template<typename U>
     typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& is();
 
-private:
-    template<typename T, typename I = Instance<T>, typename... Args>
-    I* instantiate(const T* type);
+    void debug(std::ostream& out, size_t indent = 0);
 };
 
 using Object = Instance<ObjectType>;
@@ -526,29 +525,31 @@ Instance<T>::~Instance()
 }
 
 template<typename T>
-Reference Instance<T>::operator[](const std::string&)
+Reference Instance<T>::operator[](const std::string& member_name)
 {
-    throw TypeError("member access is only available on objects!");
-}
-
-template<>
-inline Reference Instance<ObjectType>::operator[](const std::string& member_name)
-{
-    const ObjectType::Member& member = this->type->at(member_name);
-    return Reference(member.type.get(), this->address + member.offset);
+    if constexpr (std::is_base_of<ObjectType, T>::value)
+    {
+        const ObjectType::Member& member = this->type->at(member_name);
+        return Reference(member.type.get(), this->address + member.offset);
+    }
+    else
+    {
+        throw TypeError("member access is only available on objects!");
+    }
 }
 
 template<typename T>
-Reference Instance<T>::operator[](size_t)
+Reference Instance<T>::operator[](size_t element_index)
 {
-    throw TypeError("indexing is only available on arrays!");
-}
-
-template<>
-inline Reference Instance<ArrayType>::operator[](size_t element_index)
-{
-    size_t offset = this->type->at(element_index);
-    return Reference(this->type->element_type.get(), this->address + offset);
+    if constexpr (std::is_base_of<ArrayType, T>::value)
+    {
+        size_t offset = this->type->at(element_index);
+        return Reference(this->type->element_type.get(), this->address + offset);
+    }
+    else
+    {
+        throw TypeError("indexing is only available on arrays!");
+    }
 }
 
 template<typename T>

@@ -66,6 +66,7 @@ using csgopp::client::string_table::StringTable;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Entity;
 using csgopp::client::game_event::GameEventType;
+using csgopp::client::game_event::GameEvent;
 
 constexpr size_t MAX_EDICT_BITS = 11;
 constexpr size_t ENTITY_HANDLE_INDEX_MASK = (1 << MAX_EDICT_BITS) - 1;
@@ -250,15 +251,15 @@ struct ClientObserverBase
         }
     };
 
-    virtual void on_game_event(Client& client, csgo::message::net::CSVCMsg_GameEvent&& event) {}
+    virtual void on_game_event(Client& client, GameEvent& event) {}
 
     struct GameEventObserver
     {
         GameEventObserver() = default;
         explicit GameEventObserver(Client& client) {}
-        virtual void handle(Client& client, csgo::message::net::CSVCMsg_GameEvent&& event)
+        virtual void handle(Client& client, GameEvent& game_event)
         {
-            client.observer.on_game_event(client, std::move(event));
+            client.observer.on_game_event(client, game_event);
         }
     };
 
@@ -1125,7 +1126,23 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
     BEFORE(Observer, GameEventObserver);
     csgo::message::net::CSVCMsg_GameEvent data;
     data.ParseFromCodedStream(&stream);
-    AFTER(GameEventObserver, std::move(data));
+
+    const GameEventType* game_event_type = this->_game_event_types.at(data.eventid());
+    GameEvent* game_event = instantiate<GameEventType, GameEvent>(game_event_type);
+    game_event->id = data.eventid();
+    game_event->name = game_event_type->name;
+
+    for (size_t i = 0; i < data.keys_size(); ++i)
+    {
+        const GameEventType::Member& member = game_event_type->members.at(i);
+        csgo::message::net::CSVCMsg_GameEvent_key_t& key = *data.mutable_keys(i);
+        auto* game_event_value_type = dynamic_cast<const game_event::GameEventValueType*>(member.type.get());
+        VERIFY(game_event_value_type != nullptr);
+        game_event_value_type->update(game_event->address + member.offset, std::move(key));
+    }
+
+    AFTER(GameEventObserver, *game_event);
+    delete game_event;
 
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);

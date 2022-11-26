@@ -17,8 +17,6 @@ using csgopp::client::Client;
 struct SummaryObserver : ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
-
-
 };
 
 struct SummaryCommand
