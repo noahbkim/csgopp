@@ -37,6 +37,36 @@ struct StringTable
     StringTable(std::string&& name, size_t size);
 };
 
-using StringTableDatabase = DatabaseWithName<StringTable, Delete<StringTable>>;
+struct StringTableDatabase : public DatabaseWithName<StringTable, Delete<StringTable>>
+{
+    using DatabaseWithName::DatabaseWithName;
+
+    StringTable* instance_baseline{nullptr};
+    StringTable* user_info{nullptr};
+
+    void on_emplace(StringTable* string_table)
+    {
+        if (string_table->name == "instancebaseline")
+        {
+            this->instance_baseline = string_table;
+        }
+        else if (string_table->name == "userinfo")
+        {
+            this->user_info = string_table;
+        }
+    }
+
+    void emplace(StringTable* string_table) override
+    {
+        DatabaseWithName::emplace(string_table);
+        this->on_emplace(string_table);
+    }
+
+    void emplace(size_t index, StringTable* string_table) override
+    {
+        DatabaseWithName::emplace(index, string_table);
+        this->on_emplace(string_table);
+    }
+};
 
 }

@@ -18,6 +18,7 @@
 #include "client/string_table.h"
 #include "client/entity.h"
 #include "client/game_event.h"
+#include "client/user.h"
 #include "netmessages.pb.h"
 
 #define LOCAL(EVENT) _event_##EVENT
@@ -67,6 +68,7 @@ using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Entity;
 using csgopp::client::game_event::GameEventType;
 using csgopp::client::game_event::GameEvent;
+using csgopp::client::user::User;
 
 constexpr size_t MAX_EDICT_BITS = 11;
 constexpr size_t ENTITY_HANDLE_INDEX_MASK = (1 << MAX_EDICT_BITS) - 1;
@@ -274,6 +276,30 @@ struct ClientObserverBase
             client.observer.on_game_event_type_creation(client, event);
         }
     };
+
+    virtual void on_user_creation(Client& client, const User* user) {}
+
+    struct UserCreationObserver
+    {
+        UserCreationObserver() = default;
+        explicit UserCreationObserver(Client& client) {}
+        virtual void handle(Client& client, const User* user)
+        {
+            client.observer.on_user_creation(client, user);
+        }
+    };
+
+    virtual void on_user_update(Client& client, const User* user) {}
+
+    struct UserUpdateObserver
+    {
+        UserUpdateObserver() = default;
+        explicit UserUpdateObserver(Client& client, const User* user) {}
+        virtual void handle(Client& client, const User* user)
+        {
+            client.observer.on_user_update(client, user);
+        }
+    };
 };
 
 /// \brief The core DEMO parser and game client.
@@ -296,6 +322,7 @@ public:
     using StringTableDatabase = csgopp::client::string_table::StringTableDatabase;
     using EntityDatabase = csgopp::client::entity::EntityDatabase;
     using GameEventTypeDatabase = csgopp::client::game_event::GameEventTypeDatabase;
+    using UserDatabase = csgopp::client::user::UserDatabase;
 
     /// Instantiate a new client with an observer.
     ///
@@ -379,17 +406,21 @@ protected:
     StringTableDatabase _string_tables;
     EntityDatabase _entities;
     GameEventTypeDatabase _game_event_types;
+    UserDatabase _users;
 
     /// Helpers
     void create_data_tables_and_server_classes(CodedInputStream& stream);
     DatabaseWithName<DataTable> create_data_tables(CodedInputStream& stream);
     Database<ServerClass> create_server_classes(CodedInputStream& stream, DatabaseWithName<DataTable>& new_data_tables);
+
     void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
 
     void _update_entity(Entity* entity, BitStream& stream);
     void create_entity(Entity::Id id, BitStream& stream);
     void update_entity(Entity::Id id, BitStream& stream);
     void delete_entity(Entity::Id id);
+
+    void update_user(size_t index, const std::string& data);
 
 private:
     /// Cast this as a const reference for template constructors.
@@ -579,7 +610,6 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         VERIFY(data.read(&entry_count, 16));
 
         StringTable* string_table = new StringTable(std::move(name), entry_count);
-
         for (uint16_t j = 0; j < entry_count; ++j)
         {
             StringTable::Entry* entry = new StringTable::Entry();
@@ -601,6 +631,7 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
             }
         }
 
+        this->_string_tables.emplace(string_table);
         AFTER(StringTableCreationObserver, std::as_const(string_table));
     }
 
@@ -1047,6 +1078,12 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
             }
         }
 
+        if (string_table->name == "userinfo")
+        {
+            size_t user_index = std::stoull(entry->string);
+            this->update_user(user_index, entry->data);
+        }
+
         auto_increment += 1;
     }
 }
@@ -1276,7 +1313,8 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
     Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->entity_type.get(), id, server_class);
 
     // Update from baseline in string table
-    for (StringTable::Entry* entry : this->_string_tables.at("instancebaseline")->entries)
+    VERIFY(this->_string_tables.instance_baseline != nullptr);
+    for (StringTable::Entry* entry : this->_string_tables.instance_baseline->entries)
     {
         if (std::stoi(entry->string) == server_class->index)
         {
@@ -1313,6 +1351,32 @@ void Client<Observer>::delete_entity(Entity::Id id)
     this->_entities.at(id) = nullptr;
     AFTER(EntityDeletionObserver, std::as_const(entity));
     delete entity;
+}
+
+template<typename Observer>
+void Client<Observer>::update_user(size_t index, const std::string& data)
+{
+    if (data.empty())
+    {
+        return;
+    }
+
+    if (index >= this->_users.size() || this->_users.at(index) == nullptr)
+    {
+        User* user = new User();
+        this->_users.emplace(index, user);
+
+        BEFORE(Observer, UserCreationObserver);
+        user->deserialize(data);
+        AFTER(UserCreationObserver, user);
+    }
+    else
+    {
+        User* user = this->_users.at(index);
+        BEFORE(Observer, UserUpdateObserver, user);
+        user->deserialize(data);
+        AFTER(UserUpdateObserver, user);
+    }
 }
 
 template<typename Observer>

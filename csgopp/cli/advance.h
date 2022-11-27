@@ -14,27 +14,20 @@ using argparse::ArgumentParser;
 using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::GameEvent;
-
-struct round_end
-{
-    uint8_t winner;
-    uint8_t reason;
-    std::string message;
-    uint8_t legacy;
-    int16_t player_count;
-};
+using csgopp::client::user::User;
 
 struct AdvanceObserver : ClientObserverBase<AdvanceObserver>
 {
     using ClientObserverBase::ClientObserverBase;
 
-    void on_game_event(Client& client, GameEvent& event) override
+    void on_user_creation(Client& client, const User* user) override
     {
-        if (event.name == "round_end")
-        {
-            auto* cast = reinterpret_cast<round_end*>(event.address);
-            std::cout << "Round end: " << cast->message << std::endl;
-        }
+        std::cout << "New user " << user->name << " (" << user->xuid << ")" << std::endl;
+    }
+
+    void on_user_update(Client& client, const User* user) override
+    {
+        std::cout << "Updated user " << user->name << " (" << user->xuid << ")" << std::endl;
     }
 };
 

@@ -31,49 +31,49 @@ struct GameEventValueType : public virtual Type
 struct StringType : public DefaultValueType<std::string>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct FloatType : public DefaultValueType<float>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct LongType : public DefaultValueType<int32_t>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct ShortType : public DefaultValueType<int16_t>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct ByteType : public DefaultValueType<uint8_t>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct BoolType : public DefaultValueType<bool>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct UnsignedInt64Type : public DefaultValueType<uint64_t>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct WideStringType : public DefaultValueType<std::wstring>, public GameEventValueType
 {
     void emit(Cursor<Declaration>& cursor) const override;
-    virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
+    void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 };
 
 struct GameEventType final : public ObjectType

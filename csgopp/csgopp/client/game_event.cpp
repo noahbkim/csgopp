@@ -1,6 +1,8 @@
 #include "game_event.h"
 #include "../error.h"
 
+// https://github.com/VSES/SourceEngine2007/blob/43a5c90a5ada1e69ca044595383be67f40b33c61/se2007/engine/GameEventManager.cpp
+
 namespace csgopp::client::game_event
 {
 
@@ -44,7 +46,9 @@ void ShortType::emit(Cursor<Declaration>& cursor) const
 
 void ShortType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = key.val_short();
+    // According to documentation this should be 16 bits
+    // https://github.com/VSES/SourceEngine2007/blob/43a5c90a5ada1e69ca044595383be67f40b33c61/se2007/engine/GameEventManager.cpp#L33
+    *reinterpret_cast<Value*>(address) = static_cast<Value>(key.val_short());
 }
 
 void ByteType::emit(Cursor<Declaration>& cursor) const
