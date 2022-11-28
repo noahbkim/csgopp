@@ -6,6 +6,8 @@ using csgopp::common::reader::ContainerReader;
 using csgopp::common::reader::BigEndian;
 using csgopp::common::reader::LittleEndian;
 
+User::User(Id id) : id(id) {}
+
 void User::deserialize(const std::string& data)
 {
     ContainerReader<std::string> reader(data);

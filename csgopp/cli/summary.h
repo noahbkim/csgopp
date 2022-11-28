@@ -15,14 +15,20 @@ using argparse::ArgumentParser;
 using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::User;
+using csgopp::client::GameEvent;
 
-struct SummaryObserver : ClientObserverBase<SummaryObserver>
+struct SummaryObserver : public ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
 
     void on_user_creation(Client& client, const User* user) override
     {
-        std::cout << "User " << user->name << " connected!" << std::endl;
+        std::cout << "User " << user->name << " (" << user->xuid << ") connected!" << std::endl;
+
+        if (user->id < client.entities().size() && client.entities().at(user->id) != nullptr)
+        {
+            std::cout << "  Already has entity!" << std::endl;
+        }
     }
 
     struct UserUpdateObserver final : public ClientObserverBase::UserUpdateObserver
@@ -39,6 +45,30 @@ struct SummaryObserver : ClientObserverBase<SummaryObserver>
             }
         }
     };
+
+    void on_entity_creation(Client& client, const Entity* entity) override
+    {
+        if (entity->id < client.users().size())
+        {
+            std::cout << "Created entity for player " << client.users().at(entity->id)->name << std::endl;
+        }
+    }
+
+    void on_entity_deletion(Client& client, const Entity* entity) override
+    {
+        if (entity->id < client.users().size())
+        {
+            std::cout << "Deleted entity for player " << client.users().at(entity->id)->name << std::endl;
+        }
+    }
+
+    void on_game_event(Client &client, GameEvent& event) override
+    {
+        if (event.name == "round_end")
+        {
+            std::cout << "Round end: " << event["message"].is<std::string>() << std::endl;
+        }
+    }
 };
 
 struct SummaryCommand

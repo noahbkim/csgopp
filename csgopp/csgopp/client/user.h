@@ -17,6 +17,10 @@ using csgopp::client::string_table::StringTable;
 
 struct User
 {
+    using Id = size_t;
+
+    Id id{};
+
     uint64_t version{};
     uint64_t xuid{};
     std::string name{};
@@ -31,6 +35,8 @@ struct User
 
     uint32_t custom_files[4]{};
     uint8_t files_downloaded{};
+
+    explicit User(Id id);
 
     void deserialize(const std::string& data);
 };

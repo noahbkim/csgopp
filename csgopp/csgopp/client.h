@@ -394,6 +394,7 @@ public:
     [[nodiscard]] const StringTableDatabase& string_tables() { return this->_string_tables; }
     [[nodiscard]] const EntityDatabase& entities() { return this->_entities; }
     [[nodiscard]] const GameEventTypeDatabase& game_event_types() { return this->_game_event_types; }
+    [[nodiscard]] const UserDatabase& users() { return this->_users; }
 
     Observer observer;
 
@@ -1365,7 +1366,7 @@ void Client<Observer>::update_user(size_t index, const std::string& data)
 
     if (index >= this->_users.size() || this->_users.at(index) == nullptr)
     {
-        User* user = new User();
+        User* user = new User(index);
         this->_users.emplace(index, user);
 
         BEFORE(Observer, UserCreationObserver);
