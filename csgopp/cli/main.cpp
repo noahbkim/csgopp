@@ -5,6 +5,7 @@
 
 #include "generate.h"
 #include "advance.h"
+#include "summary.h"
 
 using argparse::ArgumentParser;
 
@@ -15,6 +16,7 @@ int main(int argc, char** argv)
     ArgumentParser parser("csgopp.cli");
     GenerateCommand generate(parser);
     AdvanceCommand advance(parser);
+    SummaryCommand summary(parser);
 
     try
     {
@@ -33,6 +35,10 @@ int main(int argc, char** argv)
     else if (parser.is_subcommand_used(advance.name))
     {
         return advance.main();
+    }
+    else if (parser.is_subcommand_used(summary.name))
+    {
+        return summary.main();
     }
     else
     {

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include <google/protobuf/io/coded_stream.h>
 #include <argparse/argparse.hpp>
@@ -13,10 +14,31 @@
 using argparse::ArgumentParser;
 using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
+using csgopp::client::User;
 
 struct SummaryObserver : ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
+
+    void on_user_creation(Client& client, const User* user) override
+    {
+        std::cout << "User " << user->name << " connected!" << std::endl;
+    }
+
+    struct UserUpdateObserver final : public ClientObserverBase::UserUpdateObserver
+    {
+        std::string old_name;
+
+        UserUpdateObserver(Client& client, const User* user) : old_name(user->name) {}
+
+        void handle(Client &client, const User* user) override
+        {
+            if (user->name != old_name)
+            {
+                std::cout << "User " << old_name << " changed their name to " << user->name << std::endl;
+            }
+        }
+    };
 };
 
 struct SummaryCommand
@@ -35,6 +57,12 @@ struct SummaryCommand
     {
         Timer timer;
         std::string path = this->parser.get("demo");
+        if (!std::filesystem::exists(path))
+        {
+            std::cerr << "No such file " << path << std::endl;
+            return -1;
+        }
+
         std::ifstream file_stream(path, std::ios::binary);
         IstreamInputStream file_input_stream(&file_stream);
         CodedInputStream coded_input_stream(&file_input_stream);

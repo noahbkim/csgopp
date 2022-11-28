@@ -208,6 +208,12 @@ struct GenerateCommand
     {
         Timer timer;
         std::string path = this->parser.get("demo");
+        if (!std::filesystem::exists(path))
+        {
+            std::cerr << "No such file " << path << std::endl;
+            return -1;
+        }
+
         std::ifstream file_stream(path, std::ios::binary);
         IstreamInputStream file_input_stream(&file_stream);
         CodedInputStream coded_input_stream(&file_input_stream);

@@ -20,21 +20,6 @@ using csgopp::client::Entity;
 struct AdvanceObserver : ClientObserverBase<AdvanceObserver>
 {
     using ClientObserverBase::ClientObserverBase;
-
-    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
-    {
-        if (34450 < client.tick() && client.tick() < 34455)
-        {
-            std::cout << "update entity: " << entity->id << " (" << entity->server_class->name << ")" << std::endl;
-            for (uint16_t index: indices)
-            {
-                const auto& offset = entity->type->prioritized.at(index);
-                std::cout << "  [" << index << "] " << offset.property->name << ": ";
-                offset.type->represent(entity->address + offset.offset, std::cout);
-                std::cout << std::endl;
-            }
-        }
-    }
 };
 
 struct AdvanceCommand
@@ -53,6 +38,12 @@ struct AdvanceCommand
     {
         Timer timer;
         std::string path = this->parser.get("demo");
+        if (!std::filesystem::exists(path))
+        {
+            std::cerr << "No such file " << path << std::endl;
+            return -1;
+        }
+
         std::ifstream file_stream(path, std::ios::binary);
         IstreamInputStream file_input_stream(&file_stream);
         CodedInputStream coded_input_stream(&file_input_stream);
