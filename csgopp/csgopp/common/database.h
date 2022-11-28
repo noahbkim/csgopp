@@ -52,6 +52,16 @@ struct Database
     [[nodiscard]] Value *&back() { return this->container.back(); }
     [[nodiscard]] const Value *back() const { return this->container.back(); }
 
+    [[nodiscard]] Value *get(size_t index)
+    {
+        return index < this->container.size() ? this->container.at(index) : nullptr;
+    }
+
+    [[nodiscard]] const Value* get(size_t index) const
+    {
+        return index < this->container.size() ? this->container.at(index) : nullptr;
+    }
+
     [[nodiscard]] size_t size() const { return this->container.size(); }
 
     typename Vector::iterator begin() { return this->container.begin(); }

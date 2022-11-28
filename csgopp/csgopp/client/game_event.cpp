@@ -83,7 +83,7 @@ void ByteType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t
 
 void ByteType::represent(char* address, std::ostream& out) const
 {
-    out << *reinterpret_cast<Value*>(address);
+    out << static_cast<uint16_t>(*reinterpret_cast<Value*>(address));
 }
 
 void BoolType::emit(Cursor<Declaration>& cursor) const

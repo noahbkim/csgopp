@@ -25,7 +25,7 @@ struct SummaryObserver : public ClientObserverBase<SummaryObserver>
     {
         std::cout << "User " << user->name << " (" << user->xuid << ") connected!" << std::endl;
 
-        if (user->id < client.entities().size() && client.entities().at(user->id) != nullptr)
+        if (client.entities().get(user->id) != nullptr)
         {
             std::cout << "  Already has entity!" << std::endl;
         }
@@ -64,9 +64,13 @@ struct SummaryObserver : public ClientObserverBase<SummaryObserver>
 
     void on_game_event(Client &client, GameEvent& event) override
     {
-        if (event.name == "round_end")
+        if (event.name == "round_announce_match_start")
         {
-            std::cout << "Round end: " << event["message"].is<std::string>() << std::endl;
+            std::cout << "@ Match start " << event << std::endl;
+        }
+        else if (event.name == "round_end")
+        {
+            std::cout << "@ Round end: " << event << std::endl;
         }
     }
 };

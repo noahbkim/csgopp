@@ -304,9 +304,13 @@ struct Instance
 
     template<typename U>
     typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& is();
-
-    void debug(std::ostream& out, size_t indent = 0);
 };
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const Instance<T>* instance);
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const Instance<T>& instance);
 
 using Object = Instance<ObjectType>;
 using Array = Instance<ArrayType>;
@@ -597,6 +601,20 @@ typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& Instance
     {
         throw TypeError("cast is only available for values!");
     }
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const Instance<T>* instance)
+{
+    instance->type->represent(instance->address, out);
+    return out;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const Instance<T>& instance)
+{
+    instance.type->represent(instance.address, out);
+    return out;
 }
 
 }

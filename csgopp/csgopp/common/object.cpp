@@ -356,10 +356,15 @@ const ObjectType::Member& ObjectType::at(const std::string& member_name) const
 void ObjectType::represent(char* address, std::ostream& out) const
 {
     out << "{";
-    for (const Member& member : this->members)
+    for (size_t i = 0; i < this->members.size(); ++i)
     {
+        const Member& member = this->members.at(i);
         out << "\"" << member.name << "\"" << ": ";
         member.type->represent(address + member.offset, out);
+        if (i + 1 != this->members_size)
+        {
+            out << ", ";
+        }
     }
     out << "}";
 }
