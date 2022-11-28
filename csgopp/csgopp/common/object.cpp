@@ -161,6 +161,17 @@ size_t ArrayType::at(size_t element_index) const
     return element_index * this->element_size;
 }
 
+void ArrayType::represent(char* address, std::ostream& out) const
+{
+    out << "[";
+    for (size_t i = 0; i + 1 < this->length; ++i)  // Skip last, don't underflow by subtracting one
+    {
+        this->element_type->represent(address + this->at(i), out);
+        out << ", ";
+    }
+    out << "]";
+}
+
 ObjectType::Member::Member(
     std::shared_ptr<const Type> type,
     size_t offset,
@@ -340,6 +351,17 @@ const ObjectType::Member& ObjectType::at(const std::string& member_name) const
 [[nodiscard]] ObjectType::Members::const_iterator ObjectType::end() const
 {
     return this->members.end();
+}
+
+void ObjectType::represent(char* address, std::ostream& out) const
+{
+    out << "{";
+    for (const Member& member : this->members)
+    {
+        out << "\"" << member.name << "\"" << ": ";
+        member.type->represent(address + member.offset, out);
+    }
+    out << "}";
 }
 
 }

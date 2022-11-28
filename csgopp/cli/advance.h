@@ -14,20 +14,26 @@ using argparse::ArgumentParser;
 using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::GameEvent;
-using csgopp::client::user::User;
+using csgopp::client::User;
+using csgopp::client::Entity;
 
 struct AdvanceObserver : ClientObserverBase<AdvanceObserver>
 {
     using ClientObserverBase::ClientObserverBase;
 
-    void on_user_creation(Client& client, const User* user) override
+    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
     {
-        std::cout << "New user " << user->name << " (" << user->xuid << ")" << std::endl;
-    }
-
-    void on_user_update(Client& client, const User* user) override
-    {
-        std::cout << "Updated user " << user->name << " (" << user->xuid << ")" << std::endl;
+        if (34450 < client.tick() && client.tick() < 34455)
+        {
+            std::cout << "update entity: " << entity->id << " (" << entity->server_class->name << ")" << std::endl;
+            for (uint16_t index: indices)
+            {
+                const auto& offset = entity->type->prioritized.at(index);
+                std::cout << "  [" << index << "] " << offset.property->name << ": ";
+                offset.type->represent(entity->address + offset.offset, std::cout);
+                std::cout << std::endl;
+            }
+        }
     }
 };
 

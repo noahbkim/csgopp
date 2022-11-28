@@ -59,6 +59,11 @@ void BoolType::update(char* address, BitStream& stream, const Property* property
     *reinterpret_cast<bool*>(address) = value;
 }
 
+void BoolType::represent(char* address, std::ostream& out) const
+{
+    out << (*reinterpret_cast<bool*>(address) ? "true" : "false");
+}
+
 void UnsignedInt32Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "uint32_t";
@@ -124,6 +129,11 @@ void UnsignedInt32Type::update(char* address, BitStream& stream, const Property*
     }
 }
 
+void UnsignedInt32Type::represent(char* address, std::ostream& out) const
+{
+    out << *reinterpret_cast<Value*>(address);
+}
+
 void SignedInt32Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "int32_t";
@@ -139,6 +149,11 @@ void SignedInt32Type::update(char* address, BitStream& stream, const Property* p
     {
         update_int_fixed<int32_t, DataTable::Int32Property>(address, stream, property);
     }
+}
+
+void SignedInt32Type::represent(char* address, std::ostream& out) const
+{
+    out << *reinterpret_cast<Value*>(address);
 }
 
 void FloatType::emit(Cursor<Declaration>& cursor) const
@@ -400,6 +415,11 @@ void FloatType::update(char* address, BitStream& stream, const Property* propert
     update_float(address, stream, property);
 }
 
+void FloatType::represent(char* address, std::ostream& out) const
+{
+    out << *reinterpret_cast<Value*>(address);
+}
+
 void Vector3Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "Vector3";
@@ -436,6 +456,12 @@ void Vector3Type::update(char* address, BitStream& stream, const Property* prope
     }
 }
 
+void Vector3Type::represent(char* address, std::ostream& out) const
+{
+    const auto* vector = reinterpret_cast<Value*>(address);
+    out << "<" << vector->x << ", " << vector->y << ", " << vector->z << ">";
+}
+
 void Vector2Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "Vector2";
@@ -446,6 +472,12 @@ void Vector2Type::update(char* address, BitStream& stream, const Property* prope
     auto* value = reinterpret_cast<Vector3*>(address);
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->x), stream, property);
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->y), stream, property);
+}
+
+void Vector2Type::represent(char* address, std::ostream& out) const
+{
+    const auto* vector = reinterpret_cast<Value*>(address);
+    out << "<" << vector->x << ", " << vector->y << ">";
 }
 
 void StringType::emit(Cursor<Declaration>& cursor) const
@@ -460,6 +492,11 @@ void StringType::update(char* address, BitStream& stream, const Property* proper
     uint32_t size;
     stream.read(&size, string::STRING_SIZE_BITS_MAX);
     stream.read_string_from(value, std::min(string::STRING_SIZE_MAX, size));
+}
+
+void StringType::represent(char* address, std::ostream& out) const
+{
+    out << "\"" << *reinterpret_cast<Value*>(address) << "\"";
 }
 
 void UnsignedInt64Type::emit(Cursor<Declaration>& cursor) const
@@ -479,6 +516,11 @@ void UnsignedInt64Type::update(char* address, BitStream& stream, const Property*
     }
 }
 
+void UnsignedInt64Type::represent(char* address, std::ostream& out) const
+{
+    out << *reinterpret_cast<Value*>(address);
+}
+
 void SignedInt64Type::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "int64_t";
@@ -494,6 +536,11 @@ void SignedInt64Type::update(char* address, BitStream& stream, const Property* p
     {
         update_int_fixed<int64_t, DataTable::Int64Property>(address, stream, property);
     }
+}
+
+void SignedInt64Type::represent(char* address, std::ostream& out) const
+{
+    out << *reinterpret_cast<Value*>(address);
 }
 
 void PropertyArrayType::update(char* address, BitStream& stream, const Property* property) const

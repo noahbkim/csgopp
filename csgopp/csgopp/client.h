@@ -226,16 +226,16 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class update observer.
-    virtual void on_entity_update(Client& client, const Entity* entity) {}
+    virtual void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) {}
 
     /// \brief This event is emitted when a network string table is created.
     struct EntityUpdateObserver
     {
         EntityUpdateObserver() = default;
         explicit EntityUpdateObserver(Client& client, const Entity* entity) {}
-        virtual void handle(Client& client, const Entity* entity)
+        virtual void handle(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
         {
-            client.observer.on_entity_update(client, entity);
+            client.observer.on_entity_update(client, entity, indices);
         }
     };
 
@@ -407,6 +407,9 @@ protected:
     EntityDatabase _entities;
     GameEventTypeDatabase _game_event_types;
     UserDatabase _users;
+
+    /// Helper data
+    std::vector<uint16_t> _update_entity_indices;
 
     /// Helpers
     void create_data_tables_and_server_classes(CodedInputStream& stream);
@@ -1240,8 +1243,7 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
     OK(stream.read(&small_increment_optimization, 1));
 
     // Keeping this static GREATLY reduces the number of spurious allocations
-    static std::vector<uint16_t> indices;
-    indices.clear();
+    this->_update_entity_indices.clear();
 
     // It's honestly probably more efficient to read through this twice than it is to allocate and make copies
     uint16_t index = 0;
@@ -1284,11 +1286,11 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
             index += jump;
         }
 
-        indices.emplace_back(index);
+        this->_update_entity_indices.emplace_back(index);
         index += 1;
     }
 
-    for (uint16_t i : indices)
+    for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
         const entity::Offset& offset = entity->type->prioritized.at(i);
@@ -1337,7 +1339,7 @@ void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
     Entity* entity = this->_entities.at(id);
     BEFORE(Observer, EntityUpdateObserver, std::as_const(entity));
     this->_update_entity(entity, stream);
-    AFTER(EntityUpdateObserver, std::as_const(entity));
+    AFTER(EntityUpdateObserver, std::as_const(entity), std::as_const(this->_update_entity_indices));
 }
 
 template<typename Observer>

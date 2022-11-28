@@ -135,6 +135,8 @@ struct Type
 
     virtual void emit(code::Cursor<code::Declaration>&) const = 0;
     virtual void emit(layout::Cursor&) const = 0;
+
+    virtual void represent(char* address, std::ostream& out) const = 0;
 };
 
 struct Reference
@@ -199,6 +201,8 @@ struct ArrayType : public virtual Type
     [[nodiscard]] Accessor operator[](size_t element_index) const override;
 
     [[nodiscard]] size_t at(size_t element_index) const;
+
+    void represent(char* address, std::ostream& out) const override;
 };
 
 struct ObjectType : public virtual Type
@@ -267,6 +271,8 @@ struct ObjectType : public virtual Type
     [[nodiscard]] Members::const_iterator begin() const;
     [[nodiscard]] Members::const_iterator begin_self() const;
     [[nodiscard]] Members::const_iterator end() const;
+
+    void represent(char* address, std::ostream& out) const override;
 };
 
 template<typename T>
