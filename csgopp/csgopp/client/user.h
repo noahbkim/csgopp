@@ -2,9 +2,7 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 
-#include "../common/reader.h"
 #include "../common/database.h"
 #include "../client/string_table.h"
 
@@ -38,8 +36,6 @@ struct User
     uint8_t files_downloaded{};
 
     explicit User(Index index);
-
-    void deserialize(const std::string& data);
 };
 
 struct UserDatabase : public DatabaseWithId<User, Delete<User>>

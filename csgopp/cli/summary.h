@@ -17,9 +17,36 @@ using csgopp::client::Client;
 using csgopp::client::User;
 using csgopp::client::GameEvent;
 
-struct SummaryObserver : public ClientObserverBase<SummaryObserver>
+const char* describe_game_phase(uint32_t phase)
+{
+    switch (phase)
+    {
+        case 0:
+            return "Init";
+        case 1:
+            return "Pregame";
+        case 2:
+            return "Start game phase";
+        case 3:
+            return "Team side switch";
+        case 4:
+            return "Game half ended";
+        case 5:
+            return "Game ended";
+        case 6:
+            return "Stale mate";
+        case 7:
+            return "Game over";
+        default:
+            return "Unknown!";
+    }
+}
+
+struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
+
+    const Entity* game_rules{};
 
     void on_user_creation(Client& client, const User* user) override
     {
@@ -51,6 +78,18 @@ struct SummaryObserver : public ClientObserverBase<SummaryObserver>
         if (entity->id < client.users().size())
         {
             std::cout << "Created entity for player " << client.users().at(entity->id)->name << std::endl;
+        }
+        if (entity->server_class->name == "CCSGameRulesProxy")
+        {
+            this->game_rules = entity;
+        }
+    }
+
+    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
+    {
+        if (entity == this->game_rules)
+        {
+
         }
     }
 

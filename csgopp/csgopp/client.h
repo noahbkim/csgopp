@@ -8,7 +8,7 @@
 #include "common/macro.h"
 #include "common/lookup.h"
 #include "common/bits.h"
-#include "common/interface.h"
+#include "common/reader.h"
 #include "common/ring.h"
 #include "common/database.h"
 #include "common/control.h"
@@ -58,6 +58,9 @@ using csgopp::common::ring::Ring;
 using csgopp::common::control::lookup;
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
+using csgopp::common::reader::ContainerReader;
+using csgopp::common::reader::BigEndian;
+using csgopp::common::reader::LittleEndian;
 using csgopp::common::object::instantiate;
 using csgopp::error::GameError;
 using csgopp::client::data_table::DataTable;
@@ -424,6 +427,7 @@ protected:
     void update_entity(Entity::Id id, BitStream& stream);
     void delete_entity(Entity::Id id);
 
+    void _update_user(User* user, const std::string& data);
     void update_user(size_t index, const std::string& data);
 
 private:
@@ -1357,6 +1361,25 @@ void Client<Observer>::delete_entity(Entity::Id id)
 }
 
 template<typename Observer>
+void Client<Observer>::_update_user(User* user, const std::string& data)
+{
+    ContainerReader<std::string> reader(data);
+    user->version = reader.deserialize<uint64_t, BigEndian>();
+    user->xuid = reader.deserialize<uint64_t, BigEndian>();
+    user->name = reader.terminated(128);
+    user->id = reader.deserialize<int32_t, BigEndian>();
+    user->guid = reader.terminated(33);
+    user->friends_id = reader.deserialize<uint32_t, BigEndian>();
+    user->friends_name = reader.terminated(128);
+    user->is_fake = reader.deserialize<uint8_t>() != 0;
+    user->is_hltv = reader.deserialize<uint8_t>() != 0;
+    user->custom_files[0] = reader.deserialize<uint32_t, LittleEndian>();
+    user->custom_files[1] = reader.deserialize<uint32_t, LittleEndian>();
+    user->custom_files[2] = reader.deserialize<uint32_t, LittleEndian>();
+    user->custom_files[3] = reader.deserialize<uint32_t, LittleEndian>();
+}
+
+template<typename Observer>
 void Client<Observer>::update_user(size_t index, const std::string& data)
 {
     if (data.empty())
@@ -1368,7 +1391,7 @@ void Client<Observer>::update_user(size_t index, const std::string& data)
     {
         User* user = new User(index);
         BEFORE(Observer, UserCreationObserver);
-        user->deserialize(data);
+        this->_update_user(user, data);
         this->_users.emplace(index, user);
         AFTER(UserCreationObserver, user);
     }
@@ -1376,7 +1399,7 @@ void Client<Observer>::update_user(size_t index, const std::string& data)
     {
         User* user = this->_users.at(index);
         BEFORE(Observer, UserUpdateObserver, user);
-        user->deserialize(data);
+        this->_update_user(user, data);
         AFTER(UserUpdateObserver, user);
     }
 }
