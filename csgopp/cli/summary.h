@@ -79,25 +79,6 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         {
             std::cout << "Created entity for player " << client.users().at(entity->id)->name << std::endl;
         }
-        if (entity->server_class->name == "CCSGameRulesProxy")
-        {
-            this->game_rules = entity;
-            std::cout << this->game_rules << std::endl;
-        }
-    }
-
-    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
-    {
-        if (entity == this->game_rules)
-        {
-//            for (uint16_t index : indices)
-//            {
-//                if (entity->type->prioritized[index].offset == this->game_phase.offset)
-//                {
-//                    std::cout << "Game phase: " << describe_game_phase((*this->game_rules)[this->game_phase]) << std::endl;
-//                }
-//            }
-        }
     }
 
     void on_entity_deletion(Client& client, const Entity* entity) override
@@ -123,9 +104,13 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
             const User* user = client.users().at_id(event["userid"].is<int16_t>());
             std::cout << "@ Player " << user->name << " joined team " << static_cast<int>(event["team"].is<uint8_t>()) << std::endl;
         }
-        else if (event.name == "buytime_ended")
+        else if (event.name == "item_pickup")
         {
-            std::cout << "@ Buytime ended" << std::endl;
+            std::cout << "@ Item pickup" << std::endl;
+        }
+        else if (event.name == "item_found")
+        {
+            std::cout << "@ Item found" << std::endl;
         }
     }
 };

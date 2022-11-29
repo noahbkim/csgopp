@@ -59,9 +59,9 @@ void BoolType::update(char* address, BitStream& stream, const Property* property
     *reinterpret_cast<bool*>(address) = value;
 }
 
-void BoolType::represent(char* address, std::ostream& out) const
+void BoolType::represent(const char* address, std::ostream& out) const
 {
-    out << (*reinterpret_cast<bool*>(address) ? "true" : "false");
+    out << (*reinterpret_cast<const bool*>(address) ? "true" : "false");
 }
 
 void UnsignedInt32Type::emit(Cursor<Declaration>& cursor) const
@@ -129,9 +129,9 @@ void UnsignedInt32Type::update(char* address, BitStream& stream, const Property*
     }
 }
 
-void UnsignedInt32Type::represent(char* address, std::ostream& out) const
+void UnsignedInt32Type::represent(const char* address, std::ostream& out) const
 {
-    out << *reinterpret_cast<Value*>(address);
+    out << *reinterpret_cast<const Value*>(address);
 }
 
 void SignedInt32Type::emit(Cursor<Declaration>& cursor) const
@@ -151,9 +151,9 @@ void SignedInt32Type::update(char* address, BitStream& stream, const Property* p
     }
 }
 
-void SignedInt32Type::represent(char* address, std::ostream& out) const
+void SignedInt32Type::represent(const char* address, std::ostream& out) const
 {
-    out << *reinterpret_cast<Value*>(address);
+    out << *reinterpret_cast<const Value*>(address);
 }
 
 void FloatType::emit(Cursor<Declaration>& cursor) const
@@ -415,9 +415,9 @@ void FloatType::update(char* address, BitStream& stream, const Property* propert
     update_float(address, stream, property);
 }
 
-void FloatType::represent(char* address, std::ostream& out) const
+void FloatType::represent(const char* address, std::ostream& out) const
 {
-    out << *reinterpret_cast<Value*>(address);
+    out << *reinterpret_cast<const Value*>(address);
 }
 
 void Vector3Type::emit(Cursor<Declaration>& cursor) const
@@ -456,9 +456,9 @@ void Vector3Type::update(char* address, BitStream& stream, const Property* prope
     }
 }
 
-void Vector3Type::represent(char* address, std::ostream& out) const
+void Vector3Type::represent(const char* address, std::ostream& out) const
 {
-    const auto* vector = reinterpret_cast<Value*>(address);
+    const auto* vector = reinterpret_cast<const Value*>(address);
     out << "<" << vector->x << ", " << vector->y << ", " << vector->z << ">";
 }
 
@@ -474,9 +474,9 @@ void Vector2Type::update(char* address, BitStream& stream, const Property* prope
     update_float<DataTable::Vector3Property>(reinterpret_cast<char*>(&value->y), stream, property);
 }
 
-void Vector2Type::represent(char* address, std::ostream& out) const
+void Vector2Type::represent(const char* address, std::ostream& out) const
 {
-    const auto* vector = reinterpret_cast<Value*>(address);
+    const auto* vector = reinterpret_cast<const Value*>(address);
     out << "<" << vector->x << ", " << vector->y << ">";
 }
 
@@ -494,9 +494,9 @@ void StringType::update(char* address, BitStream& stream, const Property* proper
     stream.read_string_from(value, std::min(string::STRING_SIZE_MAX, size));
 }
 
-void StringType::represent(char* address, std::ostream& out) const
+void StringType::represent(const char* address, std::ostream& out) const
 {
-    out << "\"" << *reinterpret_cast<Value*>(address) << "\"";
+    out << "\"" << *reinterpret_cast<const Value*>(address) << "\"";
 }
 
 void UnsignedInt64Type::emit(Cursor<Declaration>& cursor) const
@@ -516,9 +516,9 @@ void UnsignedInt64Type::update(char* address, BitStream& stream, const Property*
     }
 }
 
-void UnsignedInt64Type::represent(char* address, std::ostream& out) const
+void UnsignedInt64Type::represent(const char* address, std::ostream& out) const
 {
-    out << *reinterpret_cast<Value*>(address);
+    out << *reinterpret_cast<const Value*>(address);
 }
 
 void SignedInt64Type::emit(Cursor<Declaration>& cursor) const
@@ -538,9 +538,9 @@ void SignedInt64Type::update(char* address, BitStream& stream, const Property* p
     }
 }
 
-void SignedInt64Type::represent(char* address, std::ostream& out) const
+void SignedInt64Type::represent(const char* address, std::ostream& out) const
 {
-    out << *reinterpret_cast<Value*>(address);
+    out << *reinterpret_cast<const Value*>(address);
 }
 
 void PropertyArrayType::update(char* address, BitStream& stream, const Property* property) const

@@ -195,7 +195,7 @@ size_t ArrayType::at(size_t element_index) const
     return element_index * this->element_size;
 }
 
-void ArrayType::represent(char* address, std::ostream& out) const
+void ArrayType::represent(const char* address, std::ostream& out) const
 {
     out << "[";
     for (size_t i = 0; i + 1 < this->length; ++i)  // Skip last, don't underflow by subtracting one
@@ -387,7 +387,7 @@ const ObjectType::Member& ObjectType::at(const std::string& member_name) const
     return this->members.end();
 }
 
-void ObjectType::represent(char* address, std::ostream& out) const
+void ObjectType::represent(const char* address, std::ostream& out) const
 {
     out << "{";
     for (size_t i = 0; i < this->members.size(); ++i)
