@@ -11,20 +11,21 @@
 namespace csgopp::client::user
 {
 
-using csgopp::common::database::Database;
+using csgopp::common::database::DatabaseWithId;
 using csgopp::common::database::Delete;
 using csgopp::client::string_table::StringTable;
 
 struct User
 {
-    using Id = size_t;
+    using Id = int32_t;
+    using Index = uint16_t;
 
-    Id id{};
+    Index index{};
 
     uint64_t version{};
     uint64_t xuid{};
     std::string name{};
-    uint32_t user_id{};
+    Id id{};  // Canonically user_id
     std::string guid{};
 
     uint32_t friends_id{};
@@ -36,11 +37,14 @@ struct User
     uint32_t custom_files[4]{};
     uint8_t files_downloaded{};
 
-    explicit User(Id id);
+    explicit User(Index index);
 
     void deserialize(const std::string& data);
 };
 
-using UserDatabase = Database<User, Delete<User>>;
+struct UserDatabase : public DatabaseWithId<User, Delete<User>>
+{
+
+};
 
 }

@@ -95,6 +95,27 @@ public:
         return result;
     }
 
+    std::string terminated(size_t max)
+    {
+        std::string result;
+        result.reserve(max);
+        size_t i = 0;
+        do
+        {
+            result.push_back(0);
+            this->read(&result.back(), 1);
+            i += 1;
+        } while (result.back() != 0 && i < max);
+        result.pop_back();
+
+        if (i < max)
+        {
+            this->skip(max - i);
+        }
+
+        return result;
+    }
+
     virtual void skip(size_t size) = 0;
     virtual size_t tell() = 0;
 

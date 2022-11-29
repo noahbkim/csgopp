@@ -1168,7 +1168,7 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
     csgo::message::net::CSVCMsg_GameEvent data;
     data.ParseFromCodedStream(&stream);
 
-    const GameEventType* game_event_type = this->_game_event_types.at(data.eventid());
+    const GameEventType* game_event_type = this->_game_event_types.at_id(data.eventid());
     GameEvent* game_event = instantiate<GameEventType, GameEvent>(game_event_type);
     game_event->id = data.eventid();
     game_event->name = game_event_type->name;
@@ -1367,10 +1367,9 @@ void Client<Observer>::update_user(size_t index, const std::string& data)
     if (index >= this->_users.size() || this->_users.at(index) == nullptr)
     {
         User* user = new User(index);
-        this->_users.emplace(index, user);
-
         BEFORE(Observer, UserCreationObserver);
         user->deserialize(data);
+        this->_users.emplace(index, user);
         AFTER(UserCreationObserver, user);
     }
     else

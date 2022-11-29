@@ -100,12 +100,12 @@ struct NameTableMixin
     explicit NameTableMixin(size_t reserved) : by_name(reserved)
     {}
 
-    [[nodiscard]] T *&at(std::string_view name)
+    [[nodiscard]] T *&at_name(std::string_view name)
     {
         return this->by_name.at(name);
     }
 
-    [[nodiscard]] const T *at(std::string_view name) const
+    [[nodiscard]] const T *at_name(std::string_view name) const
     {
         return this->by_name.at(name);
     }
@@ -133,9 +133,6 @@ struct DatabaseWithName : public Database<T, Manager>, public NameTableMixin<T>
     explicit DatabaseWithName(size_t reserved)
         : Database<T, Manager>(reserved), NameTableMixin<T>(reserved)
     {}
-
-    using Database<T, Manager>::at;
-    using NameTableMixin<T>::at;
 
     void emplace(T *property) override
     {
@@ -166,12 +163,12 @@ struct IdTableMixin
     explicit IdTableMixin(size_t reserved) : by_id(reserved)
     {}
 
-    [[nodiscard]] T *&at(typename T::Id id)
+    [[nodiscard]] T *&at_id(typename T::Id id)
     {
         return this->by_id.at(id);
     }
 
-    [[nodiscard]] const T *at(typename T::Id id) const
+    [[nodiscard]] const T *at_id(typename T::Id id) const
     {
         return this->by_id.at(id);
     }
@@ -192,6 +189,34 @@ struct IdTableMixin
     }
 };
 
+
+template<typename T, typename Manager = Noop<T>>
+struct DatabaseWithId : public Database<T, Manager>, public IdTableMixin<T>
+{
+    DatabaseWithId() = default;
+    explicit DatabaseWithId(size_t reserved)
+        : Database<T, Manager>(reserved), IdTableMixin<T>(reserved)
+    {}
+    
+    void emplace(T *property) override
+    {
+        Database<T, Manager>::emplace(property);
+        IdTableMixin<T>::emplace(property);
+    }
+
+    void emplace(size_t index, T *property) override
+    {
+        Database<T, Manager>::emplace(index, property);
+        IdTableMixin<T>::emplace(property);
+    }
+
+    void reserve(size_t count) override
+    {
+        Database<T, Manager>::reserve(count);
+        IdTableMixin<T>::reserve(count);
+    }
+};
+
 template<typename T, typename Manager = Noop<T>>
 struct DatabaseWithNameId : public DatabaseWithName<T, Manager>, public IdTableMixin<T>
 {
@@ -199,10 +224,7 @@ struct DatabaseWithNameId : public DatabaseWithName<T, Manager>, public IdTableM
     explicit DatabaseWithNameId(size_t reserved)
         : DatabaseWithName<T, Manager>(reserved), IdTableMixin<T>(reserved)
     {}
-
-    using DatabaseWithName<T, Manager>::at;
-    using IdTableMixin<T>::at;
-
+	
     void emplace(T *property) override
     {
         DatabaseWithName<T, Manager>::emplace(property);

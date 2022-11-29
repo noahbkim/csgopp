@@ -23,7 +23,7 @@ struct SummaryObserver : public ClientObserverBase<SummaryObserver>
 
     void on_user_creation(Client& client, const User* user) override
     {
-        std::cout << "User " << user->name << " (" << user->xuid << ") connected!" << std::endl;
+        std::cout << "User " << user->name << " (" << user->id << ") connected!" << std::endl;
 
         if (client.entities().get(user->id) != nullptr)
         {
@@ -71,6 +71,11 @@ struct SummaryObserver : public ClientObserverBase<SummaryObserver>
         else if (event.name == "round_end")
         {
             std::cout << "@ Round end: " << event << std::endl;
+        }
+        else if (event.name == "player_team")
+        {
+            const User* user = client.users().at_id(event["userid"].is<int16_t>());
+            std::cout << "@ Player " << user->name << " joined team " << static_cast<int>(event["team"].is<uint8_t>()) << std::endl;
         }
     }
 };
