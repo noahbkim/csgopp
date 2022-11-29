@@ -52,6 +52,40 @@ Reference Reference::operator[](size_t element_index) const
     }
 }
 
+ConstReference::ConstReference(const Type* type, const char* address)
+    : type(type)
+    , address(address)
+{}
+
+ConstReference ConstReference::operator[](const std::string& member_name) const
+{
+    auto* object_type = dynamic_cast<const ObjectType*>(this->type);
+    if (object_type != nullptr)
+    {
+        const ObjectType::Member& member = object_type->at(member_name);
+        return ConstReference(member.type.get(), this->address + member.offset);
+    }
+    else
+    {
+        throw TypeError("member access is only available on objects!");
+    }
+}
+
+ConstReference ConstReference::operator[](size_t element_index) const
+{
+    auto* array_type = dynamic_cast<const ArrayType*>(this->type);
+    if (array_type != nullptr)
+    {
+        size_t element_offset = array_type->at(element_index);
+        return ConstReference(array_type->element_type.get(), this->address + element_offset);
+    }
+    else
+    {
+        throw TypeError("indexing is only available on arrays!");
+    }
+}
+
+
 void ValueType::emit(code::Cursor<code::Declaration>& cursor) const
 {
     cursor.target.type = this->info().name();

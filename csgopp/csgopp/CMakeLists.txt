@@ -6,11 +6,10 @@ add_library(csgopp STATIC
         common/vector.h
         client/entity.cpp client/entity.h
         common/id.h
-        common/interface.h
         client/server_class.cpp client/server_class.h
         error.h
         client/data_table.cpp client/data_table.h
-        common/magic.h common/bits.h
+        common/bits.h
         client/string_table.cpp client/string_table.h
         common/ring.h
         common/reader.h common/database.h common/control.h common/object.h

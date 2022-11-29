@@ -64,9 +64,10 @@ struct Type;
 template<typename T>
 struct As
 {
-    const Type* origin;
-    size_t offset;
+    const Type* origin{nullptr};
+    size_t offset{0};
 
+    As() = default;
     As(const Type* origin, size_t offset);
 
     T* operator()(Reference& reference) const;
@@ -81,16 +82,23 @@ private:
 template<typename T>
 struct Is
 {
-    const Type* origin;
-    size_t offset;
+    const Type* origin{nullptr};
+    size_t offset{0};
 
+    Is() = default;
     Is(const Type* origin, size_t offset);
 
     template<typename U>
     T& operator()(Reference& reference) const;
 
     template<typename U>
+    const T& operator()(const Reference& reference) const;
+
+    template<typename U>
     T& operator()(Instance<U>& instance) const;
+
+    template<typename U>
+    const T& operator()(const Instance<U>& instance) const;
 
 private:
     T& bind(char* address) const;
@@ -98,10 +106,11 @@ private:
 
 struct Accessor
 {
-    const struct Type* origin;
-    const struct Type* type;
-    size_t offset;
+    const struct Type* origin{nullptr};
+    const struct Type* type{nullptr};
+    size_t offset{0};
 
+    Accessor() = default;
     Accessor(const struct Type* origin, const struct Type* type, size_t offset);
 
     Accessor operator[](const std::string& member_name) const;
@@ -160,6 +169,29 @@ struct Reference
 
     template<typename T>
     T& is();
+};
+
+struct ConstReference
+{
+    const Type* type;
+    const char* address;
+
+    ConstReference(const Type* type, const char* address);
+
+    ConstReference operator[](const std::string& member_name) const;
+    ConstReference operator[](size_t element_index) const;
+
+    template<typename T>
+    const T* operator[](const As<T>& as);
+
+    template<typename T>
+    const T& operator[](const Is<T>& is);
+
+    template<typename T>
+    const T* as();
+
+    template<typename T>
+    const T& is();
 };
 
 struct ValueType : public virtual Type
@@ -293,17 +325,33 @@ struct Instance
     Reference operator[](size_t element_index);
     Reference operator*();
 
+    ConstReference operator[](const std::string& member_name) const;
+    ConstReference operator[](size_t element_index) const;
+    ConstReference operator*() const;
+
     template<typename U>
     U* operator[](const As<U>& as);
+
+    template<typename U>
+    const U* operator[](const As<U>& as) const;
 
     template<typename U>
     U& operator[](const Is<U>& as);
 
     template<typename U>
+    const U& operator[](const Is<U>& as) const;
+
+    template<typename U>
     U* as();
 
     template<typename U>
+    const U* as() const;
+
+    template<typename U>
     typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& is();
+
+    template<typename U>
+    const typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& is() const;
 };
 
 template<typename T>
@@ -383,7 +431,35 @@ T& Is<T>::operator()(Reference& reference) const
 
 template<typename T>
 template<typename U>
+const T& Is<T>::operator()(const Reference& reference) const
+{
+    if (reference.type == this->origin)
+    {
+        return this->bind(reference.address);
+    }
+    else
+    {
+        throw TypeError("accessor target does not match its origin");
+    }
+}
+
+template<typename T>
+template<typename U>
 T& Is<T>::operator()(Instance<U>& instance) const
+{
+    if (instance.type == this->origin)
+    {
+        return this->bind(instance.address);
+    }
+    else
+    {
+        throw TypeError("accessor target does not match its origin");
+    }
+}
+
+template<typename T>
+template<typename U>
+const T& Is<T>::operator()(const Instance<U>& instance) const
 {
     if (instance.type == this->origin)
     {
@@ -485,6 +561,45 @@ T& Reference::is()
 }
 
 template<typename T>
+const T* ConstReference::operator[](const As<T>& as)
+{
+    return as(*this);
+}
+
+template<typename T>
+const T& ConstReference::operator[](const Is<T>& is)
+{
+    return is(*this);
+}
+
+template<typename T>
+const T* ConstReference::as()
+{
+    return reinterpret_cast<const T*>(this->address);
+}
+
+template<typename T>
+const T& ConstReference::is()
+{
+    auto* value_type = dynamic_cast<const ValueType*>(this->type);
+    if (value_type != nullptr)
+    {
+        if (value_type->info() == typeid(T))
+        {
+            return *reinterpret_cast<const T*>(this->address);
+        }
+        else
+        {
+            throw TypeError("cast does not match original type!");
+        }
+    }
+    else
+    {
+        throw TypeError("cast is only available for values!");
+    }
+}
+
+template<typename T>
 [[nodiscard]] size_t DefaultValueType<T>::size() const
 {
     return sizeof(T);
@@ -569,8 +684,49 @@ Reference Instance<T>::operator*()
 }
 
 template<typename T>
+ConstReference Instance<T>::operator[](const std::string& member_name) const
+{
+    if constexpr (std::is_base_of<ObjectType, T>::value)
+    {
+        const ObjectType::Member& member = this->type->at(member_name);
+        return ConstReference(member.type.get(), this->address + member.offset);
+    }
+    else
+    {
+        throw TypeError("member access is only available on objects!");
+    }
+}
+
+template<typename T>
+ConstReference Instance<T>::operator[](size_t element_index) const
+{
+    if constexpr (std::is_base_of<ArrayType, T>::value)
+    {
+        size_t offset = this->type->at(element_index);
+        return ConstReference(this->type->element_type.get(), this->address + offset);
+    }
+    else
+    {
+        throw TypeError("indexing is only available on arrays!");
+    }
+}
+
+template<typename T>
+ConstReference Instance<T>::operator*() const
+{
+    return ConstReference(this->type, this->address);
+}
+
+template<typename T>
 template<typename U>
 U* Instance<T>::operator[](const As<U>& as)
+{
+    return as(*this);
+}
+
+template<typename T>
+template<typename U>
+const U* Instance<T>::operator[](const As<U>& as) const
 {
     return as(*this);
 }
@@ -584,9 +740,23 @@ U& Instance<T>::operator[](const Is<U>& as)
 
 template<typename T>
 template<typename U>
+const U& Instance<T>::operator[](const Is<U>& as) const
+{
+    return as(*this);
+}
+
+template<typename T>
+template<typename U>
 U* Instance<T>::as()
 {
     return reinterpret_cast<U*>(this->address);
+}
+
+template<typename T>
+template<typename U>
+const U* Instance<T>::as() const
+{
+    return reinterpret_cast<const U*>(this->address);
 }
 
 template<typename T>
@@ -596,6 +766,20 @@ typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& Instance
     if (this->type->info() == typeid(T))
     {
         return *reinterpret_cast<T*>(this->address);
+    }
+    else
+    {
+        throw TypeError("cast is only available for values!");
+    }
+}
+
+template<typename T>
+template<typename U>
+const typename std::enable_if<std::is_base_of<T, ValueType>::value, U>::type& Instance<T>::is() const
+{
+    if (this->type->info() == typeid(T))
+    {
+        return *reinterpret_cast<const T*>(this->address);
     }
     else
     {

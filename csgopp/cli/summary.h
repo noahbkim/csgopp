@@ -82,6 +82,7 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         if (entity->server_class->name == "CCSGameRulesProxy")
         {
             this->game_rules = entity;
+            std::cout << this->game_rules << std::endl;
         }
     }
 
@@ -89,7 +90,13 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
     {
         if (entity == this->game_rules)
         {
-
+//            for (uint16_t index : indices)
+//            {
+//                if (entity->type->prioritized[index].offset == this->game_phase.offset)
+//                {
+//                    std::cout << "Game phase: " << describe_game_phase((*this->game_rules)[this->game_phase]) << std::endl;
+//                }
+//            }
         }
     }
 
@@ -115,6 +122,10 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         {
             const User* user = client.users().at_id(event["userid"].is<int16_t>());
             std::cout << "@ Player " << user->name << " joined team " << static_cast<int>(event["team"].is<uint8_t>()) << std::endl;
+        }
+        else if (event.name == "buytime_ended")
+        {
+            std::cout << "@ Buytime ended" << std::endl;
         }
     }
 };
