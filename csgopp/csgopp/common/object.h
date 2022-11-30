@@ -360,6 +360,12 @@ std::ostream& operator<<(std::ostream& out, const Instance<T>* instance);
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>& instance);
 
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const Reference& instance);
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const ConstReference& instance);
+
 using Object = Instance<ObjectType>;
 using Array = Instance<ArrayType>;
 
@@ -800,5 +806,9 @@ std::ostream& operator<<(std::ostream& out, const Instance<T>& instance)
     instance.type->represent(instance.address, out);
     return out;
 }
+
+std::ostream& operator<<(std::ostream& out, const Reference& reference);
+
+std::ostream& operator<<(std::ostream& out, const ConstReference& reference);
 
 }

@@ -194,9 +194,9 @@ bool ArrayProperty::equals(const Property* other) const
 
 void DataTableProperty::apply(Cursor<Declaration> declaration) const
 {
-    if (this->flags & Flags::PROXY_ALWAYS_YES)
+    if (this->data_table->is_array)
     {
-        declaration.target.annotations.emplace_back("proxy");
+        declaration.target.annotations.emplace_back("is array");
     }
 }
 

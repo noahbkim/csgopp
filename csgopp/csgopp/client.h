@@ -1300,6 +1300,11 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
         // Actually update the field
         const entity::Offset& offset = entity->type->prioritized.at(i);
         offset.type->update(entity->address + offset.offset, stream, offset.property);
+
+        if (offset.property->name == "m_iWeaponPurchasesThisRound")
+        {
+            printf("******************update\n");
+        }
     }
 }
 
@@ -1389,7 +1394,7 @@ void Client<Observer>::update_user(size_t index, const std::string& data)
 
     if (index >= this->_users.size() || this->_users.at(index) == nullptr)
     {
-        User* user = new User(index);
+        User* user = new User(index + 1);  // Always entity index + 1
         BEFORE(Observer, UserCreationObserver);
         this->_update_user(user, data);
         this->_users.emplace(index, user);

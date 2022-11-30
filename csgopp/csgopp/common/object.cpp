@@ -403,4 +403,16 @@ void ObjectType::represent(const char* address, std::ostream& out) const
     out << "}";
 }
 
+std::ostream& operator<<(std::ostream& out, const Reference& reference)
+{
+    reference.type->represent(reference.address, out);
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const ConstReference& reference)
+{
+    reference.type->represent(reference.address, out);
+    return out;
+}
+
 }
