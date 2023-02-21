@@ -258,8 +258,7 @@ struct ObjectType : public virtual Type
     using Members = std::vector<Member>;
     using MembersLookup = absl::flat_hash_map<std::string, size_t>;
 
-    struct
-    Builder
+    struct Builder
     {
         Members members;
         MembersLookup members_lookup;

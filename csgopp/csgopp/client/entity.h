@@ -140,12 +140,16 @@ struct PropertyArrayType final : public ArrayType, public virtual PropertyValueT
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
+
+/// Maybe this should be the inheritor and we do properties separately
 struct EntityStructureNode
 {
     EntityStructureNode(const DataTableProperty* property, const struct EntityStructureNode* parent);
 
-    const DataTableProperty* property;
-    const struct EntityStructureNode* parent;
+    const DataTableProperty* property{nullptr};
+    const struct EntityStructureNode* parent{nullptr};
+    /// This *could* be flattened at creation time into a vector
+    /// Member can't map here because of DataTable -> Array compression
 };
 
 struct EntityOffset : public Offset

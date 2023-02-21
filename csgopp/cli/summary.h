@@ -133,7 +133,13 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
             {
                 if (offset.parent->property->name == "m_iWeaponPurchasesThisRound")
                 {
-                    std::cout << "Purchase!" << std::endl;
+                    if (offset.parent->parent != nullptr)
+                    {
+                        if (offset.parent->parent->property->name == "cslocaldata")
+                        {
+                            std::cout << "Purchase!" << std::endl;
+                        }
+                    }
                 }
             }
         }
@@ -169,7 +175,7 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
                         {
                             std::cout << ", ";
                         }
-                        std::cout << describe_weapon(i) << " (" << i << ")";
+                        std::cout << describe_weapon(i) << " (" << i << "=" << purchases[i] << ")";
                         first = true;
                     }
                 }
