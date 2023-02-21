@@ -69,8 +69,6 @@ struct Offset
 
     Offset() = default;
     Offset(const PropertyValueType* type, const Property* property, size_t offset);
-
-    Offset relative(size_t to) const;
 };
 
 struct BoolType final : public DefaultValueType<bool>, public PropertyValueType
@@ -142,22 +140,61 @@ struct PropertyArrayType final : public ArrayType, public virtual PropertyValueT
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
+struct EntityStructureNode
+{
+    EntityStructureNode(const DataTableProperty* property, const struct EntityStructureNode* parent);
+
+    const DataTableProperty* property;
+    const struct EntityStructureNode* parent;
+};
+
 struct EntityOffset : public Offset
 {
     /// Maximum property count when flattened is uint16_t, add extra for nesting (though this is unbounded?)
-    std::optional<uint32_t> parent;
+    const EntityStructureNode* parent{nullptr};
 
     EntityOffset() = default;
     EntityOffset(
         const PropertyValueType* type,
         const Property* property,
         size_t offset,
-        std::optional<uint32_t> parent);
+        const EntityStructureNode* parent);
+};
 
-    static EntityOffset from(
-        const Offset& offset,
-        size_t parent_offset,
-        std::optional<uint32_t> parent);
+// TODO: It would be nice to make these a single allocation
+using ExcludeView = std::pair<std::string_view, std::string_view>;
+
+struct EntityStructure
+{
+public:
+    explicit EntityStructure(const DataTable* data_table);
+    ~EntityStructure() noexcept;
+
+    [[nodiscard]] const EntityOffset& at(size_t index) const;
+
+    typename std::vector<EntityOffset>::iterator begin() { return this->prioritized.begin(); }
+    typename std::vector<EntityOffset>::iterator end() { return this->prioritized.end(); }
+    [[nodiscard]] typename std::vector<EntityOffset>::const_iterator begin() const { return this->prioritized.cbegin(); }
+    [[nodiscard]] typename std::vector<EntityOffset>::const_iterator end() const { return this->prioritized.cend(); }
+
+private:
+    std::vector<EntityOffset> prioritized;
+    std::vector<EntityStructureNode*> nodes;
+
+    void collect_properties_head(
+        const DataTable* cursor,
+        const EntityStructureNode* cursor_node,
+        size_t cursor_offset,
+        absl::flat_hash_set<ExcludeView>& excludes,
+        std::vector<EntityOffset>& container);
+
+    void collect_properties_tail(
+        const DataTable* cursor,
+        const EntityStructureNode* cursor_node,
+        size_t cursor_offset,
+        absl::flat_hash_set<ExcludeView>& excludes);
+
+    void prioritize();
 };
 
 struct EntityType final : public ObjectType
@@ -166,9 +203,9 @@ struct EntityType final : public ObjectType
     const DataTable* data_table;
 
     /// Flattened, reordered members used for updates
-    std::vector<Offset> prioritized;
+    EntityStructure structure;
 
-    EntityType(Builder&& builder, const DataTable* data_table, std::vector<Offset>&& prioritized);
+    EntityType(Builder&& builder, const DataTable* data_table);
 };
 
 struct Entity final : public Instance<EntityType>

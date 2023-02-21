@@ -41,11 +41,6 @@ Offset::Offset(const struct PropertyValueType* type, const DataTable::Property* 
     , offset(offset)
 {}
 
-Offset Offset::relative(size_t to) const
-{
-    return Offset(this->type, this->property, to + this->offset);
-}
-
 void BoolType::emit(Cursor<Declaration>& cursor) const
 {
     cursor.target.type = "bool";
@@ -563,32 +558,140 @@ void PropertyArrayType::update(char* address, BitStream& stream, const Property*
     }
 }
 
+EntityStructureNode::EntityStructureNode(const DataTableProperty* property, const struct EntityStructureNode* parent)
+    : property(property)
+    , parent(parent)
+{}
+
 EntityOffset::EntityOffset(
     const PropertyValueType* type,
     const Property* property,
     size_t offset,
-    std::optional<uint32_t> parent
+    const EntityStructureNode* parent
 )
     : Offset(type, property, offset)
     , parent(parent)
 {}
 
-EntityOffset EntityOffset::from(
-    const Offset& offset,
-    size_t parent_offset,
-    std::optional<uint32_t> parent)
+EntityStructure::EntityStructure(const DataTable* data_table)
 {
-    return EntityOffset(
-        offset.type,
-        offset.property,
-        parent_offset + offset.offset,
-        parent);
+    absl::flat_hash_set<ExcludeView> excludes;
+    this->collect_properties_tail(data_table, nullptr, 0, excludes);
+    this->prioritize();
 }
 
-EntityType::EntityType(Builder&& builder, const DataTable* data_table, std::vector<Offset>&& prioritized)
+EntityStructure::~EntityStructure() noexcept
+{
+    for (const EntityStructureNode* node : this->nodes)
+    {
+        delete node;
+    }
+}
+
+const EntityOffset& EntityStructure::at(size_t index) const
+{
+    return this->prioritized.at(index);
+}
+
+void EntityStructure::collect_properties_head(
+    const DataTable* cursor,
+    const EntityStructureNode* cursor_node,
+    size_t cursor_offset,
+    absl::flat_hash_set<ExcludeView>& excludes,
+    std::vector<EntityOffset>& container)
+{
+    // TODO: this doesn't 100% reflect the recursion but I'm pretty sure it's fine
+    for (const auto& item : cursor->excludes)
+    {
+        excludes.emplace(item);
+    }
+
+    for (DataTable::Property* property : cursor->properties)
+    {
+        if (excludes.contains(std::make_pair(cursor->name, property->name)))
+        {
+            continue;
+        }
+
+        const auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
+        if (data_table_property != nullptr)
+        {
+            auto* child = new EntityStructureNode(data_table_property, cursor_node);
+            this->nodes.emplace_back(child);
+
+            if (data_table_property->collapsible())
+            {
+                collect_properties_head(
+                    data_table_property->data_table,
+                    child,
+                    cursor_offset + property->offset.offset,
+                    excludes,
+                    container);
+            }
+            else
+            {
+                collect_properties_tail(
+                    data_table_property->data_table,
+                    child,
+                    cursor_offset + property->offset.offset,
+                    excludes);
+            }
+        }
+        else
+        {
+            container.emplace_back(
+                property->offset.type,
+                property,
+                cursor_offset + property->offset.offset,
+                cursor_node);
+        }
+    }
+}
+
+void EntityStructure::collect_properties_tail(
+    const DataTable* cursor,
+    const EntityStructureNode* cursor_node,
+    size_t cursor_offset,
+    absl::flat_hash_set<ExcludeView>& excludes)
+{
+    std::vector<EntityOffset> container;
+    collect_properties_head(cursor, cursor_node, cursor_offset, excludes, container);
+    for (const EntityOffset& absolute : container)
+    {
+        this->prioritized.emplace_back(absolute);
+    }
+}
+
+void EntityStructure::prioritize()
+{
+    size_t start = 0;
+    bool more = true;
+    for (size_t priority = 0; priority <= 64 || more; ++priority)
+    {
+        more = false;
+        for (size_t i = start; i < this->prioritized.size(); ++i)
+        {
+            const Property* property = this->prioritized[i].property;
+            if (property->priority == priority || priority == 64 && property->changes_often())
+            {
+                if (start != i)
+                {
+                    std::swap(this->prioritized[start], this->prioritized[i]);
+                }
+                start += 1;
+            }
+            else if (property->priority > priority)
+            {
+                more = true;
+            }
+        }
+    }
+}
+
+EntityType::EntityType(Builder&& builder, const DataTable* data_table)
     : ObjectType(std::move(builder))
     , data_table(data_table)
-    , prioritized(std::move(prioritized))
+    , structure(data_table)
 {}
 
 Entity::Entity(const EntityType* type, char* address, Id id, const ServerClass* server_class)

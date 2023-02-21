@@ -1299,7 +1299,7 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
     for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
-        const entity::Offset& offset = entity->type->prioritized.at(i);
+        const entity::Offset& offset = entity->type->structure.at(i);
         offset.type->update(entity->address + offset.offset, stream, offset.property);
     }
 }

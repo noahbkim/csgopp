@@ -17,7 +17,6 @@ using csgopp::common::control::concatenate;
 using csgopp::client::entity::PropertyArrayType;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Offset;
-using csgopp::client::entity::EntityOffset;
 
 Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
@@ -37,16 +36,6 @@ void Property::build(EntityType::Builder& builder)
 {
     return false;
 };
-
-[[nodiscard]] constexpr bool Property::collapsible() const
-{
-    return this->flags & Flags::COLLAPSIBLE;
-}
-
-[[nodiscard]] constexpr bool Property::changes_often() const
-{
-    return this->flags & Flags::CHANGES_OFTEN;
-}
 
 Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
     : bits(data.num_bits())
@@ -282,84 +271,6 @@ DataTable::DataTable(const CSVCMsg_SendTable& data)
     , properties(data.props_size())
 {}
 
-template<typename Callback>
-void collect_properties_tail(
-    DataTable* data_table,
-    size_t offset,
-    absl::flat_hash_set<std::pair<std::string_view, std::string_view>>& excludes,
-    Callback callback);
-
-template<typename Callback>
-void collect_properties_head(
-    DataTable* data_table,
-    size_t offset,
-    absl::flat_hash_set<DataTable::ExcludeView>& excludes,
-    Callback callback,
-    std::vector<Offset>& offsets)
-{
-    // TODO: this doesn't 100% reflect the recursion but I'm pretty sure it's fine
-    for (const auto& item : data_table->excludes)
-    {
-        excludes.emplace(item);
-    }
-
-    for (DataTable::Property* property : data_table->properties)
-    {
-        if (excludes.contains(std::make_pair(data_table->name, property->name)))
-        {
-            continue;
-        }
-
-        auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
-        if (data_table_property != nullptr)
-        {
-            if (data_table_property->collapsible())
-            {
-                collect_properties_head(
-                    data_table_property->data_table,
-                    offset + property->offset.offset,
-                    excludes,
-                    callback,
-                    offsets);
-            }
-            else
-            {
-                collect_properties_tail(
-                    data_table_property->data_table,
-                    offset + property->offset.offset,
-                    excludes,
-                    callback);
-            }
-        }
-        else
-        {
-            offsets.emplace_back(property->offset.relative(offset));
-        }
-    }
-}
-
-template<typename Callback>
-void collect_properties_tail(
-    DataTable* data_table,
-    size_t offset,
-    absl::flat_hash_set<DataTable::ExcludeView>& excludes,
-    Callback callback)
-{
-    std::vector<Offset> offsets;
-    collect_properties_head(data_table, offset, excludes, callback, offsets);
-    for (const Offset& absolute : offsets)
-    {
-        callback(absolute);
-    }
-}
-
-template<typename Callback>
-void collect_properties(DataTable* data_table, Callback callback)
-{
-    absl::flat_hash_set<DataTable::ExcludeView> excludes;
-    collect_properties_tail(data_table, 0, excludes, callback);
-}
-
 std::shared_ptr<const PropertyArrayType> DataTable::materialize_array()
 {
     std::shared_ptr<const common::object::Type> array_type = this->properties.at(0)->materialize();
@@ -392,43 +303,11 @@ std::shared_ptr<const EntityType> DataTable::materialize()
     EntityType::Builder builder(base);
     builder.name = this->name;
     builder.context = this;
-
     for (DataTable::Property* property : this->properties)
     {
         property->build(builder);
     }
-
-    std::vector<Offset> prioritized;
-    collect_properties(this, [&prioritized](const Offset& absolute)
-    {
-        prioritized.emplace_back(absolute);
-    });
-
-    size_t start = 0;
-    bool more = true;
-    for (size_t priority = 0; priority <= 64 || more; ++priority)
-    {
-        more = false;
-        for (size_t i = start; i < prioritized.size(); ++i)
-        {
-            const Property* property = prioritized[i].property;
-            if (property->priority == priority || priority == 64 && property->changes_often())
-            {
-                if (start != i)
-                {
-                    std::swap(prioritized[start], prioritized[i]);
-                }
-                start += 1;
-            }
-            else if (property->priority > priority)
-            {
-                more = true;
-            }
-        }
-    }
-
-    auto type = std::make_shared<EntityType>(std::move(builder), this, std::move(prioritized));
-    this->entity_type = type;
+    this->entity_type = std::make_shared<EntityType>(std::move(builder), this);
     return this->entity_type;
 }
 

@@ -228,7 +228,10 @@ struct Property : Context<Declaration>
     ///
     /// \sa `DataTableProperty::build`
     /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h#L74
-    [[nodiscard]] constexpr bool collapsible() const;
+    [[nodiscard]] inline bool collapsible() const
+    {
+        return this->flags & Flags::COLLAPSIBLE;
+    }
 
     /// \brief Check if the property changes often.
     ///
@@ -238,7 +241,10 @@ struct Property : Context<Declaration>
     /// marked as CHANGES_OFTEN are given priority 64.
     ///
     /// \sa `DataTable::materialize`
-    [[nodiscard]] constexpr bool changes_often() const;
+    [[nodiscard]] inline bool changes_often() const
+    {
+        return this->flags & Flags::CHANGES_OFTEN;
+    }
 };
 
 /// \brief Represents an integer with maximum width 32 bits. Can be boolean.
@@ -364,6 +370,10 @@ struct Int64Property final : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
+// TODO: DELETe
+using Exclude = std::pair<std::string, std::string>;
+using ExcludeView = std::pair<std::string_view, std::string_view>;
+
 /// \brief A collection of properties that mirror a send/receive table.
 ///
 /// Data tables are a core part of the source engine's data low-latency data
@@ -423,9 +433,6 @@ struct DataTable : Context<Definition>
 
     // Internal use
     using PropertyDatabase = DatabaseWithName<Property, Delete<Property>>;
-    // TODO: It would be nice to make these a single allocation
-    using Exclude = std::pair<std::string, std::string>;
-    using ExcludeView = std::pair<std::string_view, std::string_view>;
 
     /// \brief The name of the data table.
     std::string name;
