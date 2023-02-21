@@ -124,6 +124,21 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
 
+//    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
+//    {
+//        for (uint16_t index : indices)
+//        {
+//            const csgopp::client::entity::MaterializedOffset& offset = entity->type->prioritized[index];
+//            if (offset.parent != nullptr)
+//            {
+//                if (offset.parent->name == "m_iWeaponPurchasesThisRound")
+//                {
+//                    std::cout << "Purchase!" << std::endl;
+//                }
+//            }
+//        }
+//    }
+
     void on_game_event(Client &client, GameEvent& event) override
     {
         if (event.name == "round_end")

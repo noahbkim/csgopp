@@ -16,6 +16,7 @@ namespace csgopp::client::data_table
 
 struct Property;
 struct DataTable;
+struct DataTableProperty;
 
 }
 
@@ -46,6 +47,7 @@ using csgopp::common::code::Dependencies;
 using csgopp::common::code::Cursor;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::Property;
+using csgopp::client::data_table::DataTableProperty;
 using csgopp::client::server_class::ServerClass;
 
 enum struct Precision
@@ -68,7 +70,7 @@ struct Offset
     Offset() = default;
     Offset(const PropertyValueType* type, const Property* property, size_t offset);
 
-    [[nodiscard]] Offset from(size_t parent) const;
+    Offset relative(size_t to) const;
 };
 
 struct BoolType final : public DefaultValueType<bool>, public PropertyValueType
@@ -140,6 +142,24 @@ struct PropertyArrayType final : public ArrayType, public virtual PropertyValueT
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
+struct EntityOffset : public Offset
+{
+    /// Maximum property count when flattened is uint16_t, add extra for nesting (though this is unbounded?)
+    std::optional<uint32_t> parent;
+
+    EntityOffset() = default;
+    EntityOffset(
+        const PropertyValueType* type,
+        const Property* property,
+        size_t offset,
+        std::optional<uint32_t> parent);
+
+    static EntityOffset from(
+        const Offset& offset,
+        size_t parent_offset,
+        std::optional<uint32_t> parent);
+};
+
 struct EntityType final : public ObjectType
 {
     /// Fine
@@ -148,7 +168,7 @@ struct EntityType final : public ObjectType
     /// Flattened, reordered members used for updates
     std::vector<Offset> prioritized;
 
-    EntityType(Builder&& builder, const DataTable* data_table);
+    EntityType(Builder&& builder, const DataTable* data_table, std::vector<Offset>&& prioritized);
 };
 
 struct Entity final : public Instance<EntityType>

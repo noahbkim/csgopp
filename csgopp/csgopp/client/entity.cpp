@@ -41,10 +41,9 @@ Offset::Offset(const struct PropertyValueType* type, const DataTable::Property* 
     , offset(offset)
 {}
 
-Offset Offset::from(size_t parent) const
+Offset Offset::relative(size_t to) const
 {
-    Offset result(this->type, this->property, parent + this->offset);
-    return result;
+    return Offset(this->type, this->property, to + this->offset);
 }
 
 void BoolType::emit(Cursor<Declaration>& cursor) const
@@ -564,9 +563,32 @@ void PropertyArrayType::update(char* address, BitStream& stream, const Property*
     }
 }
 
-EntityType::EntityType(Builder&& builder, const DataTable* data_table)
+EntityOffset::EntityOffset(
+    const PropertyValueType* type,
+    const Property* property,
+    size_t offset,
+    std::optional<uint32_t> parent
+)
+    : Offset(type, property, offset)
+    , parent(parent)
+{}
+
+EntityOffset EntityOffset::from(
+    const Offset& offset,
+    size_t parent_offset,
+    std::optional<uint32_t> parent)
+{
+    return EntityOffset(
+        offset.type,
+        offset.property,
+        parent_offset + offset.offset,
+        parent);
+}
+
+EntityType::EntityType(Builder&& builder, const DataTable* data_table, std::vector<Offset>&& prioritized)
     : ObjectType(std::move(builder))
     , data_table(data_table)
+    , prioritized(std::move(prioritized))
 {}
 
 Entity::Entity(const EntityType* type, char* address, Id id, const ServerClass* server_class)

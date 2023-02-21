@@ -17,6 +17,7 @@ using csgopp::common::control::concatenate;
 using csgopp::client::entity::PropertyArrayType;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Offset;
+using csgopp::client::entity::EntityOffset;
 
 Property::Property(CSVCMsg_SendTable_sendprop_t&& data)
     : name(std::move(*data.mutable_var_name()))
@@ -332,7 +333,7 @@ void collect_properties_head(
         }
         else
         {
-            offsets.emplace_back(property->offset.from(offset));
+            offsets.emplace_back(property->offset.relative(offset));
         }
     }
 }
@@ -397,11 +398,10 @@ std::shared_ptr<const EntityType> DataTable::materialize()
         property->build(builder);
     }
 
-    auto type = std::make_shared<EntityType>(std::move(builder), this);
-
-    collect_properties(this, [&type](const Offset& absolute)
+    std::vector<Offset> prioritized;
+    collect_properties(this, [&prioritized](const Offset& absolute)
     {
-        type->prioritized.emplace_back(absolute);
+        prioritized.emplace_back(absolute);
     });
 
     size_t start = 0;
@@ -409,14 +409,14 @@ std::shared_ptr<const EntityType> DataTable::materialize()
     for (size_t priority = 0; priority <= 64 || more; ++priority)
     {
         more = false;
-        for (size_t i = start; i < type->prioritized.size(); ++i)
+        for (size_t i = start; i < prioritized.size(); ++i)
         {
-            const Property* property = type->prioritized[i].property;
+            const Property* property = prioritized[i].property;
             if (property->priority == priority || priority == 64 && property->changes_often())
             {
                 if (start != i)
                 {
-                    std::swap(type->prioritized[start], type->prioritized[i]);
+                    std::swap(prioritized[start], prioritized[i]);
                 }
                 start += 1;
             }
@@ -427,6 +427,7 @@ std::shared_ptr<const EntityType> DataTable::materialize()
         }
     }
 
+    auto type = std::make_shared<EntityType>(std::move(builder), this, std::move(prioritized));
     this->entity_type = type;
     return this->entity_type;
 }

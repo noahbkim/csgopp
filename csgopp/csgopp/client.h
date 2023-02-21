@@ -231,7 +231,7 @@ struct ClientObserverBase
     /// Called by the default server class update observer.
     virtual void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) {}
 
-    /// \brief This event is emitted when a network string table is created.
+    /// \brief This event is emitted when entity properties are updated.
     struct EntityUpdateObserver
     {
         EntityUpdateObserver() = default;
@@ -755,7 +755,8 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
             DataTable* data_table = new DataTable(data);
             DataTable::Property* preceding_array_element{nullptr};
 
-            // Do a check to see if our items are all the same type and enumerated
+            // Do a check to see if our items are all the same type and enumerated; if so we'll turn them into a single
+            // array later on.
             bool is_coalesced_array{true};
             DataTable::Property* coalesced_array_element{nullptr};
             size_t coalesced_array_index{0};
@@ -1300,11 +1301,6 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
         // Actually update the field
         const entity::Offset& offset = entity->type->prioritized.at(i);
         offset.type->update(entity->address + offset.offset, stream, offset.property);
-
-        if (offset.property->name == "m_iWeaponPurchasesThisRound")
-        {
-            printf("******************update\n");
-        }
     }
 }
 
@@ -1347,6 +1343,8 @@ template<typename Observer>
 void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 {
     Entity* entity = this->_entities.at(id);
+    // TODO: move this into _update_entity, probably actually need to split _update_entity into two parts because we
+    // don't want a callback during entity creation
     BEFORE(Observer, EntityUpdateObserver, std::as_const(entity));
     this->_update_entity(entity, stream);
     AFTER(EntityUpdateObserver, std::as_const(entity), std::as_const(this->_update_entity_indices));
