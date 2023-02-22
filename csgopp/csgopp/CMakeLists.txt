@@ -14,7 +14,7 @@ add_library(csgopp STATIC
         common/ring.h
         common/reader.h common/database.h common/control.h common/object.h
         common/object.h common/object.cpp
-        client/user.h client/user.cpp common/code.h common/code.cpp common/control.cpp common/layout.h client/game_event.h client/game_event.cpp)
+        client/user.h client/user.cpp common/code.h common/code.cpp common/control.cpp common/layout.h client/game_event.h client/game_event.cpp client/data_table/property.cpp client/data_table/property.h client/data_table/data_type.cpp client/data_table/data_type.h client/data_table/data_property.cpp client/data_table/data_property.h client/data_table/data_table_property.cpp client/data_table/data_table_property.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(csgopp PRIVATE cxx_std_17)

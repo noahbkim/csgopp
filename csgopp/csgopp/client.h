@@ -69,6 +69,7 @@ using csgopp::client::server_class::ServerClass;
 using csgopp::client::string_table::StringTable;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Entity;
+using csgopp::client::entity::DataOffset;
 using csgopp::client::game_event::GameEventType;
 using csgopp::client::game_event::GameEvent;
 using csgopp::client::user::User;
@@ -753,7 +754,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
         if (!data.is_end())
         {
             DataTable* data_table = new DataTable(data);
-            DataTable::Property* preceding_array_element{nullptr};
+            DataTable::DataProperty* preceding_array_element{nullptr};
 
             // Do a check to see if our items are all the same type and enumerated; if so we'll turn them into a single
             // array later on.
@@ -832,7 +833,9 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                 {
                     VERIFY(preceding_array_element == nullptr);
-                    preceding_array_element = property;
+                    DataTable::DataProperty* data_property = dynamic_cast<DataTable::DataProperty*>(property);
+                    VERIFY(data_property != nullptr);
+                    preceding_array_element = data_property;
                 }
                 else
                 {
@@ -920,7 +923,7 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     // Materialize types
     for (ServerClass* server_class : new_server_classes)
     {
-        server_class->data_table->materialize();
+        server_class->data_table->construct_type();
     }
 
     // Now we can emplace and emit
@@ -1299,8 +1302,8 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
     for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
-        const entity::EntityOffset& offset = entity->type->prioritized[i];
-        offset.type->update(entity->address + offset.offset, stream, offset.property);
+        const DataOffset& offset = entity->type->prioritized[i];
+        offset.property->data_type()->update(entity->address + offset.offset, stream, offset.property);
     }
 }
 
@@ -1317,8 +1320,8 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 
     BEFORE(Observer, EntityCreationObserver, id, std::as_const(server_class));
 
-    VERIFY(server_class->data_table->entity_type != nullptr);
-    Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->entity_type.get(), id, server_class);
+    VERIFY(server_class->data_table->type() != nullptr);
+    Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->type().get(), id, server_class);
 
     // Update from baseline in string table
     VERIFY(this->_string_tables.instance_baseline != nullptr);

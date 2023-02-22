@@ -38,9 +38,9 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
     void on_data_table_creation(Client& client, const DataTable* data_table) override
     {
         this->data_table_count += 1;
-        if (data_table->entity_type)
+        if (data_table->type())
         {
-            data_table->entity_type->emit(class_type_generator.append(data_table->name));
+            data_table->type()->emit(class_type_generator.append(data_table->name));
             this->entity_type_count += 1;
         }
     }
@@ -168,10 +168,10 @@ struct GenerateCommand
 
         for (const DataTable* data_table : client.data_tables())
         {
-            if (data_table->entity_type)
+            if (data_table->type())
             {
-                out << data_table->entity_type->name << std::endl;
-                for (const csgopp::client::entity::Offset& absolute : data_table->entity_type->prioritized)
+                out << data_table->type()->name << std::endl;
+                for (const csgopp::client::entity::DataOffset& absolute : data_table->type()->prioritized)
                 {
                     out << "  " << absolute.property->name << std::endl;
                 }
@@ -192,11 +192,11 @@ struct GenerateCommand
 
         for (const DataTable* data_table : client.data_tables())
         {
-            if (data_table->entity_type)
+            if (data_table->type())
             {
-                out << data_table->entity_type->name;  // Newline is added
+                out << data_table->type()->name;  // Newline is added
                 csgopp::common::layout::Cursor cursor(out);
-                data_table->entity_type->emit(cursor);
+                data_table->type()->emit(cursor);
                 out << std::endl;
             }
         }
