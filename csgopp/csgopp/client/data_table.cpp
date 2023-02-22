@@ -42,9 +42,9 @@ Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
     , Property(std::move(data))
 {}
 
-Property::Type::T Int32Property::type() const
+Property::Kind::T Int32Property::kind() const
 {
-    return Type::INT32;
+    return Kind::INT32;
 }
 
 std::shared_ptr<const common::object::Type> Int32Property::materialize() const
@@ -77,9 +77,9 @@ FloatProperty::FloatProperty(CSVCMsg_SendTable_sendprop_t&& data)
     , Property(std::move(data))
 {}
 
-Property::Type::T FloatProperty::type() const
+Property::Kind::T FloatProperty::kind() const
 {
-    return Type::FLOAT;
+    return Kind::FLOAT;
 }
 
 std::shared_ptr<const common::object::Type> FloatProperty::materialize() const
@@ -101,9 +101,9 @@ Vector3Property::Vector3Property(CSVCMsg_SendTable_sendprop_t&& data)
     , Property(std::move(data))
 {}
 
-Property::Type::T Vector3Property::type() const
+Property::Kind::T Vector3Property::kind() const
 {
-    return Type::VECTOR3;
+    return Kind::VECTOR3;
 }
 
 std::shared_ptr<const common::object::Type> Vector3Property::materialize() const
@@ -125,9 +125,9 @@ Vector2Property::Vector2Property(CSVCMsg_SendTable_sendprop_t&& data)
     , Property(std::move(data))
 {}
 
-Property::Type::T Vector2Property::type() const
+Property::Kind::T Vector2Property::kind() const
 {
-    return Type::VECTOR2;
+    return Kind::VECTOR2;
 }
 
 std::shared_ptr<const common::object::Type> Vector2Property::materialize() const
@@ -142,9 +142,9 @@ bool Vector2Property::equals(const Property* other) const
     return true;
 }
 
-Property::Type::T StringProperty::type() const
+Property::Kind::T StringProperty::kind() const
 {
-    return Type::STRING;
+    return Kind::STRING;
 }
 
 std::shared_ptr<const common::object::Type> StringProperty::materialize() const
@@ -165,9 +165,9 @@ ArrayProperty::ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* elem
     , Property(std::move(data))
 {}
 
-Property::Type::T ArrayProperty::type() const
+Property::Kind::T ArrayProperty::kind() const
 {
-    return Type::ARRAY;
+    return Kind::ARRAY;
 }
 
 std::shared_ptr<const common::object::Type> ArrayProperty::materialize() const
@@ -194,9 +194,9 @@ DataTableProperty::DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data)
     : Property(std::move(data))
 {}
 
-Property::Type::T DataTableProperty::type() const
+Property::Kind::T DataTableProperty::kind() const
 {
-    return Type::DATA_TABLE;
+    return Kind::DATA_TABLE;
 }
 
 std::shared_ptr<const common::object::Type> DataTableProperty::materialize() const
@@ -241,9 +241,9 @@ Int64Property::Int64Property(CSVCMsg_SendTable_sendprop_t&& data)
     , Property(std::move(data))
 {}
 
-Property::Type::T Int64Property::type() const
+Property::Kind::T Int64Property::kind() const
 {
-    return Type::INT64;
+    return Kind::INT64;
 }
 
 std::shared_ptr<const common::object::Type> Int64Property::materialize() const

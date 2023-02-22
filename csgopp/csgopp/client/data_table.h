@@ -120,7 +120,7 @@ struct Property : Context<Declaration>
 {
     /// \brief The type of property as reported by the serialized data.
     /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h
-    struct Type
+    struct Kind
     {
         using T = int32_t;
         enum E : T
@@ -174,7 +174,7 @@ struct Property : Context<Declaration>
     /// subclass type, but we still want to be able to access it. If you find
     /// yourself switching on this type, you might want to reconsider why
     /// you're not working directly with the virtual interface.
-    [[nodiscard]] virtual Type::T type() const = 0;
+    [[nodiscard]] virtual Kind::T kind() const = 0;
 
     /// \brief Materialize a `object::Type` from the property.
     ///
@@ -253,7 +253,7 @@ struct Int32Property final : public Property
     int32_t bits;
 
     explicit Int32Property(CSVCMsg_SendTable_sendprop_t&& data);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -266,7 +266,7 @@ struct FloatProperty final : public Property
     int32_t bits;
 
     explicit FloatProperty(CSVCMsg_SendTable_sendprop_t&& data);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -279,7 +279,7 @@ struct Vector3Property final : public Property
     int32_t bits;
 
     explicit Vector3Property(CSVCMsg_SendTable_sendprop_t&& data);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -292,7 +292,7 @@ struct Vector2Property final : public Property
     int32_t bits;
 
     explicit Vector2Property(CSVCMsg_SendTable_sendprop_t&& data);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -301,7 +301,7 @@ struct Vector2Property final : public Property
 struct StringProperty final : public Property
 {
     using Property::Property;
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -316,7 +316,7 @@ struct ArrayProperty final : public Property
     int32_t length;
 
     ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, Property* element);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -336,7 +336,7 @@ struct DataTableProperty final : public Property
 
     // No constructor because data_table is set later on
     explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
 
     /// \brief Add the referenced data table as a member of the `EntityType`.
@@ -365,7 +365,7 @@ struct Int64Property final : public Property
     int32_t bits;
 
     explicit Int64Property(CSVCMsg_SendTable_sendprop_t&& data);
-    [[nodiscard]] Type::T type() const override;
+    [[nodiscard]] Kind::T kind() const override;
     [[nodiscard]] std::shared_ptr<const common::object::Type> materialize() const override;
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -509,15 +509,15 @@ using DataTableDatabase = DatabaseWithName<DataTable, Delete<DataTable>>;
 /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_send.cpp
 bool is_array_index(std::string_view name, size_t index);
 
-LOOKUP(describe, DataTable::Property::Type::T, const char*,
-    CASE(DataTable::Property::Type::INT32, "INT32")
-    CASE(DataTable::Property::Type::FLOAT, "FLOAT")
-    CASE(DataTable::Property::Type::VECTOR3, "VECTOR3")
-    CASE(DataTable::Property::Type::VECTOR2, "VECTOR2")
-    CASE(DataTable::Property::Type::STRING, "STRING")
-    CASE(DataTable::Property::Type::ARRAY, "ARRAY")
-    CASE(DataTable::Property::Type::DATA_TABLE, "DATA_TABLE")
-    CASE(DataTable::Property::Type::INT64, "INT64")
+LOOKUP(describe, DataTable::Property::Kind::T, const char*,
+    CASE(DataTable::Property::Kind::INT32, "INT32")
+    CASE(DataTable::Property::Kind::FLOAT, "FLOAT")
+    CASE(DataTable::Property::Kind::VECTOR3, "VECTOR3")
+    CASE(DataTable::Property::Kind::VECTOR2, "VECTOR2")
+    CASE(DataTable::Property::Kind::STRING, "STRING")
+    CASE(DataTable::Property::Kind::ARRAY, "ARRAY")
+    CASE(DataTable::Property::Kind::DATA_TABLE, "DATA_TABLE")
+    CASE(DataTable::Property::Kind::INT64, "INT64")
     DEFAULT(throw GameError("unknown send table property type: " + std::to_string(key))));
 
 }

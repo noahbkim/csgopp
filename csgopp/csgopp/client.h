@@ -775,33 +775,33 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 DataTable::Property* property;
                 switch (property_data.type())
                 {
-                    using Type = DataTable::Property::Type;
-                    case Type::INT32:
+                    using Kind = DataTable::Property::Kind;
+                    case Kind::INT32:
                         property = new DataTable::Int32Property(std::move(property_data));
                         break;
-                    case Type::FLOAT:
+                    case Kind::FLOAT:
                         property = new DataTable::FloatProperty(std::move(property_data));
                         break;
-                    case Type::VECTOR3:
+                    case Kind::VECTOR3:
                         property = new DataTable::Vector3Property(std::move(property_data));
                         break;
-                    case Type::VECTOR2:
+                    case Kind::VECTOR2:
                         property = new DataTable::Vector2Property(std::move(property_data));
                         break;
-                    case Type::STRING:
+                    case Kind::STRING:
                         property = new DataTable::StringProperty(std::move(property_data));
                         break;
-                    case Type::ARRAY:
+                    case Kind::ARRAY:
                         VERIFY(preceding_array_element != nullptr);
                         property = new DataTable::ArrayProperty(std::move(property_data), preceding_array_element);
                         preceding_array_element = nullptr;
                         break;
-                    case Type::DATA_TABLE:
+                    case Kind::DATA_TABLE:
                         property = new_data_table_properties.emplace_back(
                             new DataTable::DataTableProperty(std::move(property_data)),
                             std::string(std::move(*property_data.mutable_dt_name()))).property;
                         break;
-                    case Type::INT64:
+                    case Kind::INT64:
                         property = new DataTable::Int64Property(std::move(property_data));
                         break;
                     default:
