@@ -201,7 +201,6 @@ Property::Type::T DataTableProperty::type() const
 
 std::shared_ptr<const common::object::Type> DataTableProperty::materialize() const
 {
-
     if (this->data_table->is_array)
     {
         return this->data_table->materialize_array();
@@ -216,7 +215,7 @@ void DataTableProperty::build(EntityType::Builder& builder)
 {
     if (this->name == "baseclass")
     {
-        // Do nothing
+        // Do nothing; this is already handled
     }
     else if (this->collapsible())
     {

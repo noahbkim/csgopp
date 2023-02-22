@@ -140,66 +140,35 @@ struct PropertyArrayType final : public ArrayType, public virtual PropertyValueT
     void update(char* address, BitStream& stream, const Property* property) const override;
 };
 
-
-/// Maybe this should be the inheritor and we do properties separately
-struct EntityStructureNode
+struct ParentOffset
 {
-    EntityStructureNode(const DataTableProperty* property, const struct EntityStructureNode* parent);
-
+    const Type* type{nullptr};  // MAY BE NULL?
     const DataTableProperty* property{nullptr};
-    const struct EntityStructureNode* parent{nullptr};
-    /// This *could* be flattened at creation time into a vector
-    /// Member can't map here because of DataTable -> Array compression
+    size_t offset{0};
+    std::shared_ptr<const ParentOffset> parent;
+
+    ParentOffset() = default;
+    ParentOffset(
+        const Type* type,
+        const DataTableProperty* property,
+        size_t offset,
+        std::shared_ptr<const ParentOffset> parent);
 };
 
 struct EntityOffset : public Offset
 {
-    /// Maximum property count when flattened is uint16_t, add extra for nesting (though this is unbounded?)
-    const EntityStructureNode* parent{nullptr};
+    std::shared_ptr<const ParentOffset> parent;
 
     EntityOffset() = default;
     EntityOffset(
         const PropertyValueType* type,
         const Property* property,
         size_t offset,
-        const EntityStructureNode* parent);
+        std::shared_ptr<const ParentOffset> parent);
 };
 
 // TODO: It would be nice to make these a single allocation
 using ExcludeView = std::pair<std::string_view, std::string_view>;
-
-struct EntityStructure
-{
-public:
-    explicit EntityStructure(const DataTable* data_table);
-    ~EntityStructure() noexcept;
-
-    [[nodiscard]] const EntityOffset& at(size_t index) const;
-
-    typename std::vector<EntityOffset>::iterator begin() { return this->prioritized.begin(); }
-    typename std::vector<EntityOffset>::iterator end() { return this->prioritized.end(); }
-    [[nodiscard]] typename std::vector<EntityOffset>::const_iterator begin() const { return this->prioritized.cbegin(); }
-    [[nodiscard]] typename std::vector<EntityOffset>::const_iterator end() const { return this->prioritized.cend(); }
-
-private:
-    std::vector<EntityOffset> prioritized;
-    std::vector<EntityStructureNode*> nodes;
-
-    void collect_properties_head(
-        const DataTable* cursor,
-        const EntityStructureNode* cursor_node,
-        size_t cursor_offset,
-        absl::flat_hash_set<ExcludeView>& excludes,
-        std::vector<EntityOffset>& container);
-
-    void collect_properties_tail(
-        const DataTable* cursor,
-        const EntityStructureNode* cursor_node,
-        size_t cursor_offset,
-        absl::flat_hash_set<ExcludeView>& excludes);
-
-    void prioritize();
-};
 
 struct EntityType final : public ObjectType
 {
@@ -207,9 +176,24 @@ struct EntityType final : public ObjectType
     const DataTable* data_table;
 
     /// Flattened, reordered members used for updates
-    EntityStructure structure;
+    std::vector<EntityOffset> prioritized;
 
     EntityType(Builder&& builder, const DataTable* data_table);
+
+    void collect_properties_head(
+        const DataTable* cursor,
+        const std::shared_ptr<const ParentOffset>& cursor_parent,
+        size_t cursor_offset,
+        absl::flat_hash_set<ExcludeView>& excludes,
+        std::vector<EntityOffset>& container);
+
+    void collect_properties_tail(
+        const DataTable* cursor,
+        const std::shared_ptr<const ParentOffset>& cursor_parent,
+        size_t cursor_offset,
+        absl::flat_hash_set<ExcludeView>& excludes);
+
+    void prioritize();
 };
 
 struct Entity final : public Instance<EntityType>

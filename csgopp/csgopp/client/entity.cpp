@@ -558,44 +558,31 @@ void PropertyArrayType::update(char* address, BitStream& stream, const Property*
     }
 }
 
-EntityStructureNode::EntityStructureNode(const DataTableProperty* property, const struct EntityStructureNode* parent)
-    : property(property)
-    , parent(parent)
+ParentOffset::ParentOffset(
+    const Type* type,
+    const DataTableProperty* property,
+    size_t offset,
+    std::shared_ptr<const ParentOffset> parent
+)
+    : type(type)
+    , property(property)
+    , offset(offset)
+    , parent(std::move(parent))
 {}
 
 EntityOffset::EntityOffset(
     const PropertyValueType* type,
     const Property* property,
     size_t offset,
-    const EntityStructureNode* parent
+    std::shared_ptr<const ParentOffset> parent
 )
     : Offset(type, property, offset)
-    , parent(parent)
+    , parent(std::move(parent))
 {}
 
-EntityStructure::EntityStructure(const DataTable* data_table)
-{
-    absl::flat_hash_set<ExcludeView> excludes;
-    this->collect_properties_tail(data_table, nullptr, 0, excludes);
-    this->prioritize();
-}
-
-EntityStructure::~EntityStructure() noexcept
-{
-    for (const EntityStructureNode* node : this->nodes)
-    {
-        delete node;
-    }
-}
-
-const EntityOffset& EntityStructure::at(size_t index) const
-{
-    return this->prioritized.at(index);
-}
-
-void EntityStructure::collect_properties_head(
+void EntityType::collect_properties_head(
     const DataTable* cursor,
-    const EntityStructureNode* cursor_node,
+    const std::shared_ptr<const ParentOffset>& cursor_parent,
     size_t cursor_offset,
     absl::flat_hash_set<ExcludeView>& excludes,
     std::vector<EntityOffset>& container)
@@ -616,8 +603,12 @@ void EntityStructure::collect_properties_head(
         const auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
         if (data_table_property != nullptr)
         {
-            auto* child = new EntityStructureNode(data_table_property, cursor_node);
-            this->nodes.emplace_back(child);
+
+            auto child = std::make_shared<ParentOffset>(
+                data_table_property->offset.type,
+                data_table_property,
+                cursor_offset,
+                cursor_parent);
 
             if (data_table_property->collapsible())
             {
@@ -639,30 +630,31 @@ void EntityStructure::collect_properties_head(
         }
         else
         {
+            OK(property->offset.type != nullptr);
             container.emplace_back(
                 property->offset.type,
                 property,
                 cursor_offset + property->offset.offset,
-                cursor_node);
+                cursor_parent);
         }
     }
 }
 
-void EntityStructure::collect_properties_tail(
+void EntityType::collect_properties_tail(
     const DataTable* cursor,
-    const EntityStructureNode* cursor_node,
+    const std::shared_ptr<const ParentOffset>& cursor_parent,
     size_t cursor_offset,
     absl::flat_hash_set<ExcludeView>& excludes)
 {
     std::vector<EntityOffset> container;
-    collect_properties_head(cursor, cursor_node, cursor_offset, excludes, container);
+    collect_properties_head(cursor, cursor_parent, cursor_offset, excludes, container);
     for (const EntityOffset& absolute : container)
     {
         this->prioritized.emplace_back(absolute);
     }
 }
 
-void EntityStructure::prioritize()
+void EntityType::prioritize()
 {
     size_t start = 0;
     bool more = true;
@@ -691,8 +683,12 @@ void EntityStructure::prioritize()
 EntityType::EntityType(Builder&& builder, const DataTable* data_table)
     : ObjectType(std::move(builder))
     , data_table(data_table)
-    , structure(data_table)
-{}
+{
+    this->prioritized.reserve(this->members.size());
+    absl::flat_hash_set<ExcludeView> excludes;
+    this->collect_properties_tail(data_table, nullptr, 0, excludes);
+    this->prioritize();
+}
 
 Entity::Entity(const EntityType* type, char* address, Id id, const ServerClass* server_class)
     : Instance<EntityType>(type, address)

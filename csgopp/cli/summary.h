@@ -128,7 +128,7 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
     {
         for (uint16_t index : indices)
         {
-            const csgopp::client::entity::EntityOffset& offset = entity->type->structure.at(index);
+            const csgopp::client::entity::EntityOffset& offset = entity->type->prioritized.at(index);
             if (offset.parent != nullptr)
             {
                 if (offset.parent->property->name == "m_iWeaponPurchasesThisRound")
