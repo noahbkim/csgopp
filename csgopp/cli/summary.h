@@ -129,18 +129,9 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         for (uint16_t index : indices)
         {
             const csgopp::client::entity::DataOffset& offset = entity->type->prioritized.at(index);
-            if (offset.parent != nullptr)
+            if (offset.parent && offset.parent->matches("cslocaldata", "m_iWeaponPurchasesThisRound"))
             {
-                if (offset.parent->property->name == "m_iWeaponPurchasesThisRound")
-                {
-                    if (offset.parent->parent != nullptr)
-                    {
-                        if (offset.parent->parent->property->name == "cslocaldata")
-                        {
-                            std::cout << "Purchase!" << std::endl;
-                        }
-                    }
-                }
+                std::cout << "Purchase!" << std::endl;
             }
         }
     }

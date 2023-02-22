@@ -25,48 +25,95 @@ using csgopp::common::object::Type;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::server_class::ServerClass;
 
+using csgopp::client::data_table::property::Property;
 using csgopp::client::data_table::data_type::DataType;
 using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::client::data_table::data_table_property::DataTableProperty;
 
-struct Offset
+struct DataTableOffset;
+
+struct DataTableOffset
 {
     size_t offset{0};
-
-    Offset() = default;
-    explicit Offset(size_t offset)
-        : offset(offset)
-    {}
-};
-
-struct DataTableOffset : Offset
-{
-    std::shared_ptr<const DataTableOffset> parent;
+    std::shared_ptr<const DataTableOffset> parent;  // nullable
     const DataTableProperty* property{nullptr};
     const Type* type{nullptr};
 
     DataTableOffset() = default;
     DataTableOffset(size_t offset, std::shared_ptr<const DataTableOffset> parent, const DataTableProperty* property)
-        : Offset(offset)
+        : offset(offset)
         , parent(std::move(parent))
         , property(property)
         , type(property->type().get())
     {}
+
+    template<typename... Args>
+    bool matches(Args&&... args) const
+    {
+        return this->matches_reversing(std::index_sequence_for<Args...>{}, args...);
+    }
+
+private:
+    friend struct DataOffset;
+
+    template<size_t... Is, typename... Args>
+    bool matches_reversing(std::index_sequence<Is...>, Args&&... args) const
+    {
+        return this->matches_reversed(std::get<sizeof...(Is) - 1 - Is>(std::tie(args...))...);
+    }
+
+    template<typename Arg, typename... Args>
+    bool matches_reversed(Arg&& arg, Args&&... args) const
+    {
+        return arg == this->property->name && this->parent->matches_reversed(args...);
+    }
+
+    template<typename Arg>
+    bool matches_reversed(Arg&& arg) const
+    {
+        return arg == this->property->name && this->parent == nullptr;
+    }
 };
 
-struct DataOffset : public Offset
+struct DataOffset
 {
-    std::shared_ptr<const DataTableOffset> parent;
+    size_t offset{0};
+    std::shared_ptr<const DataTableOffset> parent;  // not null
     const DataProperty* property{nullptr};
     const DataType* type{nullptr};
 
     DataOffset() = default;
     DataOffset(size_t offset, std::shared_ptr<const DataTableOffset> parent, const DataProperty* property)
-        : Offset(offset)
+        : offset(offset)
         , parent(std::move(parent))
         , property(property)
         , type(property->data_type().get())
     {}
+
+    template<typename... Args>
+    bool matches(Args&&... args) const
+    {
+        return this->matches_reversing(std::index_sequence_for<Args...>{}, args...);
+    }
+
+private:
+    template<size_t... Is, typename... Args>
+    bool matches_reversing(std::index_sequence<Is...>, Args&&... args) const
+    {
+        return this->matches_reversed(std::get<sizeof...(Is) - 1 - Is>(std::tie(args...))...);
+    }
+
+    template<typename Arg, typename... Args>
+    bool matches_reversed(Arg&& arg, Args&&... args) const
+    {
+        return arg == this->property->name && this->parent->matches_reversed(args...);
+    }
+
+    template<typename Arg>
+    bool matches_reversed(Arg&& arg) const
+    {
+        return false;
+    }
 };
 
 // TODO: It would be nice to make these a single allocation

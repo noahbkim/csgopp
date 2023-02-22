@@ -14,7 +14,6 @@ using csgopp::common::object::Type;
 using csgopp::common::object::shared;
 using csgopp::common::control::concatenate;
 using csgopp::client::entity::EntityType;
-using csgopp::client::entity::Offset;
 
 DataTable::DataTable(const CSVCMsg_SendTable& data)
     : name(data.net_table_name())

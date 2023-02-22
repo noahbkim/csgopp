@@ -153,7 +153,7 @@ struct DataTable : Context<Definition>
     /// \brief Return the constructed type; not possible to guarantee this statically.
     ///
     /// \return a shared pointer to the allocated type.
-    std::shared_ptr<const EntityType> type() const;
+    [[nodiscard]] std::shared_ptr<const EntityType> type() const;
 
     /// \brief Build an array entity type from the data table properties.
     ///
