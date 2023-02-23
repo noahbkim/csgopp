@@ -9,11 +9,13 @@ StringTable::StringTable(const csgo::message::net::CSVCMsg_CreateStringTable& da
     , capacity(data.max_entries())
     , data_fixed(data.user_data_fixed_size())
     , data_size_bits(data.user_data_size_bits())
-{}
+{
+}
 
 StringTable::StringTable(std::string&& name, size_t size)
     : name(std::move(name))
     , entries(size)
-{}
+{
+}
 
 }

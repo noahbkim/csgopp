@@ -16,7 +16,10 @@ struct Container
 public:
     using Data = std::array<T, Capacity>;
     using Index = size_t;
-    Container() : _data() {}
+
+    Container() : _data()
+    {
+    }
 
 protected:
     Data _data;
@@ -35,7 +38,10 @@ struct Container<T, Runtime>
 public:
     using Data = std::vector<T>;
     using Index = typename Data::size_type;
-    explicit Container(size_t size) : _data(size) {}
+
+    explicit Container(size_t size) : _data(size)
+    {
+    }
 
 protected:
     Data _data;
@@ -56,7 +62,9 @@ public:
     using Index = typename Container<T, Capacity>::Index;
 
     template<typename... Args>
-    explicit Ring(Args... args) : Container<T, Capacity>(args...) {}
+    explicit Ring(Args... args) : Container<T, Capacity>(args...)
+    {
+    }
 
     void push_back(const T& item)
     {

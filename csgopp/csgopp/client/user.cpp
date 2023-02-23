@@ -3,6 +3,8 @@
 namespace csgopp::client::user
 {
 
-User::User(Index index) : index(index) {}
+User::User(Index index) : index(index)
+{
+}
 
 }

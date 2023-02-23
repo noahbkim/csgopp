@@ -19,7 +19,9 @@ struct Declaration
     std::vector<size_t> array_sizes;
     std::vector<std::string> annotations;
 
-    explicit Declaration(std::string name) : name(std::move(name)) {}
+    explicit Declaration(std::string name) : name(std::move(name))
+    {
+    }
 };
 
 struct Definition
@@ -31,7 +33,11 @@ struct Definition
     std::vector<std::string> aliases;
 
     Definition() = default;
-    explicit Definition(std::string name) : name(std::move(name)) {}
+
+    explicit Definition(std::string name) : name(std::move(name))
+    {
+    }
+
     Declaration& append(std::string declaration_name);
 
     void write(std::ostream& out) const;
@@ -46,7 +52,8 @@ struct Cursor
     Cursor(T& target, Dependencies& dependencies)
         : target(target)
         , dependencies(dependencies)
-    {}
+    {
+    }
 
     template<typename U>
     Cursor<U> into(U& u)
@@ -59,7 +66,10 @@ template<typename T>
 struct Context
 {
     virtual ~Context() = default;
-    virtual void apply(Cursor<T> cursor) const {};
+
+    virtual void apply(Cursor<T> cursor) const
+    {
+    };
 };
 
 struct Generator

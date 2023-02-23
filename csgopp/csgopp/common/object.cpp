@@ -22,7 +22,8 @@ Reference Accessor::bind(char* address) const
 Reference::Reference(const Type* type, char* address)
     : type(type)
     , address(address)
-{}
+{
+}
 
 Reference Reference::operator[](const std::string& member_name) const
 {
@@ -55,7 +56,8 @@ Reference Reference::operator[](size_t element_index) const
 ConstReference::ConstReference(const Type* type, const char* address)
     : type(type)
     , address(address)
-{}
+{
+}
 
 ConstReference ConstReference::operator[](const std::string& member_name) const
 {
@@ -100,7 +102,8 @@ Accessor::Accessor(const Type* origin, const Type* type, size_t offset)
     : origin(origin)
     , type(type)
     , offset(offset)
-{}
+{
+}
 
 Accessor Accessor::operator[](const std::string& member_name) const
 {
@@ -135,7 +138,8 @@ ArrayType::ArrayType(std::shared_ptr<const Type> element_type, size_t length)
     : element_type(std::move(element_type))
     , element_size(align(this->element_type->alignment(), this->element_type->size()))
     , length(length)
-{}
+{
+}
 
 size_t ArrayType::size() const
 {
@@ -147,7 +151,7 @@ size_t ArrayType::alignment() const
     return this->element_type->alignment();
 }
 
-void ArrayType::construct(char *address) const
+void ArrayType::construct(char* address) const
 {
     for (size_t i = 0; i < this->length; ++i)
     {
@@ -155,7 +159,7 @@ void ArrayType::construct(char *address) const
     }
 }
 
-void ArrayType::destroy(char *address) const
+void ArrayType::destroy(char* address) const
 {
     for (size_t i = 0; i < this->length; ++i)
     {
@@ -216,7 +220,8 @@ ObjectType::Member::Member(
     , offset(offset)
     , name(std::move(name))
     , context(context)
-{}
+{
+}
 
 void ObjectType::Member::emit(code::Cursor<code::Declaration> cursor) const
 {
@@ -267,7 +272,8 @@ size_t ObjectType::Builder::member(
     std::string member_name,
     std::shared_ptr<const Type> member_type,
     code::Context<code::Declaration>* member_context
-) {
+)
+{
     // TODO: find a clean way to log if a member is hidden here
     size_t offset = align(this->members_size, member_type->alignment());
     this->members_size = offset + member_type->size();
@@ -284,7 +290,8 @@ ObjectType::ObjectType(Builder&& builder)
     , name(std::move(builder.name))
     , base(builder.base)
     , context(builder.context)
-{}
+{
+}
 
 size_t ObjectType::size() const
 {
@@ -296,20 +303,24 @@ size_t ObjectType::alignment() const
     return this->members.empty() ? 0 : this->members.front().type->alignment();
 }
 
-void ObjectType::construct(char *address) const
+void ObjectType::construct(char* address) const
 {
-    std::for_each(this->members.begin(), this->members.end(), [address](const Member& member)
-    {
-        member.type->construct(address + member.offset);
-    });
+    std::for_each(
+        this->members.begin(), this->members.end(), [address](const Member& member)
+        {
+            member.type->construct(address + member.offset);
+        }
+    );
 }
 
-void ObjectType::destroy(char *address) const
+void ObjectType::destroy(char* address) const
 {
-    std::for_each(this->members.rbegin(), this->members.rend(), [address](const Member& member)
-    {
-        member.type->destroy(address + member.offset);
-    });
+    std::for_each(
+        this->members.rbegin(), this->members.rend(), [address](const Member& member)
+        {
+            member.type->destroy(address + member.offset);
+        }
+    );
 }
 
 void ObjectType::emit(code::Cursor<code::Declaration>& cursor) const
@@ -339,7 +350,7 @@ void ObjectType::emit(code::Cursor<code::Definition>& cursor) const
 
 void ObjectType::emit(layout::Cursor& cursor) const
 {
-    for (const Member& member : this->members)
+    for (const Member& member: this->members)
     {
         cursor.write(member.name, member.offset);
         layout::Cursor indented(cursor.indent(member.offset));
@@ -347,7 +358,7 @@ void ObjectType::emit(layout::Cursor& cursor) const
     }
 }
 
-Accessor ObjectType::operator[](const std::string &member_name) const
+Accessor ObjectType::operator[](const std::string& member_name) const
 {
     const Member& member = this->at(member_name);
     return Accessor(this, member.type.get(), member.offset);

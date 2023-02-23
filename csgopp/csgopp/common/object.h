@@ -38,7 +38,11 @@ struct TypeError : Error
 template<typename T>
 static constexpr size_t alignmentof()
 {
-    struct Measure { uint8_t bump; T aligned; };
+    struct Measure
+    {
+        uint8_t bump;
+        T aligned;
+    };
     return offsetof(Measure, aligned);
 }
 
@@ -250,7 +254,8 @@ struct ObjectType : public virtual Type
             std::shared_ptr<const Type> type,
             size_t offset,
             std::string&& name,
-            code::Context<code::Declaration>* context = nullptr);
+            code::Context<code::Declaration>* context = nullptr
+        );
 
         void emit(code::Cursor<code::Declaration>) const;
     };
@@ -275,7 +280,8 @@ struct ObjectType : public virtual Type
         size_t member(
             std::string member_name,
             std::shared_ptr<const Type> member_type,
-            code::Context<code::Declaration>* member_context = nullptr);
+            code::Context<code::Declaration>* member_context = nullptr
+        );
     };
 
     Members members;
@@ -369,17 +375,18 @@ using Object = Instance<ObjectType>;
 using Array = Instance<ArrayType>;
 
 template<typename T, typename I = Instance<T>, typename... Args>
-I* instantiate(const T* type, Args&&... args)
+I* instantiate(const T* type, Args&& ... args)
 {
     char* address = new char[sizeof(I) + type->size()];
-    return new (address) I(type, address + sizeof(I), args...);
+    return new(address) I(type, address + sizeof(I), args...);
 }
 
 template<typename T>
 As<T>::As(const Type* origin, size_t offset)
     : origin(origin)
     , offset(offset)
-{}
+{
+}
 
 template<typename T>
 T* As<T>::operator()(Reference& reference) const
@@ -418,7 +425,8 @@ template<typename T>
 Is<T>::Is(const Type* origin, size_t offset)
     : origin(origin)
     , offset(offset)
-{}
+{
+}
 
 template<typename T>
 template<typename U>
@@ -516,7 +524,9 @@ Is<T> Accessor::is() const
 }
 
 template<typename T>
-void leak(T*) {}
+void leak(T*)
+{
+}
 
 template<typename T>
 std::shared_ptr<T> shared()
@@ -627,7 +637,7 @@ void DefaultValueType<T>::construct(char* address) const
 {
     if constexpr (std::is_constructible<T>::value)
     {
-        new (address) T;
+        new(address) T;
     }
 }
 

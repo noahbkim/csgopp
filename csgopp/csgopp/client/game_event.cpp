@@ -139,15 +139,15 @@ std::shared_ptr<Type> lookup_type(int32_t type)
 {
     switch (type)
     {
-        case 1: return shared<StringType>();
-        case 2: return shared<FloatType>();
-        case 3: return shared<LongType>();
-        case 4: return shared<ShortType>();
-        case 5: return shared<ByteType>();
-        case 6: return shared<BoolType>();
-        case 7: return shared<UnsignedInt64Type>();
-        case 8: return shared<WideStringType>();
-        default: throw GameError("invalid game event value type " + std::to_string(type));
+    case 1: return shared<StringType>();
+    case 2: return shared<FloatType>();
+    case 3: return shared<LongType>();
+    case 4: return shared<ShortType>();
+    case 5: return shared<ByteType>();
+    case 6: return shared<BoolType>();
+    case 7: return shared<UnsignedInt64Type>();
+    case 8: return shared<WideStringType>();
+    default: throw GameError("invalid game event value type " + std::to_string(type));
     }
 }
 
@@ -155,14 +155,15 @@ GameEventType::GameEventType(Builder&& builder, Id id, std::string&& name)
     : ObjectType(std::move(builder))
     , id(id)
     , name(std::move(name))
-{}
+{
+}
 
 GameEventType* GameEventType::build(csgo::message::net::CSVCMsg_GameEventList_descriptor_t&& descriptor)
 {
     ObjectType::Builder builder;
     builder.name = descriptor.name();
 
-    for (csgo::message::net::CSVCMsg_GameEventList_key_t& key : *descriptor.mutable_keys())
+    for (csgo::message::net::CSVCMsg_GameEventList_key_t& key: *descriptor.mutable_keys())
     {
         builder.member(std::move(*key.mutable_name()), lookup_type(key.type()));
     }

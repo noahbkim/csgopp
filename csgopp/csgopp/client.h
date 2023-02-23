@@ -129,16 +129,24 @@ struct ClientObserverBase
     using Client = Client<ClientObserver>;
 
     /// Client also receives a reference to the client for setup.
-    explicit ClientObserverBase(Client& client) {}
+    explicit ClientObserverBase(Client& client)
+    {
+    }
 
     /// Called by the default frame observer.
-    virtual void on_frame(Client& client, demo::Command::Type command) {}
+    virtual void on_frame(Client& client, demo::Command::Type command)
+    {
+    }
 
     /// \brief This event is emitted when a DEMO frame is parsed.
     struct FrameObserver
     {
         FrameObserver() = default;
-        explicit FrameObserver(Client& client) {}
+
+        explicit FrameObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, demo::Command::Type command)
         {
             client.observer.on_frame(client, command);
@@ -146,13 +154,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default packet observer.
-    virtual void on_packet(Client& client, int32_t type) {}
+    virtual void on_packet(Client& client, int32_t type)
+    {
+    }
 
     /// \brief This event is emitted when a game packet is parsed.
     struct PacketObserver
     {
         PacketObserver() = default;
-        explicit PacketObserver(Client& client) {}
+
+        explicit PacketObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, int32_t type)
         {
             client.observer.on_packet(client, type);
@@ -160,13 +174,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default data table creation observer.
-    virtual void on_data_table_creation(Client& client, const DataTable* data_table) {}
+    virtual void on_data_table_creation(Client& client, const DataTable* data_table)
+    {
+    }
 
     /// \brief This event is emitted when a network data table is created.
     struct DataTableCreationObserver
     {
         DataTableCreationObserver() = default;
-        explicit DataTableCreationObserver(Client& client) {}
+
+        explicit DataTableCreationObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, const DataTable* data_table)
         {
             client.observer.on_data_table_creation(client, data_table);
@@ -174,13 +194,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_server_class_creation(Client& client, const ServerClass* server_class) {}
+    virtual void on_server_class_creation(Client& client, const ServerClass* server_class)
+    {
+    }
 
     /// \brief This event is emitted when a network server class is created.
     struct ServerClassCreationObserver
     {
         ServerClassCreationObserver() = default;
-        explicit ServerClassCreationObserver(Client& client) {}
+
+        explicit ServerClassCreationObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, const ServerClass* server_class)
         {
             client.observer.on_server_class_creation(client, server_class);
@@ -188,13 +214,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_string_table_creation(Client& client, const StringTable* string_table) {}
+    virtual void on_string_table_creation(Client& client, const StringTable* string_table)
+    {
+    }
 
     /// \brief This event is emitted when a network string table is created.
     struct StringTableCreationObserver
     {
         StringTableCreationObserver() = default;
-        explicit StringTableCreationObserver(Client& client) {}
+
+        explicit StringTableCreationObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, const StringTable* string_table)
         {
             client.observer.on_string_table_creation(client, string_table);
@@ -202,13 +234,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class update observer.
-    virtual void on_string_table_update(Client& client, const StringTable* string_table) {}
+    virtual void on_string_table_update(Client& client, const StringTable* string_table)
+    {
+    }
 
     /// \brief This event is emitted when a network string table is created.
     struct StringTableUpdateObserver
     {
         StringTableUpdateObserver() = default;
-        explicit StringTableUpdateObserver(Client& client, const StringTable* string_table) {}
+
+        explicit StringTableUpdateObserver(Client& client, const StringTable* string_table)
+        {
+        }
+
         virtual void handle(Client& client, const StringTable* string_table)
         {
             client.observer.on_string_table_update(client, string_table);
@@ -216,13 +254,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class update observer.
-    virtual void on_entity_creation(Client& client, const Entity* entity) {}
+    virtual void on_entity_creation(Client& client, const Entity* entity)
+    {
+    }
 
     /// \brief This event is emitted when a network string table is created.
     struct EntityCreationObserver
     {
         EntityCreationObserver() = default;
-        explicit EntityCreationObserver(Client& client, Entity::Id id, const ServerClass* server_class) {}
+
+        explicit EntityCreationObserver(Client& client, Entity::Id id, const ServerClass* server_class)
+        {
+        }
+
         virtual void handle(Client& client, const Entity* entity)
         {
             client.observer.on_entity_creation(client, entity);
@@ -230,13 +274,19 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class update observer.
-    virtual void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) {}
+    virtual void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
+    {
+    }
 
     /// \brief This event is emitted when entity properties are updated.
     struct EntityUpdateObserver
     {
         EntityUpdateObserver() = default;
-        explicit EntityUpdateObserver(Client& client, const Entity* entity) {}
+
+        explicit EntityUpdateObserver(Client& client, const Entity* entity)
+        {
+        }
+
         virtual void handle(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
         {
             client.observer.on_entity_update(client, entity, indices);
@@ -244,61 +294,91 @@ struct ClientObserverBase
     };
 
     /// Called by the default server class update observer.
-    virtual void on_entity_deletion(Client& client, const Entity* entity) {}
+    virtual void on_entity_deletion(Client& client, const Entity* entity)
+    {
+    }
 
     /// \brief This event is emitted when a network string table is created.
     struct EntityDeletionObserver
     {
         EntityDeletionObserver() = default;
-        explicit EntityDeletionObserver(Client& client, const Entity* entity) {}
+
+        explicit EntityDeletionObserver(Client& client, const Entity* entity)
+        {
+        }
+
         virtual void handle(Client& client, const Entity* entity)
         {
             client.observer.on_entity_creation(client, entity);
         }
     };
 
-    virtual void on_game_event(Client& client, GameEvent& event) {}
+    virtual void on_game_event(Client& client, GameEvent& event)
+    {
+    }
 
     struct GameEventObserver
     {
         GameEventObserver() = default;
-        explicit GameEventObserver(Client& client) {}
+
+        explicit GameEventObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, GameEvent& game_event)
         {
             client.observer.on_game_event(client, game_event);
         }
     };
 
-    virtual void on_game_event_type_creation(Client& client, const GameEventType* event) {}
+    virtual void on_game_event_type_creation(Client& client, const GameEventType* event)
+    {
+    }
 
     struct GameEventTypeCreationObserver
     {
         GameEventTypeCreationObserver() = default;
-        explicit GameEventTypeCreationObserver(Client& client) {}
+
+        explicit GameEventTypeCreationObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, const GameEventType* event)
         {
             client.observer.on_game_event_type_creation(client, event);
         }
     };
 
-    virtual void on_user_creation(Client& client, const User* user) {}
+    virtual void on_user_creation(Client& client, const User* user)
+    {
+    }
 
     struct UserCreationObserver
     {
         UserCreationObserver() = default;
-        explicit UserCreationObserver(Client& client) {}
+
+        explicit UserCreationObserver(Client& client)
+        {
+        }
+
         virtual void handle(Client& client, const User* user)
         {
             client.observer.on_user_creation(client, user);
         }
     };
 
-    virtual void on_user_update(Client& client, const User* user) {}
+    virtual void on_user_update(Client& client, const User* user)
+    {
+    }
 
     struct UserUpdateObserver
     {
         UserUpdateObserver() = default;
-        explicit UserUpdateObserver(Client& client, const User* user) {}
+
+        explicit UserUpdateObserver(Client& client, const User* user)
+        {
+        }
+
         virtual void handle(Client& client, const User* user)
         {
             client.observer.on_user_update(client, user);
@@ -390,15 +470,50 @@ public:
     virtual bool advance_unknown(CodedInputStream& stream, char command);
 
     /// Interface
-    [[nodiscard]] const demo::Header& header() { return this->_header; }
-    [[nodiscard]] uint32_t cursor() { return this->_cursor; }
-    [[nodiscard]] uint32_t tick() { return this->_tick; }
-    [[nodiscard]] const DataTableDatabase& data_tables() { return this->_data_tables; }
-    [[nodiscard]] const ServerClassDatabase& server_classes() { return this->_server_classes; }
-    [[nodiscard]] const StringTableDatabase& string_tables() { return this->_string_tables; }
-    [[nodiscard]] const EntityDatabase& entities() { return this->_entities; }
-    [[nodiscard]] const GameEventTypeDatabase& game_event_types() { return this->_game_event_types; }
-    [[nodiscard]] const UserDatabase& users() { return this->_users; }
+    [[nodiscard]] const demo::Header& header()
+    {
+        return this->_header;
+    }
+
+    [[nodiscard]] uint32_t cursor()
+    {
+        return this->_cursor;
+    }
+
+    [[nodiscard]] uint32_t tick()
+    {
+        return this->_tick;
+    }
+
+    [[nodiscard]] const DataTableDatabase& data_tables()
+    {
+        return this->_data_tables;
+    }
+
+    [[nodiscard]] const ServerClassDatabase& server_classes()
+    {
+        return this->_server_classes;
+    }
+
+    [[nodiscard]] const StringTableDatabase& string_tables()
+    {
+        return this->_string_tables;
+    }
+
+    [[nodiscard]] const EntityDatabase& entities()
+    {
+        return this->_entities;
+    }
+
+    [[nodiscard]] const GameEventTypeDatabase& game_event_types()
+    {
+        return this->_game_event_types;
+    }
+
+    [[nodiscard]] const UserDatabase& users()
+    {
+        return this->_users;
+    }
 
     Observer observer;
 
@@ -435,14 +550,19 @@ private:
     /// Cast this as a const reference for template constructors.
     ///
     /// \todo Figure out how to avoid this.
-    [[nodiscard]] inline Client& self() { return *this; }
+    [[nodiscard]] inline Client& self()
+    {
+        return *this;
+    }
 };
 
 template<typename Observer>
 template<typename... Args>
 Client<Observer>::Client(CodedInputStream& stream, Args... args)
     : _header(stream)
-    , observer(self(), args...) {}
+    , observer(self(), args...)
+{
+}
 
 template<typename Observer>
 bool Client<Observer>::advance(CodedInputStream& stream)
@@ -457,33 +577,24 @@ bool Client<Observer>::advance(CodedInputStream& stream)
 
     switch (command)
     {
-        case demo::Command::SIGN_ON:
-        case demo::Command::PACKET:
-            this->advance_packets(stream);
-            break;
-        case demo::Command::SYNC_TICK:
-            break;
-        case demo::Command::CONSOLE_COMMAND:
-            this->advance_console_command(stream);
-            break;
-        case demo::Command::USER_COMMAND:
-            this->advance_user_command(stream);
-            break;
-        case demo::Command::DATA_TABLES:
-            this->advance_data_tables(stream);
-            break;
-        case demo::Command::STOP:
-            ok = false;
-            break;
-        case demo::Command::CUSTOM_DATA:
-            this->advance_custom_data(stream);
-            break;
-        case demo::Command::STRING_TABLES:
-            this->advance_string_tables(stream);
-            break;
-        default:
-            this->advance_unknown(stream, command);
-            break;
+    case demo::Command::SIGN_ON:
+    case demo::Command::PACKET:this->advance_packets(stream);
+        break;
+    case demo::Command::SYNC_TICK:break;
+    case demo::Command::CONSOLE_COMMAND:this->advance_console_command(stream);
+        break;
+    case demo::Command::USER_COMMAND:this->advance_user_command(stream);
+        break;
+    case demo::Command::DATA_TABLES:this->advance_data_tables(stream);
+        break;
+    case demo::Command::STOP:ok = false;
+        break;
+    case demo::Command::CUSTOM_DATA:this->advance_custom_data(stream);
+        break;
+    case demo::Command::STRING_TABLES:this->advance_string_tables(stream);
+        break;
+    default:this->advance_unknown(stream, command);
+        break;
     }
 
     this->_cursor += 1;
@@ -519,45 +630,83 @@ void Client<Observer>::advance_packet(CodedInputStream& stream)
     switch (command)
     {
         using namespace csgo::message::net;
-        case NET_Messages::net_NOP: this->advance_packet_nop(stream); break;
-        case NET_Messages::net_Disconnect: this->advance_packet_disconnect(stream); break;
-        case NET_Messages::net_File: this->advance_packet_file(stream); break;
-        case NET_Messages::net_SplitScreenUser: this->advance_packet_split_screen_user(stream); break;
-        case NET_Messages::net_Tick: this->advance_packet_tick(stream); break;
-        case NET_Messages::net_StringCmd: this->advance_packet_string_command(stream); break;
-        case NET_Messages::net_SetConVar: this->advance_packet_set_console_variable(stream); break;
-        case NET_Messages::net_SignonState: this->advance_packet_sign_on_state(stream); break;
-        case SVC_Messages::svc_ServerInfo: this->advance_packet_server_info(stream); break;
-        case SVC_Messages::svc_SendTable: this->advance_packet_send_table(stream); break;
-        case SVC_Messages::svc_ClassInfo: this->advance_packet_class_info(stream); break;
-        case SVC_Messages::svc_SetPause: this->advance_packet_set_pause(stream); break;
-        case SVC_Messages::svc_CreateStringTable: this->advance_packet_create_string_table(stream); break;
-        case SVC_Messages::svc_UpdateStringTable: this->advance_packet_update_string_table(stream); break;
-        case SVC_Messages::svc_VoiceInit: this->advance_packet_voice_initialization(stream); break;
-        case SVC_Messages::svc_VoiceData: this->advance_packet_voice_data(stream); break;
-        case SVC_Messages::svc_Print: this->advance_packet_print(stream); break;
-        case SVC_Messages::svc_Sounds: this->advance_packet_sounds(stream); break;
-        case SVC_Messages::svc_SetView: this->advance_packet_set_view(stream); break;
-        case SVC_Messages::svc_FixAngle: this->advance_packet_fix_angle(stream); break;
-        case SVC_Messages::svc_CrosshairAngle: this->advance_packet_crosshair_angle(stream); break;
-        case SVC_Messages::svc_BSPDecal: this->advance_packet_bsp_decal(stream); break;
-        case SVC_Messages::svc_SplitScreen: this->advance_packet_split_screen(stream); break;
-        case SVC_Messages::svc_UserMessage: this->advance_packet_user_message(stream); break;
-        case SVC_Messages::svc_EntityMessage: this->advance_packet_entity_message(stream); break;
-        case SVC_Messages::svc_GameEvent: this->advance_packet_game_event(stream); break;
-        case SVC_Messages::svc_PacketEntities: this->advance_packet_packet_entities(stream); break;
-        case SVC_Messages::svc_TempEntities: this->advance_packet_temporary_entities(stream); break;
-        case SVC_Messages::svc_Prefetch: this->advance_packet_prefetch(stream); break;
-        case SVC_Messages::svc_Menu: this->advance_packet_menu(stream); break;
-        case SVC_Messages::svc_GameEventList: this->advance_packet_game_event_list(stream); break;
-        case SVC_Messages::svc_GetCvarValue: this->advance_packet_get_console_variable_value(stream); break;
-        case SVC_Messages::svc_PaintmapData: this->advance_packet_paintmap_data(stream); break;
-        case SVC_Messages::svc_CmdKeyValues: this->advance_packet_command_key_values(stream); break;
-        case SVC_Messages::svc_EncryptedData: this->advance_packet_encrypted_data(stream); break;
-        case SVC_Messages::svc_HltvReplay: this->advance_packet_hltv_replay(stream); break;
-        case SVC_Messages::svc_Broadcast_Command: this->advance_packet_broadcast_command(stream); break;
-        case NET_Messages::net_PlayerAvatarData: this->advance_packet_player_avatar_data(stream); break;
-        default: this->advance_packet_unknown(stream, command);
+    case NET_Messages::net_NOP: this->advance_packet_nop(stream);
+        break;
+    case NET_Messages::net_Disconnect: this->advance_packet_disconnect(stream);
+        break;
+    case NET_Messages::net_File: this->advance_packet_file(stream);
+        break;
+    case NET_Messages::net_SplitScreenUser: this->advance_packet_split_screen_user(stream);
+        break;
+    case NET_Messages::net_Tick: this->advance_packet_tick(stream);
+        break;
+    case NET_Messages::net_StringCmd: this->advance_packet_string_command(stream);
+        break;
+    case NET_Messages::net_SetConVar: this->advance_packet_set_console_variable(stream);
+        break;
+    case NET_Messages::net_SignonState: this->advance_packet_sign_on_state(stream);
+        break;
+    case SVC_Messages::svc_ServerInfo: this->advance_packet_server_info(stream);
+        break;
+    case SVC_Messages::svc_SendTable: this->advance_packet_send_table(stream);
+        break;
+    case SVC_Messages::svc_ClassInfo: this->advance_packet_class_info(stream);
+        break;
+    case SVC_Messages::svc_SetPause: this->advance_packet_set_pause(stream);
+        break;
+    case SVC_Messages::svc_CreateStringTable: this->advance_packet_create_string_table(stream);
+        break;
+    case SVC_Messages::svc_UpdateStringTable: this->advance_packet_update_string_table(stream);
+        break;
+    case SVC_Messages::svc_VoiceInit: this->advance_packet_voice_initialization(stream);
+        break;
+    case SVC_Messages::svc_VoiceData: this->advance_packet_voice_data(stream);
+        break;
+    case SVC_Messages::svc_Print: this->advance_packet_print(stream);
+        break;
+    case SVC_Messages::svc_Sounds: this->advance_packet_sounds(stream);
+        break;
+    case SVC_Messages::svc_SetView: this->advance_packet_set_view(stream);
+        break;
+    case SVC_Messages::svc_FixAngle: this->advance_packet_fix_angle(stream);
+        break;
+    case SVC_Messages::svc_CrosshairAngle: this->advance_packet_crosshair_angle(stream);
+        break;
+    case SVC_Messages::svc_BSPDecal: this->advance_packet_bsp_decal(stream);
+        break;
+    case SVC_Messages::svc_SplitScreen: this->advance_packet_split_screen(stream);
+        break;
+    case SVC_Messages::svc_UserMessage: this->advance_packet_user_message(stream);
+        break;
+    case SVC_Messages::svc_EntityMessage: this->advance_packet_entity_message(stream);
+        break;
+    case SVC_Messages::svc_GameEvent: this->advance_packet_game_event(stream);
+        break;
+    case SVC_Messages::svc_PacketEntities: this->advance_packet_packet_entities(stream);
+        break;
+    case SVC_Messages::svc_TempEntities: this->advance_packet_temporary_entities(stream);
+        break;
+    case SVC_Messages::svc_Prefetch: this->advance_packet_prefetch(stream);
+        break;
+    case SVC_Messages::svc_Menu: this->advance_packet_menu(stream);
+        break;
+    case SVC_Messages::svc_GameEventList: this->advance_packet_game_event_list(stream);
+        break;
+    case SVC_Messages::svc_GetCvarValue: this->advance_packet_get_console_variable_value(stream);
+        break;
+    case SVC_Messages::svc_PaintmapData: this->advance_packet_paintmap_data(stream);
+        break;
+    case SVC_Messages::svc_CmdKeyValues: this->advance_packet_command_key_values(stream);
+        break;
+    case SVC_Messages::svc_EncryptedData: this->advance_packet_encrypted_data(stream);
+        break;
+    case SVC_Messages::svc_HltvReplay: this->advance_packet_hltv_replay(stream);
+        break;
+    case SVC_Messages::svc_Broadcast_Command: this->advance_packet_broadcast_command(stream);
+        break;
+    case NET_Messages::net_PlayerAvatarData: this->advance_packet_player_avatar_data(stream);
+        break;
+    default: this->advance_packet_unknown(stream, command);
     }
 
     AFTER(PacketObserver, command);
@@ -729,7 +878,8 @@ struct UnboundDataTableProperty
     UnboundDataTableProperty(DataTable::DataTableProperty* property, std::string&& name)
         : property(property)
         , name(name)
-    {}
+    {
+    }
 };
 
 template<typename Observer>
@@ -763,7 +913,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
             size_t coalesced_array_index{0};
 
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
-            for (CSVCMsg_SendTable_sendprop_t& property_data : *data.mutable_props())
+            for (CSVCMsg_SendTable_sendprop_t& property_data: *data.mutable_props())
             {
                 if (property_data.flags() & DataTable::Property::Flags::EXCLUDE)
                 {
@@ -777,36 +927,28 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 switch (property_data.type())
                 {
                     using Kind = DataTable::Property::Kind;
-                    case Kind::INT32:
-                        property = new DataTable::Int32Property(std::move(property_data));
-                        break;
-                    case Kind::FLOAT:
-                        property = new DataTable::FloatProperty(std::move(property_data));
-                        break;
-                    case Kind::VECTOR3:
-                        property = new DataTable::Vector3Property(std::move(property_data));
-                        break;
-                    case Kind::VECTOR2:
-                        property = new DataTable::Vector2Property(std::move(property_data));
-                        break;
-                    case Kind::STRING:
-                        property = new DataTable::StringProperty(std::move(property_data));
-                        break;
-                    case Kind::ARRAY:
-                        VERIFY(preceding_array_element != nullptr);
-                        property = new DataTable::ArrayProperty(std::move(property_data), preceding_array_element);
-                        preceding_array_element = nullptr;
-                        break;
-                    case Kind::DATA_TABLE:
-                        property = new_data_table_properties.emplace_back(
-                            new DataTable::DataTableProperty(std::move(property_data)),
-                            std::string(std::move(*property_data.mutable_dt_name()))).property;
-                        break;
-                    case Kind::INT64:
-                        property = new DataTable::Int64Property(std::move(property_data));
-                        break;
-                    default:
-                        throw csgopp::error::GameError("unreachable");
+                case Kind::INT32:property = new DataTable::Int32Property(std::move(property_data));
+                    break;
+                case Kind::FLOAT:property = new DataTable::FloatProperty(std::move(property_data));
+                    break;
+                case Kind::VECTOR3:property = new DataTable::Vector3Property(std::move(property_data));
+                    break;
+                case Kind::VECTOR2:property = new DataTable::Vector2Property(std::move(property_data));
+                    break;
+                case Kind::STRING:property = new DataTable::StringProperty(std::move(property_data));
+                    break;
+                case Kind::ARRAY:VERIFY(preceding_array_element != nullptr);
+                    property = new DataTable::ArrayProperty(std::move(property_data), preceding_array_element);
+                    preceding_array_element = nullptr;
+                    break;
+                case Kind::DATA_TABLE:
+                    property = new_data_table_properties.emplace_back(
+                        new DataTable::DataTableProperty(std::move(property_data)),
+                        std::string(std::move(*property_data.mutable_dt_name()))).property;
+                    break;
+                case Kind::INT64:property = new DataTable::Int64Property(std::move(property_data));
+                    break;
+                default:throw csgopp::error::GameError("unreachable");
                 }
 
                 // Check if we're still optimizing as array
@@ -820,7 +962,8 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                     if (
                         is_array_index(property->name, coalesced_array_index)
                         && property->equals(coalesced_array_element)
-                    ) {
+                        )
+                    {
                         coalesced_array_index += 1;
                     }
                     else
@@ -855,13 +998,14 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
     } while (!data.is_end());
 
     // Link data table properties to their data table
-    for (const UnboundDataTableProperty& unbound : new_data_table_properties)
+    for (const UnboundDataTableProperty& unbound: new_data_table_properties)
     {
         unbound.property->data_table = lookup(
             new_data_tables.by_name,
             this->_data_tables.by_name,
             unbound.name,
-            [&unbound]() { return "failed to find referenced data table " + unbound.name; });
+            [&unbound]() { return "failed to find referenced data table " + unbound.name; }
+        );
     }
 
     return new_data_tables;
@@ -871,7 +1015,8 @@ template<typename Observer>
 Database<ServerClass> Client<Observer>::create_server_classes(
     CodedInputStream& stream,
     DatabaseWithName<DataTable>& new_data_tables
-) {
+)
+{
     uint16_t server_class_count;
     VERIFY(demo::ReadLittleEndian16(stream, &server_class_count));
     Database<ServerClass> new_server_classes(server_class_count);
@@ -888,14 +1033,15 @@ Database<ServerClass> Client<Observer>::create_server_classes(
             new_data_tables.by_name,
             this->_data_tables.by_name,
             data_table_name,
-            [&data_table_name]() { return "failed to find referenced data table " + data_table_name; });
+            [&data_table_name]() { return "failed to find referenced data table " + data_table_name; }
+        );
         server_class->data_table->server_class = server_class;
         new_server_classes.emplace(server_class);
     }
 
-    for (ServerClass* server_class : new_server_classes)
+    for (ServerClass* server_class: new_server_classes)
     {
-        for (DataTable::Property* property : server_class->data_table->properties)
+        for (DataTable::Property* property: server_class->data_table->properties)
         {
             if (property->name == "baseclass")
             {
@@ -921,14 +1067,14 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     Database<ServerClass> new_server_classes = this->create_server_classes(stream, new_data_tables);
 
     // Materialize types
-    for (ServerClass* server_class : new_server_classes)
+    for (ServerClass* server_class: new_server_classes)
     {
         server_class->data_table->construct_type();
     }
 
     // Now we can emplace and emit
     this->_data_tables.reserve(new_data_tables.size());
-    for (DataTable* data_table : new_data_tables)
+    for (DataTable* data_table: new_data_tables)
     {
         BEFORE(Observer, DataTableCreationObserver);
         this->_data_tables.emplace(data_table);
@@ -936,7 +1082,7 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     }
 
     this->_server_classes.reserve(new_server_classes.size());
-    for (ServerClass* server_class : new_server_classes)
+    for (ServerClass* server_class: new_server_classes)
     {
         BEFORE(Observer, ServerClassCreationObserver);
         this->_server_classes.emplace(server_class->index, server_class);
@@ -1299,7 +1445,7 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
         index += 1;
     }
 
-    for (uint16_t i : this->_update_entity_indices)
+    for (uint16_t i: this->_update_entity_indices)
     {
         // Actually update the field
         const DataOffset& offset = entity->type->prioritized[i];
@@ -1325,7 +1471,7 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 
     // Update from baseline in string table
     VERIFY(this->_string_tables.instance_baseline != nullptr);
-    for (StringTable::Entry* entry : this->_string_tables.instance_baseline->entries)
+    for (StringTable::Entry* entry: this->_string_tables.instance_baseline->entries)
     {
         if (std::stoi(entry->string) == server_class->index)
         {
@@ -1436,7 +1582,7 @@ void Client<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
 
     csgo::message::net::CSVCMsg_GameEventList data;
     data.ParseFromCodedStream(&stream);
-    for (csgo::message::net::CSVCMsg_GameEventList_descriptor_t& descriptor : *data.mutable_descriptors())
+    for (csgo::message::net::CSVCMsg_GameEventList_descriptor_t& descriptor: *data.mutable_descriptors())
     {
         BEFORE(Observer, GameEventTypeCreationObserver);
         GameEventType* game_event_type = GameEventType::build(std::move(descriptor));

@@ -37,7 +37,9 @@ struct DataTableProperty final : public Property
 
     // No constructor because data_table is set later on
     explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const Type> type() const override;
 
     /// \brief Add the referenced data table as a member of the `EntityType`.

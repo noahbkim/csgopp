@@ -12,10 +12,12 @@ public:
     using value_type = Value;
 
     IdBase() noexcept: value(autoincrement())
-    {}
+    {
+    }
 
     IdBase(const IdBase& other) noexcept: value(other.value)
-    {}
+    {
+    }
 
     IdBase& operator=(const IdBase& other)
     {

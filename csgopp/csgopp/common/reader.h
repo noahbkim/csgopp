@@ -129,7 +129,9 @@ class StreamReader final : public Reader
 {
 public:
     template<typename... Args>
-    explicit StreamReader(Args&& ...args) : stream(args...) {}
+    explicit StreamReader(Args&& ...args) : stream(args...)
+    {
+    }
 
     void skip(size_t size) override
     {
@@ -163,7 +165,9 @@ template<typename T>
 class ContainerReader final : public Reader
 {
 public:
-    explicit ContainerReader(const T& data) : data(data) {}
+    explicit ContainerReader(const T& data) : data(data)
+    {
+    }
 
     void skip(size_t size) override
     {

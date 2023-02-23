@@ -138,7 +138,8 @@ struct Property : Context<Declaration>
         , flags(data.flags())
         , priority(data.priority())
         , offset(0)
-    {}
+    {
+    }
 
     /// \brief Materialize the type enumeration of the property.
     ///

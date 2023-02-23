@@ -17,7 +17,8 @@ struct Cursor
         : out(out)
         , absolute(absolute)
         , level(level)
-    {}
+    {
+    }
 
     Cursor indent(size_t relative)
     {

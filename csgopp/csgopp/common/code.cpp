@@ -7,7 +7,7 @@ namespace csgopp::common::code
 
 void Definition::write(std::ostream& out) const
 {
-    for (const std::string& annotation : this->annotations)
+    for (const std::string& annotation: this->annotations)
     {
         out << "// " << annotation << std::endl;
     }
@@ -17,17 +17,17 @@ void Definition::write(std::ostream& out) const
         out << " : public " << this->base_name.value();
     }
     out << std::endl << "{" << std::endl;
-    for (const Declaration& declaration : this->members)
+    for (const Declaration& declaration: this->members)
     {
         if (declaration.annotations.size() > 1)
         {
-            for (const std::string& annotation : declaration.annotations)
+            for (const std::string& annotation: declaration.annotations)
             {
                 out << TAB "// " << annotation << std::endl;
             }
         }
         out << TAB << declaration.type << " " << declaration.name;
-        for (size_t array_size : declaration.array_sizes)
+        for (size_t array_size: declaration.array_sizes)
         {
             out << "[" << array_size << "]";
         }
@@ -41,7 +41,7 @@ void Definition::write(std::ostream& out) const
     out << "};" << std::endl << std::endl;
     if (!this->aliases.empty())
     {
-        for (const std::string& alias : this->aliases)
+        for (const std::string& alias: this->aliases)
         {
             out << "using " << alias << " = " << this->name << ";" << std::endl;
         }
@@ -66,7 +66,7 @@ void Generator::write(std::ostream& out, bool sort)
     {
         this->sort();
     }
-    for (auto& definition : this->definitions)
+    for (auto& definition: this->definitions)
     {
         definition.write(out);
     }
@@ -78,13 +78,13 @@ void Generator::sort()
     lookup.reserve(this->definitions.size());
     std::vector<Definition> next;
 
-    for (Definition& definition : definitions)
+    for (Definition& definition: definitions)
     {
         lookup.emplace(definition.name, std::move(definition));
     }
     this->definitions.clear();
 
-    for (auto& [name, structure] : lookup)
+    for (auto& [name, structure]: lookup)
     {
         if (this->dependencies.at(name).empty())
         {
@@ -92,7 +92,7 @@ void Generator::sort()
         }
         else
         {
-            for (const std::string& dependency : this->dependencies.at(name))
+            for (const std::string& dependency: this->dependencies.at(name))
             {
                 this->dependents[dependency].emplace(name);
             }
@@ -106,7 +106,7 @@ void Generator::sort()
         next.pop_back();
 
         const std::string& name = this->definitions.back().name;
-        for (const std::string& dependent : this->dependents[name])
+        for (const std::string& dependent: this->dependents[name])
         {
             Dependencies& d = this->dependencies.at(dependent);
             d.erase(name);

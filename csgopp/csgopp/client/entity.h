@@ -23,32 +23,35 @@ using csgopp::common::object::ObjectType;
 using csgopp::common::object::Instance;
 using csgopp::common::object::Type;
 using csgopp::client::data_table::DataTable;
-using csgopp::client::server_class::ServerClass;
-
 using csgopp::client::data_table::property::Property;
 using csgopp::client::data_table::data_type::DataType;
 using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::client::data_table::data_table_property::DataTableProperty;
-
-struct DataTableOffset;
+using csgopp::client::server_class::ServerClass;
 
 struct DataTableOffset
 {
     size_t offset{0};
-    std::shared_ptr<const DataTableOffset> parent;  // nullable
+    std::shared_ptr<const struct DataTableOffset> parent;  // nullable
     const DataTableProperty* property{nullptr};
     const Type* type{nullptr};
 
     DataTableOffset() = default;
-    DataTableOffset(size_t offset, std::shared_ptr<const DataTableOffset> parent, const DataTableProperty* property)
+
+    DataTableOffset(
+        size_t offset,
+        std::shared_ptr<const struct DataTableOffset> parent,
+        const DataTableProperty* property
+    )
         : offset(offset)
         , parent(std::move(parent))
         , property(property)
         , type(property->type().get())
-    {}
+    {
+    }
 
     template<typename... Args>
-    bool matches(Args&&... args) const
+    bool matches(Args&& ... args) const
     {
         return this->matches_reversing(std::index_sequence_for<Args...>{}, args...);
     }
@@ -57,13 +60,13 @@ private:
     friend struct DataOffset;
 
     template<size_t... Is, typename... Args>
-    bool matches_reversing(std::index_sequence<Is...>, Args&&... args) const
+    bool matches_reversing(std::index_sequence<Is...>, Args&& ... args) const
     {
         return this->matches_reversed(std::get<sizeof...(Is) - 1 - Is>(std::tie(args...))...);
     }
 
     template<typename Arg, typename... Args>
-    bool matches_reversed(Arg&& arg, Args&&... args) const
+    bool matches_reversed(Arg&& arg, Args&& ... args) const
     {
         return arg == this->property->name && this->parent->matches_reversed(args...);
     }
@@ -83,28 +86,30 @@ struct DataOffset
     const DataType* type{nullptr};
 
     DataOffset() = default;
+
     DataOffset(size_t offset, std::shared_ptr<const DataTableOffset> parent, const DataProperty* property)
         : offset(offset)
         , parent(std::move(parent))
         , property(property)
         , type(property->data_type().get())
-    {}
+    {
+    }
 
     template<typename... Args>
-    bool matches(Args&&... args) const
+    bool matches(Args&& ... args) const
     {
         return this->matches_reversing(std::index_sequence_for<Args...>{}, args...);
     }
 
 private:
     template<size_t... Is, typename... Args>
-    bool matches_reversing(std::index_sequence<Is...>, Args&&... args) const
+    bool matches_reversing(std::index_sequence<Is...>, Args&& ... args) const
     {
         return this->matches_reversed(std::get<sizeof...(Is) - 1 - Is>(std::tie(args...))...);
     }
 
     template<typename Arg, typename... Args>
-    bool matches_reversed(Arg&& arg, Args&&... args) const
+    bool matches_reversed(Arg&& arg, Args&& ... args) const
     {
         return arg == this->property->name && this->parent->matches_reversed(args...);
     }
@@ -134,13 +139,15 @@ struct EntityType final : public ObjectType
         const std::shared_ptr<const DataTableOffset>& cursor_parent,
         size_t cursor_offset,
         absl::flat_hash_set<ExcludeView>& excludes,
-        std::vector<DataOffset>& container);
+        std::vector<DataOffset>& container
+    );
 
     void collect_properties_tail(
         const DataTable* cursor,
         const std::shared_ptr<const DataTableOffset>& cursor_parent,
         size_t cursor_offset,
-        absl::flat_hash_set<ExcludeView>& excludes);
+        absl::flat_hash_set<ExcludeView>& excludes
+    );
 
     void prioritize();
 };

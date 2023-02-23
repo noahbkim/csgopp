@@ -84,7 +84,8 @@ template<>
 inline void update_int_fixed<int32_t, Int32Property>(
     char* address,
     BitStream& stream,
-    const Property* property)
+    const Property* property
+)
 {
     const auto* int_property = reinterpret_cast<const Int32Property*>(property);
     int32_t& value = *reinterpret_cast<int32_t*>(address);
@@ -100,7 +101,8 @@ template<>
 inline void update_int_fixed<int64_t, Int64Property>(
     char* address,
     BitStream& stream,
-    const Property* property)
+    const Property* property
+)
 {
     const auto* int_property = reinterpret_cast<const Int64Property*>(property);
     int64_t& value = *reinterpret_cast<int64_t*>(address);
@@ -374,35 +376,34 @@ inline void update_float(char* address, BitStream& stream, const Property* prope
         switch (property->flags & Property::Flags::FLOAT_FLAGS)
         {
             using Flags = Property::Flags;
-            case 0:
-                update_float_scaled<Underlying>(address, stream, property);
-                break;
-            case Flags::COORDINATES:
-                update_float_coordinates(address, stream);
-                break;
-            case Flags::NORMAL:
-                update_float_normal(address, stream);
-                break;
-            case Flags::COORDINATES_MULTIPLAYER:
-                update_float_coordinates_multiplayer(address, stream);
-                break;
-            case Flags::COORDINATES_MULTIPLAYER_LOW_PRECISION:
-                update_float_coordinates_multiplayer<Precision::Low>(address, stream);
-                break;
-            case Flags::COORDINATES_MULTIPLAYER_INTEGRAL:
-                update_float_coordinates_multiplayer_integral(address, stream);
-                break;
-            case Flags::CELL_COORDINATES:
-                update_float_cell_coordinates<Underlying>(address, stream, property);
-                break;
-            case Flags::CELL_COORDINATES_LOW_PRECISION:
-                update_float_cell_coordinates<Underlying, Precision::Low>(address, stream, property);
-                break;
-            case Flags::CELL_COORDINATES_INTEGRAL:
-                update_float_cell_coordinates_integral<Underlying>(address, stream, property);
-                break;
-            default:
-                throw csgopp::error::GameError("invalid float flag set " + std::to_string(property->flags));
+        case 0:update_float_scaled<Underlying>(address, stream, property);
+            break;
+        case Flags::COORDINATES:update_float_coordinates(address, stream);
+            break;
+        case Flags::NORMAL:update_float_normal(address, stream);
+            break;
+        case Flags::COORDINATES_MULTIPLAYER:update_float_coordinates_multiplayer(address, stream);
+            break;
+        case Flags::COORDINATES_MULTIPLAYER_LOW_PRECISION:
+            update_float_coordinates_multiplayer<Precision::Low>(
+                address, stream
+            );
+            break;
+        case Flags::COORDINATES_MULTIPLAYER_INTEGRAL:update_float_coordinates_multiplayer_integral(address, stream);
+            break;
+        case Flags::CELL_COORDINATES:update_float_cell_coordinates<Underlying>(address, stream, property);
+            break;
+        case Flags::CELL_COORDINATES_LOW_PRECISION:
+            update_float_cell_coordinates<Underlying, Precision::Low>(
+                address, stream, property
+            );
+            break;
+        case Flags::CELL_COORDINATES_INTEGRAL:
+            update_float_cell_coordinates_integral<Underlying>(
+                address, stream, property
+            );
+            break;
+        default:throw csgopp::error::GameError("invalid float flag set " + std::to_string(property->flags));
         }
     }
 }

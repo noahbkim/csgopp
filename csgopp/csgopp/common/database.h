@@ -9,14 +9,15 @@ namespace csgopp::common::database
 template<typename T>
 struct Noop
 {
-    static void destroy(T *)
-    {}
+    static void destroy(T*)
+    {
+    }
 };
 
 template<typename T>
 struct Delete
 {
-    static void destroy(T *item)
+    static void destroy(T* item)
     {
         delete item;
     }
@@ -25,7 +26,7 @@ struct Delete
 template<typename T, typename Manager = Noop<T>>
 struct Database
 {
-    using Vector = std::vector<T *>;
+    using Vector = std::vector<T*>;
     using Value = T;
 
     Vector container;
@@ -39,20 +40,43 @@ struct Database
 
     ~Database()
     {
-        for (T *item: this->container)
+        for (T* item: this->container)
         {
             Manager::destroy(item);
         }
     }
 
-    [[nodiscard]] Value *&front() { return this->container.front(); }
-    [[nodiscard]] const Value *front() const { return this->container.front(); }
-    [[nodiscard]] Value *&at(size_t index) { return this->container.at(index); }
-    [[nodiscard]] const Value *at(size_t index) const { return this->container.at(index); }
-    [[nodiscard]] Value *&back() { return this->container.back(); }
-    [[nodiscard]] const Value *back() const { return this->container.back(); }
+    [[nodiscard]] Value*& front()
+    {
+        return this->container.front();
+    }
 
-    [[nodiscard]] Value *get(size_t index)
+    [[nodiscard]] const Value* front() const
+    {
+        return this->container.front();
+    }
+
+    [[nodiscard]] Value*& at(size_t index)
+    {
+        return this->container.at(index);
+    }
+
+    [[nodiscard]] const Value* at(size_t index) const
+    {
+        return this->container.at(index);
+    }
+
+    [[nodiscard]] Value*& back()
+    {
+        return this->container.back();
+    }
+
+    [[nodiscard]] const Value* back() const
+    {
+        return this->container.back();
+    }
+
+    [[nodiscard]] Value* get(size_t index)
     {
         return index < this->container.size() ? this->container.at(index) : nullptr;
     }
@@ -62,14 +86,36 @@ struct Database
         return index < this->container.size() ? this->container.at(index) : nullptr;
     }
 
-    [[nodiscard]] size_t size() const { return this->container.size(); }
+    [[nodiscard]] size_t size() const
+    {
+        return this->container.size();
+    }
 
-    typename Vector::iterator begin() { return this->container.begin(); }
-    typename Vector::iterator end() { return this->container.end(); }
-    typename Vector::const_iterator begin() const { return this->container.cbegin(); }
-    typename Vector::const_iterator end() const { return this->container.cend(); }
+    typename Vector::iterator begin()
+    {
+        return this->container.begin();
+    }
 
-    virtual void emplace(T *item) { this->container.emplace_back(item); }
+    typename Vector::iterator end()
+    {
+        return this->container.end();
+    }
+
+    typename Vector::const_iterator begin() const
+    {
+        return this->container.cbegin();
+    }
+
+    typename Vector::const_iterator end() const
+    {
+        return this->container.cend();
+    }
+
+    virtual void emplace(T* item)
+    {
+        this->container.emplace_back(item);
+    }
+
     virtual void emplace(size_t index, T* item)
     {
         if (this->container.size() <= index)
@@ -80,7 +126,7 @@ struct Database
         {
             delete this->container.at(index);
         }
-        
+
         this->container.at(index) = item;
     }
 
@@ -93,19 +139,21 @@ struct Database
 template<typename T>
 struct NameTableMixin
 {
-    using NameTable = absl::flat_hash_map<std::string_view, T *>;
+    using NameTable = absl::flat_hash_map<std::string_view, T*>;
     NameTable by_name{};
 
     NameTableMixin() = default;
-    explicit NameTableMixin(size_t reserved) : by_name(reserved)
-    {}
 
-    [[nodiscard]] T *&at_name(std::string_view name)
+    explicit NameTableMixin(size_t reserved) : by_name(reserved)
+    {
+    }
+
+    [[nodiscard]] T*& at_name(std::string_view name)
     {
         return this->by_name.at(name);
     }
 
-    [[nodiscard]] const T *at_name(std::string_view name) const
+    [[nodiscard]] const T* at_name(std::string_view name) const
     {
         return this->by_name.at(name);
     }
@@ -115,7 +163,7 @@ struct NameTableMixin
         return this->by_name.contains(name);
     }
 
-    void emplace(T *member)
+    void emplace(T* member)
     {
         this->by_name.emplace(member->name, member);
     }
@@ -130,17 +178,19 @@ template<typename T, typename Manager = Noop<T>>
 struct DatabaseWithName : public Database<T, Manager>, public NameTableMixin<T>
 {
     DatabaseWithName() = default;
+
     explicit DatabaseWithName(size_t reserved)
         : Database<T, Manager>(reserved), NameTableMixin<T>(reserved)
-    {}
+    {
+    }
 
-    void emplace(T *property) override
+    void emplace(T* property) override
     {
         Database<T, Manager>::emplace(property);
         NameTableMixin<T>::emplace(property);
     }
 
-    void emplace(size_t index, T *property) override
+    void emplace(size_t index, T* property) override
     {
         Database<T, Manager>::emplace(index, property);
         NameTableMixin<T>::emplace(property);
@@ -156,19 +206,21 @@ struct DatabaseWithName : public Database<T, Manager>, public NameTableMixin<T>
 template<typename T>
 struct IdTableMixin
 {
-    using IdTable = absl::flat_hash_map<typename T::Id, T *>;
+    using IdTable = absl::flat_hash_map<typename T::Id, T*>;
     IdTable by_id{};
 
     IdTableMixin() = default;
-    explicit IdTableMixin(size_t reserved) : by_id(reserved)
-    {}
 
-    [[nodiscard]] T *&at_id(typename T::Id id)
+    explicit IdTableMixin(size_t reserved) : by_id(reserved)
+    {
+    }
+
+    [[nodiscard]] T*& at_id(typename T::Id id)
     {
         return this->by_id.at(id);
     }
 
-    [[nodiscard]] const T *at_id(typename T::Id id) const
+    [[nodiscard]] const T* at_id(typename T::Id id) const
     {
         return this->by_id.at(id);
     }
@@ -178,7 +230,7 @@ struct IdTableMixin
         return this->by_name.contains(id);
     }
 
-    void emplace(T *member)
+    void emplace(T* member)
     {
         this->by_id.emplace(member->id, member);
     }
@@ -194,17 +246,19 @@ template<typename T, typename Manager = Noop<T>>
 struct DatabaseWithId : public Database<T, Manager>, public IdTableMixin<T>
 {
     DatabaseWithId() = default;
+
     explicit DatabaseWithId(size_t reserved)
         : Database<T, Manager>(reserved), IdTableMixin<T>(reserved)
-    {}
-    
-    void emplace(T *property) override
+    {
+    }
+
+    void emplace(T* property) override
     {
         Database<T, Manager>::emplace(property);
         IdTableMixin<T>::emplace(property);
     }
 
-    void emplace(size_t index, T *property) override
+    void emplace(size_t index, T* property) override
     {
         Database<T, Manager>::emplace(index, property);
         IdTableMixin<T>::emplace(property);
@@ -221,11 +275,13 @@ template<typename T, typename Manager = Noop<T>>
 struct DatabaseWithNameId : public DatabaseWithName<T, Manager>, public IdTableMixin<T>
 {
     DatabaseWithNameId() = default;
+
     explicit DatabaseWithNameId(size_t reserved)
         : DatabaseWithName<T, Manager>(reserved), IdTableMixin<T>(reserved)
-    {}
-	
-    void emplace(T *property) override
+    {
+    }
+
+    void emplace(T* property) override
     {
         DatabaseWithName<T, Manager>::emplace(property);
         IdTableMixin<T>::emplace(property);

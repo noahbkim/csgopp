@@ -12,15 +12,16 @@ void EntityType::collect_properties_head(
     const std::shared_ptr<const DataTableOffset>& cursor_parent,
     size_t cursor_offset,
     absl::flat_hash_set<ExcludeView>& excludes,
-    std::vector<DataOffset>& container)
+    std::vector<DataOffset>& container
+)
 {
     // TODO: this doesn't 100% reflect the recursion but I'm pretty sure it's fine
-    for (const auto& item : cursor->excludes)
+    for (const auto& item: cursor->excludes)
     {
         excludes.emplace(item);
     }
 
-    for (DataTable::Property* property : cursor->properties)
+    for (DataTable::Property* property: cursor->properties)
     {
         if (excludes.contains(std::make_pair(cursor->name, property->name)))
         {
@@ -33,7 +34,8 @@ void EntityType::collect_properties_head(
             container.emplace_back(
                 cursor_offset + property->offset,
                 cursor_parent,
-                data_property);
+                data_property
+            );
         }
         else
         {
@@ -43,7 +45,8 @@ void EntityType::collect_properties_head(
             auto child = std::make_shared<DataTableOffset>(
                 cursor_offset + data_table_property->offset,
                 cursor_parent,
-                data_table_property);
+                data_table_property
+            );
 
             if (data_table_property->collapsible())
             {
@@ -52,7 +55,8 @@ void EntityType::collect_properties_head(
                     child,
                     cursor_offset + property->offset,
                     excludes,
-                    container);
+                    container
+                );
             }
             else
             {
@@ -60,7 +64,8 @@ void EntityType::collect_properties_head(
                     data_table_property->data_table,
                     child,
                     cursor_offset + property->offset,
-                    excludes);
+                    excludes
+                );
             }
         }
     }
@@ -70,11 +75,12 @@ void EntityType::collect_properties_tail(
     const DataTable* cursor,
     const std::shared_ptr<const DataTableOffset>& cursor_parent,
     size_t cursor_offset,
-    absl::flat_hash_set<ExcludeView>& excludes)
+    absl::flat_hash_set<ExcludeView>& excludes
+)
 {
     std::vector<DataOffset> container;
     collect_properties_head(cursor, cursor_parent, cursor_offset, excludes, container);
-    for (const DataOffset& absolute : container)
+    for (const DataOffset& absolute: container)
     {
         this->prioritized.emplace_back(absolute);
     }
@@ -120,6 +126,7 @@ Entity::Entity(const EntityType* type, char* address, Id id, const ServerClass* 
     : Instance<EntityType>(type, address)
     , id(id)
     , server_class(server_class)
-{}
+{
+}
 
 }

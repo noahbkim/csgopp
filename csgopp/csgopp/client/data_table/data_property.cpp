@@ -23,7 +23,8 @@ using csgopp::common::object::shared;
 Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
     : bits(data.num_bits())
     , DataProperty(std::move(data))
-{}
+{
+}
 
 Property::Kind::T Int32Property::kind() const
 {
@@ -58,7 +59,8 @@ FloatProperty::FloatProperty(CSVCMsg_SendTable_sendprop_t&& data)
     , low_value(data.low_value())
     , bits(data.num_bits())
     , DataProperty(std::move(data))
-{}
+{
+}
 
 Property::Kind::T FloatProperty::kind() const
 {
@@ -82,7 +84,8 @@ Vector3Property::Vector3Property(CSVCMsg_SendTable_sendprop_t&& data)
     , low_value(data.low_value())
     , bits(data.num_bits())
     , DataProperty(std::move(data))
-{}
+{
+}
 
 Property::Kind::T Vector3Property::kind() const
 {
@@ -106,7 +109,8 @@ Vector2Property::Vector2Property(CSVCMsg_SendTable_sendprop_t&& data)
     , low_value(data.low_value())
     , bits(data.num_bits())
     , DataProperty(std::move(data))
-{}
+{
+}
 
 Property::Kind::T Vector2Property::kind() const
 {
@@ -146,7 +150,8 @@ ArrayProperty::ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, DataProperty* 
     : element(element)
     , length(data.num_elements())
     , DataProperty(std::move(data))
-{}
+{
+}
 
 Property::Kind::T ArrayProperty::kind() const
 {
@@ -168,7 +173,8 @@ bool ArrayProperty::equals(const Property* other) const
 Int64Property::Int64Property(CSVCMsg_SendTable_sendprop_t&& data)
     : bits(data.num_bits())
     , DataProperty(std::move(data))
-{}
+{
+}
 
 Property::Kind::T Int64Property::kind() const
 {

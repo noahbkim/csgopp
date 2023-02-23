@@ -21,7 +21,8 @@ void DataTableProperty::apply(Cursor<Declaration> declaration) const
 
 DataTableProperty::DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data)
     : Property(std::move(data))
-{}
+{
+}
 
 Property::Kind::T DataTableProperty::kind() const
 {

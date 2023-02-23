@@ -20,7 +20,8 @@ struct DataProperty : public Property
     /// \param data a protobuf container of sendtable property data.
     explicit DataProperty(CSVCMsg_SendTable_sendprop_t&& data)
         : Property(std::move(data))
-    {}
+    {
+    }
 
     /// \brief Must be a ValueType
     [[nodiscard]] virtual std::shared_ptr<const DataType> data_type() const = 0;
@@ -38,8 +39,11 @@ struct Int32Property final : public DataProperty
     int32_t bits;
 
     explicit Int32Property(CSVCMsg_SendTable_sendprop_t&& data);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -51,8 +55,11 @@ struct FloatProperty final : public DataProperty
     int32_t bits;
 
     explicit FloatProperty(CSVCMsg_SendTable_sendprop_t&& data);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -64,8 +71,11 @@ struct Vector3Property final : public DataProperty
     int32_t bits;
 
     explicit Vector3Property(CSVCMsg_SendTable_sendprop_t&& data);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -77,8 +87,11 @@ struct Vector2Property final : public DataProperty
     int32_t bits;
 
     explicit Vector2Property(CSVCMsg_SendTable_sendprop_t&& data);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -86,8 +99,11 @@ struct Vector2Property final : public DataProperty
 struct StringProperty final : public DataProperty
 {
     using DataProperty::DataProperty;
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -101,8 +117,11 @@ struct ArrayProperty final : public DataProperty
     int32_t length;
 
     ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, DataProperty* element);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
 
@@ -112,10 +131,12 @@ struct Int64Property final : public DataProperty
     int32_t bits;
 
     explicit Int64Property(CSVCMsg_SendTable_sendprop_t&& data);
+
     [[nodiscard]] Kind::T kind() const override;
+
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
+
     [[nodiscard]] bool equals(const Property* other) const override;
 };
-
 
 }

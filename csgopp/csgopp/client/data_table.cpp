@@ -18,7 +18,8 @@ using csgopp::client::entity::EntityType;
 DataTable::DataTable(const CSVCMsg_SendTable& data)
     : name(data.net_table_name())
     , properties(data.props_size())
-{}
+{
+}
 
 std::shared_ptr<const EntityType> DataTable::construct_type()
 {
@@ -33,7 +34,7 @@ std::shared_ptr<const EntityType> DataTable::construct_type()
         EntityType::Builder builder(base);
         builder.name = this->name;
         builder.context = this;
-        for (DataTable::Property* property : this->properties)
+        for (DataTable::Property* property: this->properties)
         {
             property->build(builder);
         }
