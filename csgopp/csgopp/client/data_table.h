@@ -185,14 +185,15 @@ using DataTableDatabase = DatabaseWithName<DataTable, Delete<DataTable>>;
 bool is_array_index(std::string_view name, size_t index);
 
 LOOKUP(describe, DataTable::Property::Kind::T, const char*,
-       CASE(DataTable::Property::Kind::INT32, "INT32")
-           CASE(DataTable::Property::Kind::FLOAT, "FLOAT")
-           CASE(DataTable::Property::Kind::VECTOR3, "VECTOR3")
-           CASE(DataTable::Property::Kind::VECTOR2, "VECTOR2")
-           CASE(DataTable::Property::Kind::STRING, "STRING")
-           CASE(DataTable::Property::Kind::ARRAY, "ARRAY")
-           CASE(DataTable::Property::Kind::DATA_TABLE, "DATA_TABLE")
-           CASE(DataTable::Property::Kind::INT64, "INT64")
-           DEFAULT(throw GameError("unknown send table property type: " + std::to_string(key))));
+    CASE(DataTable::Property::Kind::INT32, "INT32")
+    CASE(DataTable::Property::Kind::FLOAT, "FLOAT")
+    CASE(DataTable::Property::Kind::VECTOR3, "VECTOR3")
+    CASE(DataTable::Property::Kind::VECTOR2, "VECTOR2")
+    CASE(DataTable::Property::Kind::STRING, "STRING")
+    CASE(DataTable::Property::Kind::ARRAY, "ARRAY")
+    CASE(DataTable::Property::Kind::DATA_TABLE, "DATA_TABLE")
+    CASE(DataTable::Property::Kind::INT64, "INT64")
+    DEFAULT(throw GameError("unknown send table property type: " + std::to_string(key)))
+)
 
 }

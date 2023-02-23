@@ -35,17 +35,6 @@ struct TypeError : Error
     using Error::Error;
 };
 
-template<typename T>
-static constexpr size_t alignmentof()
-{
-    struct Measure
-    {
-        uint8_t bump;
-        T aligned;
-    };
-    return offsetof(Measure, aligned);
-}
-
 static constexpr size_t align(size_t offset, size_t alignment)
 {
     if (alignment == 0)
@@ -623,7 +612,7 @@ template<typename T>
 template<typename T>
 [[nodiscard]] size_t DefaultValueType<T>::alignment() const
 {
-    return alignmentof<T>();
+    return std::alignment_of<T>();
 }
 
 template<typename T>

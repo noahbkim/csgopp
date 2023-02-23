@@ -117,6 +117,7 @@ const char* describe_weapon(uint32_t weapon)
         case 62: return "Recipe Trade Up";
         case 63: return "weapon_cz75a";
         case 64: return "weapon_revolver";
+        default: return "unknown";
     }
 }
 
