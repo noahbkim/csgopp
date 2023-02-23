@@ -30,6 +30,7 @@ void EntityType::collect_properties_head(
         const auto* data_property = dynamic_cast<DataTable::DataProperty*>(property);
         if (data_property != nullptr)
         {
+            // EntityDatum creation
             container.emplace_back(
                 this,
                 data_property->data_type().get(),

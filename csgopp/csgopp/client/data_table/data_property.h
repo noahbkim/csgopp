@@ -10,6 +10,7 @@ namespace csgopp::client::data_table::data_property
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::client::data_table::property::Property;
 using csgopp::client::data_table::data_type::DataType;
+using csgopp::client::data_table::data_type::DataArrayType;
 using csgopp::common::object::ObjectType;
 using csgopp::common::object::Type;
 
@@ -123,6 +124,10 @@ struct ArrayProperty final : public DataProperty
     [[nodiscard]] std::shared_ptr<const DataType> data_type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
+
+private:
+    // Cache this so we don't have to worry about lifetimes
+    std::shared_ptr<DataArrayType> _type;
 };
 
 /// \brief Represents an integer with maximum width 64 bits.

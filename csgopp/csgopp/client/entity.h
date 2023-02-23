@@ -35,18 +35,23 @@ struct EntityDatum : public Accessor
 {
     // TODO: we can reduce one memory lookup by somehow getting this type to be DataType* type
     const DataProperty* property{nullptr};
+    const DataType* data_type{nullptr};
 
     EntityDatum() = default;
 
     EntityDatum(
         const struct Type* origin,
-        const struct Type* type,
+        const DataType* data_type,
         size_t offset,
         const DataProperty* property
     )
-        : Accessor(origin, type, offset)
+        : Accessor(origin, data_type, offset)
         , property(property)
+        , data_type(data_type)
     {
+        std::shared_ptr<const DataType> dt = property->data_type();
+        this->data_type = dt.get();
+//        OK(this->data_type == this->type);
     }
 };
 

@@ -151,7 +151,6 @@ struct Property : Context<Declaration>
     /// you're not working directly with the virtual interface.
     [[nodiscard]] virtual Kind::T kind() const = 0;
 
-
     /// \brief Materialize a `object::Type` from the property.
     ///
     /// \return a `std::shared_ptr` to a `object::Type` that

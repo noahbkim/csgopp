@@ -1510,7 +1510,7 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
     {
         // Actually update the field
         const EntityDatum& offset = entity->type->prioritized[i];
-        offset.property->data_type()->update(entity->address + offset.offset, stream, offset.property);
+        offset.data_type->update(entity->address + offset.offset, stream, offset.property);
     }
 }
 

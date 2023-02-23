@@ -118,7 +118,7 @@ struct Accessor
     template<typename T>
     Is<T> is() const;
 
-    bool contains(const Accessor& other) const;
+    [[nodiscard]] bool contains(const Accessor& other) const;
     bool operator==(const Accessor& other) const;
     bool operator>(const Accessor& other) const;
     bool operator>=(const Accessor& other) const;

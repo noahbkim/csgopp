@@ -151,6 +151,7 @@ ArrayProperty::ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, DataProperty* 
     , length(data.num_elements())
     , DataProperty(std::move(data))
 {
+    this->_type = std::make_shared<DataArrayType>(this->element->data_type(), this->length);
 }
 
 Property::Kind::T ArrayProperty::kind() const
@@ -160,7 +161,7 @@ Property::Kind::T ArrayProperty::kind() const
 
 std::shared_ptr<const DataType> ArrayProperty::data_type() const
 {
-    return std::make_shared<DataArrayType>(this->element->data_type(), this->length);
+    return this->_type;
 }
 
 bool ArrayProperty::equals(const Property* other) const
