@@ -118,6 +118,11 @@ struct Accessor
     template<typename T>
     Is<T> is() const;
 
+    bool contains(const Accessor& other) const;
+    bool operator==(const Accessor& other) const;
+    bool operator>(const Accessor& other) const;
+    bool operator>=(const Accessor& other) const;
+
 private:
     Reference bind(char* address) const;
 };

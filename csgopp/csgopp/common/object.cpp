@@ -9,6 +9,34 @@ Reference Accessor::bind(char* address) const
     return Reference(this->type, address + this->offset);
 }
 
+bool Accessor::contains(const Accessor& other) const
+{
+    return (
+        this->origin == other.origin
+        && other.offset >= this->offset
+        && other.offset < this->offset + this->type->size()
+    );
+}
+
+bool Accessor::operator==(const Accessor& other) const
+{
+    return (
+        this->origin == other.origin
+        && this->type == other.type
+        && this->offset == other.offset
+    );
+}
+
+bool Accessor::operator>(const Accessor& other) const
+{
+    return this->contains(other);
+}
+
+bool Accessor::operator>=(const Accessor& other) const
+{
+    return (*this) == other || (*this) > other;
+}
+
 [[nodiscard]] Accessor Type::operator[](const std::string& member_name) const
 {
     throw TypeError("member access is only available on objects!");

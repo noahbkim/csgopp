@@ -175,7 +175,7 @@ struct GenerateCommand
             if (data_table->type())
             {
                 out << data_table->type()->name << std::endl;
-                for (const csgopp::client::entity::DataOffset& absolute : data_table->type()->prioritized)
+                for (const csgopp::client::entity::EntityDatum& absolute : data_table->type()->prioritized)
                 {
                     out << "  " << absolute.property->name << std::endl;
                 }

@@ -22,6 +22,7 @@ using csgopp::common::database::Database;
 using csgopp::common::object::ObjectType;
 using csgopp::common::object::Instance;
 using csgopp::common::object::Type;
+using csgopp::common::object::Accessor;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::property::Property;
 using csgopp::client::data_table::data_type::DataType;
@@ -29,95 +30,23 @@ using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::client::data_table::data_table_property::DataTableProperty;
 using csgopp::client::server_class::ServerClass;
 
-struct DataTableOffset
+// Maps properties and types
+struct EntityDatum : public Accessor
 {
-    size_t offset{0};
-    std::shared_ptr<const struct DataTableOffset> parent;  // nullable
-    const DataTableProperty* property{nullptr};
-    const Type* type{nullptr};
-
-    DataTableOffset() = default;
-
-    DataTableOffset(
-        size_t offset,
-        std::shared_ptr<const struct DataTableOffset> parent,
-        const DataTableProperty* property
-    )
-        : offset(offset)
-        , parent(std::move(parent))
-        , property(property)
-        , type(property->type().get())
-    {
-    }
-
-    template<typename... Args>
-    bool matches(Args&& ... args) const
-    {
-        return this->matches_reversing(std::index_sequence_for<Args...>{}, args...);
-    }
-
-private:
-    friend struct DataOffset;
-
-    template<size_t... Is, typename... Args>
-    bool matches_reversing(std::index_sequence<Is...>, Args&& ... args) const
-    {
-        return this->matches_reversed(std::get<sizeof...(Is) - 1 - Is>(std::tie(args...))...);
-    }
-
-    template<typename Arg, typename... Args>
-    bool matches_reversed(Arg&& arg, Args&& ... args) const
-    {
-        return arg == this->property->name && this->parent->matches_reversed(args...);
-    }
-
-    template<typename Arg>
-    bool matches_reversed(Arg&& arg) const
-    {
-        return arg == this->property->name && this->parent == nullptr;
-    }
-};
-
-struct DataOffset
-{
-    size_t offset{0};
-    std::shared_ptr<const DataTableOffset> parent;  // not null
+    // TODO: we can reduce one memory lookup by somehow getting this type to be DataType* type
     const DataProperty* property{nullptr};
-    const DataType* type{nullptr};
 
-    DataOffset() = default;
+    EntityDatum() = default;
 
-    DataOffset(size_t offset, std::shared_ptr<const DataTableOffset> parent, const DataProperty* property)
-        : offset(offset)
-        , parent(std::move(parent))
+    EntityDatum(
+        const struct Type* origin,
+        const struct Type* type,
+        size_t offset,
+        const DataProperty* property
+    )
+        : Accessor(origin, type, offset)
         , property(property)
-        , type(property->data_type().get())
     {
-    }
-
-    template<typename... Args>
-    bool matches(Args&& ... args) const
-    {
-        return this->matches_reversing(std::index_sequence_for<Args...>{}, args...);
-    }
-
-private:
-    template<size_t... Is, typename... Args>
-    bool matches_reversing(std::index_sequence<Is...>, Args&& ... args) const
-    {
-        return this->matches_reversed(std::get<sizeof...(Is) - 1 - Is>(std::tie(args...))...);
-    }
-
-    template<typename Arg, typename... Args>
-    bool matches_reversed(Arg&& arg, Args&& ... args) const
-    {
-        return arg == this->property->name && this->parent->matches_reversed(args...);
-    }
-
-    template<typename Arg>
-    bool matches_reversed(Arg&& arg) const
-    {
-        return false;
     }
 };
 
@@ -130,21 +59,19 @@ struct EntityType final : public ObjectType
     const DataTable* data_table;
 
     /// Flattened, reordered members used for updates
-    std::vector<DataOffset> prioritized;
+    std::vector<EntityDatum> prioritized;
 
     EntityType(Builder&& builder, const DataTable* data_table);
 
     void collect_properties_head(
         const DataTable* cursor,
-        const std::shared_ptr<const DataTableOffset>& cursor_parent,
         size_t cursor_offset,
         absl::flat_hash_set<ExcludeView>& excludes,
-        std::vector<DataOffset>& container
+        std::vector<EntityDatum>& container
     );
 
     void collect_properties_tail(
         const DataTable* cursor,
-        const std::shared_ptr<const DataTableOffset>& cursor_parent,
         size_t cursor_offset,
         absl::flat_hash_set<ExcludeView>& excludes
     );

@@ -9,19 +9,18 @@ using csgopp::client::data_table::DataTable;
 
 void EntityType::collect_properties_head(
     const DataTable* cursor,
-    const std::shared_ptr<const DataTableOffset>& cursor_parent,
     size_t cursor_offset,
     absl::flat_hash_set<ExcludeView>& excludes,
-    std::vector<DataOffset>& container
+    std::vector<EntityDatum>& container
 )
 {
     // TODO: this doesn't 100% reflect the recursion but I'm pretty sure it's fine
-    for (const auto& item: cursor->excludes)
+    for (const auto& item : cursor->excludes)
     {
         excludes.emplace(item);
     }
 
-    for (DataTable::Property* property: cursor->properties)
+    for (DataTable::Property* property : cursor->properties)
     {
         if (excludes.contains(std::make_pair(cursor->name, property->name)))
         {
@@ -32,8 +31,9 @@ void EntityType::collect_properties_head(
         if (data_property != nullptr)
         {
             container.emplace_back(
+                this,
+                data_property->data_type().get(),
                 cursor_offset + property->offset,
-                cursor_parent,
                 data_property
             );
         }
@@ -41,18 +41,10 @@ void EntityType::collect_properties_head(
         {
             const auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property);
             OK(data_table_property != nullptr);
-
-            auto child = std::make_shared<DataTableOffset>(
-                cursor_offset + data_table_property->offset,
-                cursor_parent,
-                data_table_property
-            );
-
             if (data_table_property->collapsible())
             {
-                collect_properties_head(
+                this->collect_properties_head(
                     data_table_property->data_table,
-                    child,
                     cursor_offset + property->offset,
                     excludes,
                     container
@@ -60,9 +52,8 @@ void EntityType::collect_properties_head(
             }
             else
             {
-                collect_properties_tail(
+                this->collect_properties_tail(
                     data_table_property->data_table,
-                    child,
                     cursor_offset + property->offset,
                     excludes
                 );
@@ -73,14 +64,13 @@ void EntityType::collect_properties_head(
 
 void EntityType::collect_properties_tail(
     const DataTable* cursor,
-    const std::shared_ptr<const DataTableOffset>& cursor_parent,
     size_t cursor_offset,
     absl::flat_hash_set<ExcludeView>& excludes
 )
 {
-    std::vector<DataOffset> container;
-    collect_properties_head(cursor, cursor_parent, cursor_offset, excludes, container);
-    for (const DataOffset& absolute: container)
+    std::vector<EntityDatum> container;
+    this->collect_properties_head(cursor, cursor_offset, excludes, container);
+    for (const EntityDatum& absolute : container)
     {
         this->prioritized.emplace_back(absolute);
     }
@@ -118,7 +108,7 @@ EntityType::EntityType(Builder&& builder, const DataTable* data_table)
 {
     this->prioritized.reserve(this->members.size());
     absl::flat_hash_set<ExcludeView> excludes;
-    this->collect_properties_tail(data_table, nullptr, 0, excludes);
+    this->collect_properties_tail(data_table, 0, excludes);
     this->prioritize();
 }
 

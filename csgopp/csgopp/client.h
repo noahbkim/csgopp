@@ -69,7 +69,7 @@ using csgopp::client::server_class::ServerClass;
 using csgopp::client::string_table::StringTable;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::Entity;
-using csgopp::client::entity::DataOffset;
+using csgopp::client::entity::EntityDatum;
 using csgopp::client::game_event::GameEventType;
 using csgopp::client::game_event::GameEvent;
 using csgopp::client::user::User;
@@ -578,22 +578,31 @@ bool Client<Observer>::advance(CodedInputStream& stream)
     switch (command)
     {
     case demo::Command::SIGN_ON:
-    case demo::Command::PACKET:this->advance_packets(stream);
+    case demo::Command::PACKET:
+        this->advance_packets(stream);
         break;
-    case demo::Command::SYNC_TICK:break;
-    case demo::Command::CONSOLE_COMMAND:this->advance_console_command(stream);
+    case demo::Command::SYNC_TICK:
         break;
-    case demo::Command::USER_COMMAND:this->advance_user_command(stream);
+    case demo::Command::CONSOLE_COMMAND:
+        this->advance_console_command(stream);
         break;
-    case demo::Command::DATA_TABLES:this->advance_data_tables(stream);
+    case demo::Command::USER_COMMAND:
+        this->advance_user_command(stream);
         break;
-    case demo::Command::STOP:ok = false;
+    case demo::Command::DATA_TABLES:
+        this->advance_data_tables(stream);
         break;
-    case demo::Command::CUSTOM_DATA:this->advance_custom_data(stream);
+    case demo::Command::STOP:
+        ok = false;
         break;
-    case demo::Command::STRING_TABLES:this->advance_string_tables(stream);
+    case demo::Command::CUSTOM_DATA:
+        this->advance_custom_data(stream);
         break;
-    default:this->advance_unknown(stream, command);
+    case demo::Command::STRING_TABLES:
+        this->advance_string_tables(stream);
+        break;
+    default:
+        this->advance_unknown(stream, command);
         break;
     }
 
@@ -630,83 +639,122 @@ void Client<Observer>::advance_packet(CodedInputStream& stream)
     switch (command)
     {
         using namespace csgo::message::net;
-    case NET_Messages::net_NOP: this->advance_packet_nop(stream);
+    case NET_Messages::net_NOP:
+        this->advance_packet_nop(stream);
         break;
-    case NET_Messages::net_Disconnect: this->advance_packet_disconnect(stream);
+    case NET_Messages::net_Disconnect:
+        this->advance_packet_disconnect(stream);
         break;
-    case NET_Messages::net_File: this->advance_packet_file(stream);
+    case NET_Messages::net_File:
+        this->advance_packet_file(stream);
         break;
-    case NET_Messages::net_SplitScreenUser: this->advance_packet_split_screen_user(stream);
+    case NET_Messages::net_SplitScreenUser:
+        this->advance_packet_split_screen_user(stream);
         break;
-    case NET_Messages::net_Tick: this->advance_packet_tick(stream);
+    case NET_Messages::net_Tick:
+        this->advance_packet_tick(stream);
         break;
-    case NET_Messages::net_StringCmd: this->advance_packet_string_command(stream);
+    case NET_Messages::net_StringCmd:
+        this->advance_packet_string_command(stream);
         break;
-    case NET_Messages::net_SetConVar: this->advance_packet_set_console_variable(stream);
+    case NET_Messages::net_SetConVar:
+        this->advance_packet_set_console_variable(stream);
         break;
-    case NET_Messages::net_SignonState: this->advance_packet_sign_on_state(stream);
+    case NET_Messages::net_SignonState:
+        this->advance_packet_sign_on_state(stream);
         break;
-    case SVC_Messages::svc_ServerInfo: this->advance_packet_server_info(stream);
+    case SVC_Messages::svc_ServerInfo:
+        this->advance_packet_server_info(stream);
         break;
-    case SVC_Messages::svc_SendTable: this->advance_packet_send_table(stream);
+    case SVC_Messages::svc_SendTable:
+        this->advance_packet_send_table(stream);
         break;
-    case SVC_Messages::svc_ClassInfo: this->advance_packet_class_info(stream);
+    case SVC_Messages::svc_ClassInfo:
+        this->advance_packet_class_info(stream);
         break;
-    case SVC_Messages::svc_SetPause: this->advance_packet_set_pause(stream);
+    case SVC_Messages::svc_SetPause:
+        this->advance_packet_set_pause(stream);
         break;
-    case SVC_Messages::svc_CreateStringTable: this->advance_packet_create_string_table(stream);
+    case SVC_Messages::svc_CreateStringTable:
+        this->advance_packet_create_string_table(stream);
         break;
-    case SVC_Messages::svc_UpdateStringTable: this->advance_packet_update_string_table(stream);
+    case SVC_Messages::svc_UpdateStringTable:
+        this->advance_packet_update_string_table(stream);
         break;
-    case SVC_Messages::svc_VoiceInit: this->advance_packet_voice_initialization(stream);
+    case SVC_Messages::svc_VoiceInit:
+        this->advance_packet_voice_initialization(stream);
         break;
-    case SVC_Messages::svc_VoiceData: this->advance_packet_voice_data(stream);
+    case SVC_Messages::svc_VoiceData:
+        this->advance_packet_voice_data(stream);
         break;
-    case SVC_Messages::svc_Print: this->advance_packet_print(stream);
+    case SVC_Messages::svc_Print:
+        this->advance_packet_print(stream);
         break;
-    case SVC_Messages::svc_Sounds: this->advance_packet_sounds(stream);
+    case SVC_Messages::svc_Sounds:
+        this->advance_packet_sounds(stream);
         break;
-    case SVC_Messages::svc_SetView: this->advance_packet_set_view(stream);
+    case SVC_Messages::svc_SetView:
+        this->advance_packet_set_view(stream);
         break;
-    case SVC_Messages::svc_FixAngle: this->advance_packet_fix_angle(stream);
+    case SVC_Messages::svc_FixAngle:
+        this->advance_packet_fix_angle(stream);
         break;
-    case SVC_Messages::svc_CrosshairAngle: this->advance_packet_crosshair_angle(stream);
+    case SVC_Messages::svc_CrosshairAngle:
+        this->advance_packet_crosshair_angle(stream);
         break;
-    case SVC_Messages::svc_BSPDecal: this->advance_packet_bsp_decal(stream);
+    case SVC_Messages::svc_BSPDecal:
+        this->advance_packet_bsp_decal(stream);
         break;
-    case SVC_Messages::svc_SplitScreen: this->advance_packet_split_screen(stream);
+    case SVC_Messages::svc_SplitScreen:
+        this->advance_packet_split_screen(stream);
         break;
-    case SVC_Messages::svc_UserMessage: this->advance_packet_user_message(stream);
+    case SVC_Messages::svc_UserMessage:
+        this->advance_packet_user_message(stream);
         break;
-    case SVC_Messages::svc_EntityMessage: this->advance_packet_entity_message(stream);
+    case SVC_Messages::svc_EntityMessage:
+        this->advance_packet_entity_message(stream);
         break;
-    case SVC_Messages::svc_GameEvent: this->advance_packet_game_event(stream);
+    case SVC_Messages::svc_GameEvent:
+        this->advance_packet_game_event(stream);
         break;
-    case SVC_Messages::svc_PacketEntities: this->advance_packet_packet_entities(stream);
+    case SVC_Messages::svc_PacketEntities:
+        this->advance_packet_packet_entities(stream);
         break;
-    case SVC_Messages::svc_TempEntities: this->advance_packet_temporary_entities(stream);
+    case SVC_Messages::svc_TempEntities:
+        this->advance_packet_temporary_entities(stream);
         break;
-    case SVC_Messages::svc_Prefetch: this->advance_packet_prefetch(stream);
+    case SVC_Messages::svc_Prefetch:
+        this->advance_packet_prefetch(stream);
         break;
-    case SVC_Messages::svc_Menu: this->advance_packet_menu(stream);
+    case SVC_Messages::svc_Menu:
+        this->advance_packet_menu(stream);
         break;
-    case SVC_Messages::svc_GameEventList: this->advance_packet_game_event_list(stream);
+    case SVC_Messages::svc_GameEventList:
+        this->advance_packet_game_event_list(stream);
         break;
-    case SVC_Messages::svc_GetCvarValue: this->advance_packet_get_console_variable_value(stream);
+    case SVC_Messages::svc_GetCvarValue:
+        this->advance_packet_get_console_variable_value(stream);
         break;
-    case SVC_Messages::svc_PaintmapData: this->advance_packet_paintmap_data(stream);
+    case SVC_Messages::svc_PaintmapData:
+        this->advance_packet_paintmap_data(stream);
         break;
-    case SVC_Messages::svc_CmdKeyValues: this->advance_packet_command_key_values(stream);
+    case SVC_Messages::svc_CmdKeyValues:
+        this->advance_packet_command_key_values(stream);
         break;
-    case SVC_Messages::svc_EncryptedData: this->advance_packet_encrypted_data(stream);
+    case SVC_Messages::svc_EncryptedData:
+        this->advance_packet_encrypted_data(stream);
         break;
-    case SVC_Messages::svc_HltvReplay: this->advance_packet_hltv_replay(stream);
+    case SVC_Messages::svc_HltvReplay:
+        this->advance_packet_hltv_replay(stream);
         break;
-    case SVC_Messages::svc_Broadcast_Command: this->advance_packet_broadcast_command(stream);
+    case SVC_Messages::svc_Broadcast_Command:
+        this->advance_packet_broadcast_command(stream);
         break;
-    case NET_Messages::net_PlayerAvatarData: this->advance_packet_player_avatar_data(stream);
+    case NET_Messages::net_PlayerAvatarData:
+        this->advance_packet_player_avatar_data(stream);
         break;
-    default: this->advance_packet_unknown(stream, command);
+    default:
+        this->advance_packet_unknown(stream, command);
     }
 
     AFTER(PacketObserver, command);
@@ -903,7 +951,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
         // Actually do event handling if we're not at the terminator.
         if (!data.is_end())
         {
-            DataTable* data_table = new DataTable(data);
+            auto* data_table = new DataTable(data);
             DataTable::DataProperty* preceding_array_element{nullptr};
 
             // Do a check to see if our items are all the same type and enumerated; if so we'll turn them into a single
@@ -913,13 +961,14 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
             size_t coalesced_array_index{0};
 
             using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
-            for (CSVCMsg_SendTable_sendprop_t& property_data: *data.mutable_props())
+            for (CSVCMsg_SendTable_sendprop_t& property_data : *data.mutable_props())
             {
                 if (property_data.flags() & DataTable::Property::Flags::EXCLUDE)
                 {
                     data_table->excludes.emplace_back(
                         std::move(*property_data.mutable_dt_name()),
-                        std::move(*property_data.mutable_var_name()));
+                        std::move(*property_data.mutable_var_name())
+                    );
                     continue;
                 }
 
@@ -927,28 +976,40 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 switch (property_data.type())
                 {
                     using Kind = DataTable::Property::Kind;
-                case Kind::INT32:property = new DataTable::Int32Property(std::move(property_data));
+                case Kind::INT32:
+                    property = new DataTable::Int32Property(std::move(property_data));
                     break;
-                case Kind::FLOAT:property = new DataTable::FloatProperty(std::move(property_data));
+                case Kind::FLOAT:
+                    property = new DataTable::FloatProperty(std::move(property_data));
                     break;
-                case Kind::VECTOR3:property = new DataTable::Vector3Property(std::move(property_data));
+                case Kind::VECTOR3:
+                    property = new DataTable::Vector3Property(std::move(property_data));
                     break;
-                case Kind::VECTOR2:property = new DataTable::Vector2Property(std::move(property_data));
+                case Kind::VECTOR2:
+                    property = new DataTable::Vector2Property(std::move(property_data));
                     break;
-                case Kind::STRING:property = new DataTable::StringProperty(std::move(property_data));
+                case Kind::STRING:
+                    property = new DataTable::StringProperty(std::move(property_data));
                     break;
-                case Kind::ARRAY:VERIFY(preceding_array_element != nullptr);
-                    property = new DataTable::ArrayProperty(std::move(property_data), preceding_array_element);
+                case Kind::ARRAY:
+                    VERIFY(preceding_array_element != nullptr);
+                    property = new DataTable::ArrayProperty(
+                        std::move(property_data),
+                        preceding_array_element
+                    );
                     preceding_array_element = nullptr;
                     break;
                 case Kind::DATA_TABLE:
                     property = new_data_table_properties.emplace_back(
                         new DataTable::DataTableProperty(std::move(property_data)),
-                        std::string(std::move(*property_data.mutable_dt_name()))).property;
+                        std::move(*property_data.mutable_dt_name())
+                    ).property;
                     break;
-                case Kind::INT64:property = new DataTable::Int64Property(std::move(property_data));
+                case Kind::INT64:
+                    property = new DataTable::Int64Property(std::move(property_data));
                     break;
-                default:throw csgopp::error::GameError("unreachable");
+                default:
+                    throw csgopp::error::GameError("unreachable");
                 }
 
                 // Check if we're still optimizing as array
@@ -998,7 +1059,7 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
     } while (!data.is_end());
 
     // Link data table properties to their data table
-    for (const UnboundDataTableProperty& unbound: new_data_table_properties)
+    for (const UnboundDataTableProperty& unbound : new_data_table_properties)
     {
         unbound.property->data_table = lookup(
             new_data_tables.by_name,
@@ -1039,9 +1100,9 @@ Database<ServerClass> Client<Observer>::create_server_classes(
         new_server_classes.emplace(server_class);
     }
 
-    for (ServerClass* server_class: new_server_classes)
+    for (ServerClass* server_class : new_server_classes)
     {
-        for (DataTable::Property* property: server_class->data_table->properties)
+        for (DataTable::Property* property : server_class->data_table->properties)
         {
             if (property->name == "baseclass")
             {
@@ -1067,14 +1128,14 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     Database<ServerClass> new_server_classes = this->create_server_classes(stream, new_data_tables);
 
     // Materialize types
-    for (ServerClass* server_class: new_server_classes)
+    for (ServerClass* server_class : new_server_classes)
     {
         server_class->data_table->construct_type();
     }
 
     // Now we can emplace and emit
     this->_data_tables.reserve(new_data_tables.size());
-    for (DataTable* data_table: new_data_tables)
+    for (DataTable* data_table : new_data_tables)
     {
         BEFORE(Observer, DataTableCreationObserver);
         this->_data_tables.emplace(data_table);
@@ -1082,7 +1143,7 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     }
 
     this->_server_classes.reserve(new_server_classes.size());
-    for (ServerClass* server_class: new_server_classes)
+    for (ServerClass* server_class : new_server_classes)
     {
         BEFORE(Observer, ServerClassCreationObserver);
         this->_server_classes.emplace(server_class->index, server_class);
@@ -1445,10 +1506,10 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
         index += 1;
     }
 
-    for (uint16_t i: this->_update_entity_indices)
+    for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
-        const DataOffset& offset = entity->type->prioritized[i];
+        const EntityDatum& offset = entity->type->prioritized[i];
         offset.property->data_type()->update(entity->address + offset.offset, stream, offset.property);
     }
 }
@@ -1471,7 +1532,7 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 
     // Update from baseline in string table
     VERIFY(this->_string_tables.instance_baseline != nullptr);
-    for (StringTable::Entry* entry: this->_string_tables.instance_baseline->entries)
+    for (StringTable::Entry* entry : this->_string_tables.instance_baseline->entries)
     {
         if (std::stoi(entry->string) == server_class->index)
         {
@@ -1582,7 +1643,7 @@ void Client<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
 
     csgo::message::net::CSVCMsg_GameEventList data;
     data.ParseFromCodedStream(&stream);
-    for (csgo::message::net::CSVCMsg_GameEventList_descriptor_t& descriptor: *data.mutable_descriptors())
+    for (csgo::message::net::CSVCMsg_GameEventList_descriptor_t& descriptor : *data.mutable_descriptors())
     {
         BEFORE(Observer, GameEventTypeCreationObserver);
         GameEventType* game_event_type = GameEventType::build(std::move(descriptor));

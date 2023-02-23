@@ -8,6 +8,7 @@
 #include <argparse/argparse.hpp>
 
 #include <csgopp/client.h>
+#include <csgopp/common/object.h>
 
 #include "common.h"
 
@@ -16,6 +17,9 @@ using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::User;
 using csgopp::client::GameEvent;
+using csgopp::client::entity::EntityType;
+using csgopp::client::entity::EntityDatum;
+using csgopp::common::object::Accessor;
 
 const char* describe_game_phase(uint32_t phase)
 {
@@ -125,14 +129,33 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
 
+    const ServerClass* player_server_class{nullptr};
+    Accessor weapon_purchases_accessor;
+
+    void on_server_class_creation(Client& client, const ServerClass* server_class) override
+    {
+        if (server_class->name == "CCSPlayer")
+        {
+            this->player_server_class = server_class;
+            const EntityType& type = *server_class->data_table->type();
+            this->weapon_purchases_accessor = type["cslocaldata"]["m_iWeaponPurchasesThisRound"];
+        }
+    }
+
     void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
     {
-        for (uint16_t index : indices)
+        if (entity->server_class == this->player_server_class)
         {
-            const csgopp::client::entity::DataOffset& offset = entity->type->prioritized.at(index);
-            if (offset.parent && offset.parent->matches("cslocaldata", "m_iWeaponPurchasesThisRound"))
+            for (uint16_t index : indices)
             {
-                std::cout << "Purchase!" << std::endl;
+                const EntityDatum& datum = entity->type->prioritized.at(index);
+                if (this->weapon_purchases_accessor > datum)
+                {
+                    const User* user = client.users().at_index(entity->id);
+                    OK(user != nullptr);
+                    int weapon = atoi(datum.property->name.c_str());
+                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
+                }
             }
         }
     }
