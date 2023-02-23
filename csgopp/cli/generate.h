@@ -17,6 +17,8 @@
 
 using argparse::ArgumentParser;
 using csgopp::common::code::Generator;
+using csgopp::common::code::Cursor;
+using csgopp::common::code::Definition;
 using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
@@ -40,7 +42,8 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
         this->data_table_count += 1;
         if (data_table->type())
         {
-            data_table->type()->emit(class_type_generator.append(data_table->name));
+            Cursor<Definition> cursor(class_type_generator.append(data_table->name));
+            data_table->type()->emit(cursor);
             this->entity_type_count += 1;
         }
     }
@@ -52,7 +55,8 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
 
     void on_game_event_type_creation(Client& client, const GameEventType* game_event_type) override
     {
-        game_event_type->emit(game_event_type_generator.append(game_event_type->name));
+        Cursor<Definition> cursor(game_event_type_generator.append(game_event_type->name));
+        game_event_type->emit(cursor);
         this->game_event_type_count += 1;
     }
 };

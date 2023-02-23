@@ -1,6 +1,6 @@
 [requires]
-protobuf/3.21.4
-abseil/20220623.0
+protobuf/3.21.9
+abseil/20230125.1
 argparse/2.9
 
 [build_requires]

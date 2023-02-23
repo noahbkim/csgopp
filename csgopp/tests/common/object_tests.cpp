@@ -1,20 +1,31 @@
 #include <gtest/gtest.h>
+#include <locale>
+#include <codecvt>
 
 #include <csgopp/common/object.h>
 
 using namespace csgopp::common::object;
 
-#define BOOL std::make_shared<DefaultValueType<bool>>()
-#define UINT8 std::make_shared<DefaultValueType<uint8_t>>()
-#define UINT32 std::make_shared<DefaultValueType<uint32_t>>()
-#define STRING std::make_shared<DefaultValueType<std::string>>()
+template<typename T>
+struct TestDefaultValueType : public DefaultValueType<T>
+{
+    void represent(const char* address, std::ostream& out) const override
+    {
+
+    }
+};
+
+#define BOOL std::make_shared<TestDefaultValueType<bool>>()
+#define UINT8 std::make_shared<TestDefaultValueType<uint8_t>>()
+#define UINT32 std::make_shared<TestDefaultValueType<uint32_t>>()
+#define STRING std::make_shared<TestDefaultValueType<std::string>>()
 
 struct Vector3
 {
     double x, y, z;
 };
 
-#define VECTOR std::make_shared<DefaultValueType<Vector3>>()
+#define VECTOR std::make_shared<TestDefaultValueType<Vector3>>()
 
 TEST(Object, integration)
 {
@@ -150,9 +161,9 @@ template<typename T, typename U, typename V>
 void test_alignment()
 {
     ObjectType::Builder builder;
-    builder.member("first", std::make_unique<DefaultValueType<T>>());
-    builder.member("second", std::make_unique<DefaultValueType<U>>());
-    builder.member("third", std::make_unique<DefaultValueType<V>>());
+    builder.member("first", std::make_unique<TestDefaultValueType<T>>());
+    builder.member("second", std::make_unique<TestDefaultValueType<U>>());
+    builder.member("third", std::make_unique<TestDefaultValueType<V>>());
     ObjectType tripe_T(std::move(builder));
     using Actual = Triple<T, U, V>;
     ASSERT_EQ(tripe_T.at("first").offset, offsetof(Actual, first));

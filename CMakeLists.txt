@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.23)
 set(CMAKE_CXX_STANDARD 17)
 
-# set the project name
+# Set the project name
 project(csgopp)
 
-# include conan
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+# Include conan
+include(${PROJECT_SOURCE_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
-# external libraries
+# External libraries
 set(NB_SHARED OFF CACHE INTERNAL "")
 add_subdirectory(libraries/nanobind)
 
-# link compiled proto headers
+# Main subdirectories
 add_subdirectory(csgopp/messages/)
 add_subdirectory(csgopp/csgopp/)
 #add_subdirectory(csgopp/csgopy)
