@@ -1,11 +1,7 @@
-# Dogshit fucking build system I hate C++
-set(Protobuf_PROTOC_EXECUTABLE ${CONAN_BIN_DIRS_PROTOBUF}/protoc)
-set(PROTOC protoc)
+set(Protobuf_PROTOC_EXECUTABLE ${CONAN_BIN_DIRS_PROTOBUF}/protoc.exe)
 
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
-
-set_property(TARGET protobuf::protoc PROPERTY IMPORTED_LOCATION ${CONAN_BIN_DIRS_PROTOBUF}/protoc)
 
 protobuf_generate_cpp(PROTO_SOURCES PROTO_HEADERS
         cstrike15_gcmessages.proto
@@ -13,6 +9,8 @@ protobuf_generate_cpp(PROTO_SOURCES PROTO_HEADERS
         engine_gcmessages.proto
         netmessages.proto
         steammessages.proto)
+
+set_property(TARGET protobuf::protoc PROPERTY IMPORTED_LOCATION ${CONAN_BIN_DIRS_PROTOBUF}/protoc.exe)
 
 # https://stackoverflow.com/questions/20824194/cmake-with-google-protocol-buffers
 add_library(csgopp.messages STATIC ${PROTO_SOURCES} ${PROTO_HEADERS})
