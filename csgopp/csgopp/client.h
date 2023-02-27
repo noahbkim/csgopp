@@ -283,7 +283,7 @@ struct ClientObserverBase
     {
         EntityUpdateObserver() = default;
 
-        explicit EntityUpdateObserver(Client& client, const Entity* entity)
+        explicit EntityUpdateObserver(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
         {
         }
 
@@ -538,6 +538,7 @@ protected:
 
     void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
 
+    void _get_update_indices(BitStream& stream);
     void _update_entity(Entity* entity, BitStream& stream);
     void create_entity(Entity::Id id, BitStream& stream);
     void update_entity(Entity::Id id, BitStream& stream);
@@ -1451,9 +1452,9 @@ void Client<Observer>::advance_packet_packet_entities(CodedInputStream& stream)
     stream.PopLimit(limit);
 }
 
-/// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
+// THIS MUST BE CALLED BEFORE _update_entity
 template<typename Observer>
-void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
+void Client<Observer>::_get_update_indices(BitStream& stream)
 {
     uint8_t small_increment_optimization;
     OK(stream.read(&small_increment_optimization, 1));
@@ -1505,7 +1506,13 @@ void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
         this->_update_entity_indices.emplace_back(index);
         index += 1;
     }
+}
 
+// THIS MUST BE CALLED AFTER _get_update_indices
+/// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
+template<typename Observer>
+void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
+{
     for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
@@ -1528,7 +1535,11 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
     BEFORE(Observer, EntityCreationObserver, id, std::as_const(server_class));
 
     VERIFY(server_class->data_table->type() != nullptr);
-    Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->type(), id, server_class);
+    Entity* entity = instantiate<EntityType, Entity>(
+        server_class->data_table->type(),
+        id,
+        server_class
+    );
 
     // Update from baseline in string table
     VERIFY(this->_string_tables.instance_baseline != nullptr);
@@ -1537,12 +1548,15 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
         if (std::stoi(entry->string) == server_class->index)
         {
             BitStream baseline(entry->data);
+            // TODO: this could be optimized if it's slow--it's probably not
+            this->_get_update_indices(baseline);
             this->_update_entity(entity, baseline);
             break;
         }
     }
 
     // Update from provided data
+    this->_get_update_indices(stream);
     this->_update_entity(entity, stream);
     this->_entities.emplace(id, entity);
     AFTER(EntityCreationObserver, std::as_const(entity))
@@ -1553,9 +1567,9 @@ template<typename Observer>
 void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 {
     Entity* entity = this->_entities.at(id);
-    // TODO: move this into _update_entity, probably actually need to split _update_entity into two parts because we
-    // don't want a callback during entity creation
-    BEFORE(Observer, EntityUpdateObserver, std::as_const(entity));
+    // don't want a callback during entity creation so repeat this code
+    this->_get_update_indices(stream);
+    BEFORE(Observer, EntityUpdateObserver, std::as_const(entity), std::as_const(this->_update_entity_indices));
     this->_update_entity(entity, stream);
     AFTER(EntityUpdateObserver, std::as_const(entity), std::as_const(this->_update_entity_indices));
 }

@@ -70,10 +70,6 @@ std::shared_ptr<const ArrayType> DataTable::construct_array_type()
     return this->_array_type;
 }
 
-const ArrayType* DataTable::array_type() const
-{
-    return this->_array_type.get();
-}
 
 void DataTable::apply(Cursor<Definition> cursor) const
 {
