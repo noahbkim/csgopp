@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(csgopp)
 
 # Include conan
-include(${PROJECT_SOURCE_DIR}/conanbuildinfo.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
 # External libraries

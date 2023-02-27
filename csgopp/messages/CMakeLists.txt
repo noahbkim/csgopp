@@ -1,9 +1,11 @@
 # Dogshit fucking build system I hate C++
 set(Protobuf_PROTOC_EXECUTABLE ${CONAN_BIN_DIRS_PROTOBUF}/protoc)
+set(PROTOC protoc)
 
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
 
+set_property(TARGET protobuf::protoc PROPERTY IMPORTED_LOCATION ${CONAN_BIN_DIRS_PROTOBUF}/protoc)
 
 protobuf_generate_cpp(PROTO_SOURCES PROTO_HEADERS
         cstrike15_gcmessages.proto
