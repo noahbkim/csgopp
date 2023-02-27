@@ -30,27 +30,59 @@ using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::client::data_table::data_table_property::DataTableProperty;
 using csgopp::client::server_class::ServerClass;
 
+// Allows us to get the qualified name of a property
+struct PropertyNode
+{
+    std::shared_ptr<const struct PropertyNode> parent;
+    const DataTableProperty* property{nullptr};
+
+    PropertyNode() = default;
+
+    PropertyNode(std::shared_ptr<const struct PropertyNode> parent, const DataTableProperty* property)
+        : parent(std::move(parent))
+        , property(property)
+    {}
+};
+
 // Maps properties and types
 struct EntityDatum : public Accessor
 {
     // TODO: we can reduce one memory lookup by somehow getting this type to be DataType* type
     const DataProperty* property{nullptr};
+
+    // Caching this dramatically improves runtime
     const DataType* data_type{nullptr};
+
+    // Accessing the canonical name of this offset
+    std::shared_ptr<const PropertyNode> parent;
 
     EntityDatum() = default;
 
     EntityDatum(
         const struct Type* origin,
-        const DataType* data_type,
         size_t offset,
-        const DataProperty* property
+        const DataProperty* property,
+        std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor(origin, data_type, offset)
+        : Accessor(origin, property->type(), offset)
         , property(property)
-        , data_type(data_type)
+        , data_type(property->type())
+        , parent(std::move(parent))
     {
-        this->data_type = property->type();
-//        OK(this->data_type == this->type);
+    }
+
+    [[nodiscard]] std::string qualified_name() const
+    {
+        std::string result(this->property->name);
+        const PropertyNode* cursor = this->parent.get();
+        while (cursor != nullptr)
+        {
+            result.insert(0, ".");
+            result.insert(0, cursor->property->name);
+            cursor = cursor->parent.get();
+        }
+
+        return result;
     }
 };
 
@@ -70,6 +102,7 @@ struct EntityType final : public ObjectType
     void collect_properties_head(
         const DataTable* cursor,
         size_t cursor_offset,
+        const std::shared_ptr<const PropertyNode>& parent,
         absl::flat_hash_set<ExcludeView>& excludes,
         std::vector<EntityDatum>& container
     );
@@ -77,6 +110,7 @@ struct EntityType final : public ObjectType
     void collect_properties_tail(
         const DataTable* cursor,
         size_t cursor_offset,
+        const std::shared_ptr<const PropertyNode>& parent,
         absl::flat_hash_set<ExcludeView>& excludes
     );
 
