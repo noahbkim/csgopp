@@ -40,7 +40,8 @@ struct DataTableProperty final : public Property
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const Type> type() const override;
+    [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
+    [[nodiscard]] const Type* type() const override;
 
     /// \brief Add the referenced data table as a member of the `EntityType`.
     ///
@@ -60,6 +61,9 @@ struct DataTableProperty final : public Property
     [[nodiscard]] bool equals(const Property* other) const override;
 
     void apply(Cursor<Declaration> declaration) const override;
+
+private:
+    std::shared_ptr<const Type> _type;
 };
 
 }

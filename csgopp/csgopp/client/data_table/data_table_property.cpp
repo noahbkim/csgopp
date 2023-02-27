@@ -29,16 +29,25 @@ Property::Kind::T DataTableProperty::kind() const
     return Kind::DATA_TABLE;
 }
 
-std::shared_ptr<const Type> DataTableProperty::type() const
+std::shared_ptr<const Type> DataTableProperty::construct_type()
 {
-    if (this->data_table->is_array)
+    if (this->type() == nullptr)
     {
-        return this->data_table->construct_array_type();
+        if (this->data_table->is_array)
+        {
+            this->_type = this->data_table->construct_array_type();
+        }
+        else
+        {
+            this->_type = this->data_table->construct_type();
+        }
     }
-    else
-    {
-        return this->data_table->construct_type();
-    }
+    return this->_type;
+}
+
+const Type* DataTableProperty::type() const
+{
+    return this->_type.get();
 }
 
 void DataTableProperty::build(ObjectType::Builder& builder)

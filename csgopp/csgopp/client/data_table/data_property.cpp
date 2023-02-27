@@ -31,7 +31,7 @@ Property::Kind::T Int32Property::kind() const
     return Kind::INT32;
 }
 
-std::shared_ptr<const DataType> Int32Property::data_type() const
+std::shared_ptr<const DataType> Int32Property::construct_data_type() const
 {
     if (this->bits == 1)
     {
@@ -45,6 +45,16 @@ std::shared_ptr<const DataType> Int32Property::data_type() const
     {
         return shared<SignedInt32Type>();
     }
+}
+
+std::shared_ptr<const Type> Int32Property::construct_type()
+{
+    return this->construct_data_type();
+}
+
+const DataType* Int32Property::type() const
+{
+    return this->construct_data_type().get();
 }
 
 bool Int32Property::equals(const Property* other) const
@@ -67,9 +77,19 @@ Property::Kind::T FloatProperty::kind() const
     return Kind::FLOAT;
 }
 
-std::shared_ptr<const DataType> FloatProperty::data_type() const
+std::shared_ptr<const DataType> FloatProperty::construct_data_type() const
 {
     return shared<FloatType>();
+}
+
+std::shared_ptr<const Type> FloatProperty::construct_type()
+{
+    return this->construct_data_type();
+}
+
+const DataType* FloatProperty::type() const
+{
+    return this->construct_data_type().get();
 }
 
 bool FloatProperty::equals(const Property* other) const
@@ -92,9 +112,19 @@ Property::Kind::T Vector3Property::kind() const
     return Kind::VECTOR3;
 }
 
-std::shared_ptr<const DataType> Vector3Property::data_type() const
+std::shared_ptr<const DataType> Vector3Property::construct_data_type() const
 {
     return shared<Vector3Type>();
+}
+
+std::shared_ptr<const Type> Vector3Property::construct_type()
+{
+    return this->construct_data_type();
+}
+
+const DataType* Vector3Property::type() const
+{
+    return this->construct_data_type().get();
 }
 
 bool Vector3Property::equals(const Property* other) const
@@ -117,9 +147,19 @@ Property::Kind::T Vector2Property::kind() const
     return Kind::VECTOR2;
 }
 
-std::shared_ptr<const DataType> Vector2Property::data_type() const
+std::shared_ptr<const DataType> Vector2Property::construct_data_type() const
 {
     return shared<Vector2Type>();
+}
+
+std::shared_ptr<const Type> Vector2Property::construct_type()
+{
+    return this->construct_data_type();
+}
+
+const DataType* Vector2Property::type() const
+{
+    return this->construct_data_type().get();
 }
 
 bool Vector2Property::equals(const Property* other) const
@@ -134,9 +174,19 @@ Property::Kind::T StringProperty::kind() const
     return Kind::STRING;
 }
 
-std::shared_ptr<const DataType> StringProperty::data_type() const
+std::shared_ptr<const DataType> StringProperty::construct_data_type() const
 {
     return shared<StringType>();
+}
+
+std::shared_ptr<const Type> StringProperty::construct_type()
+{
+    return this->construct_data_type();
+}
+
+const DataType* StringProperty::type() const
+{
+    return this->construct_data_type().get();
 }
 
 bool StringProperty::equals(const Property* other) const
@@ -151,7 +201,6 @@ ArrayProperty::ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, DataProperty* 
     , length(data.num_elements())
     , DataProperty(std::move(data))
 {
-    this->_type = std::make_shared<DataArrayType>(this->element->data_type(), this->length);
 }
 
 Property::Kind::T ArrayProperty::kind() const
@@ -159,9 +208,15 @@ Property::Kind::T ArrayProperty::kind() const
     return Kind::ARRAY;
 }
 
-std::shared_ptr<const DataType> ArrayProperty::data_type() const
+std::shared_ptr<const Type> ArrayProperty::construct_type()
 {
+    this->_type = std::make_shared<DataArrayType>(this->element->construct_type(), this->length);
     return this->_type;
+}
+
+const DataType* ArrayProperty::type() const
+{
+    return this->_type.get();
 }
 
 bool ArrayProperty::equals(const Property* other) const
@@ -182,7 +237,7 @@ Property::Kind::T Int64Property::kind() const
     return Kind::INT64;
 }
 
-std::shared_ptr<const DataType> Int64Property::data_type() const
+std::shared_ptr<const DataType> Int64Property::construct_data_type() const
 {
     if (this->flags & Flags::UNSIGNED)
     {
@@ -192,6 +247,16 @@ std::shared_ptr<const DataType> Int64Property::data_type() const
     {
         return shared<SignedInt64Type>();
     }
+}
+
+std::shared_ptr<const Type> Int64Property::construct_type()
+{
+    return this->construct_data_type();
+}
+
+const DataType* Int64Property::type() const
+{
+    return this->construct_data_type().get();
 }
 
 bool Int64Property::equals(const Property* other) const

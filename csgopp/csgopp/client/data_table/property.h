@@ -151,6 +151,9 @@ struct Property : Context<Declaration>
     /// you're not working directly with the virtual interface.
     [[nodiscard]] virtual Kind::T kind() const = 0;
 
+    // TODO: construct_type() also
+    [[nodiscard]] virtual std::shared_ptr<const Type> construct_type() = 0;
+
     /// \brief Materialize a `object::Type` from the property.
     ///
     /// \return a `std::shared_ptr` to a `object::Type` that
@@ -161,9 +164,12 @@ struct Property : Context<Declaration>
     /// `csgopp::common::object`'s use of `std::shared_ptr` because there isn't
     /// always a clear owner for a given type.
     ///
+    /// NOTE: this type is expected to stay alive because it needs to be
+    /// referenced from several places that only shared access to the property.
+    ///
     /// \sa `csgopp::client::entity`
     /// \sa `csgopp::common::object`
-    [[nodiscard]] virtual std::shared_ptr<const Type> type() const = 0;
+    [[nodiscard]] virtual const Type* type() const = 0;
 
     /// \brief Attach this property to an `EntityType`
     ///
@@ -176,7 +182,7 @@ struct Property : Context<Declaration>
     /// \sa `DataTableProperty::build`
     virtual void build(ObjectType::Builder& builder)
     {
-        this->offset = builder.member(this->name, this->type(), this);
+        this->offset = builder.member(this->name, this->construct_type(), this);
     }
 
     /// \brief Annotate declarations generated from this property's type.

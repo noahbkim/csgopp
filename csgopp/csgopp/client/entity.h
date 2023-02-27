@@ -49,8 +49,7 @@ struct EntityDatum : public Accessor
         , property(property)
         , data_type(data_type)
     {
-        std::shared_ptr<const DataType> dt = property->data_type();
-        this->data_type = dt.get();
+        this->data_type = property->type();
 //        OK(this->data_type == this->type);
     }
 };

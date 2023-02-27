@@ -33,7 +33,7 @@ void EntityType::collect_properties_head(
             // EntityDatum creation
             container.emplace_back(
                 this,
-                data_property->data_type().get(),
+                data_property->type(),
                 cursor_offset + property->offset,
                 data_property
             );

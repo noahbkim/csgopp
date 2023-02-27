@@ -1528,7 +1528,7 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
     BEFORE(Observer, EntityCreationObserver, id, std::as_const(server_class));
 
     VERIFY(server_class->data_table->type() != nullptr);
-    Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->type().get(), id, server_class);
+    Entity* entity = instantiate<EntityType, Entity>(server_class->data_table->type(), id, server_class);
 
     // Update from baseline in string table
     VERIFY(this->_string_tables.instance_baseline != nullptr);

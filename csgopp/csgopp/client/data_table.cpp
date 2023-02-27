@@ -45,20 +45,21 @@ std::shared_ptr<const EntityType> DataTable::construct_type()
     return this->_type;
 }
 
-std::shared_ptr<const EntityType> DataTable::type() const
+const EntityType* DataTable::type() const
 {
-    return this->_type;
+    return this->_type.get();
 }
 
 std::shared_ptr<const ArrayType> DataTable::construct_array_type()
 {
     if (this->_array_type == nullptr)
     {
-        std::shared_ptr<const Type> element_type = this->properties.at(0)->type();
+        std::shared_ptr<const Type> element_type = this->properties.at(0)->construct_type();
 
         // We have to manually set offsets since we're not materializing
         for (size_t i = 0; i < this->properties.size(); ++i)
         {
+            // TODO: this should probably be const, offset should be set elsewhere
             this->properties.at(i)->offset = i * element_type->size();
         }
 
@@ -67,6 +68,11 @@ std::shared_ptr<const ArrayType> DataTable::construct_array_type()
     }
 
     return this->_array_type;
+}
+
+const ArrayType* DataTable::array_type() const
+{
+    return this->_array_type.get();
 }
 
 void DataTable::apply(Cursor<Definition> cursor) const
