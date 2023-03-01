@@ -8,11 +8,172 @@ This project provides a couple things:
 - A CLI tool that serves as a proof of concept for the library.
 - Ergonomic Python bindings for the C++ framework that facilitate observing events in Python callbacks.
 
+## Samples
+
+Let's take a look at some examples of how to use `csgopp` as a static C++ library.
+The entrypoint for user code is the `csgopp::client::Client`, which is parameterized on an `Observer` template.
+This `Observer` object is responsible for providing event handler classes that are constructed on the stack at runtime for performance.
+You can skip a bunch of boilerplate by inheriting from the `csgopp::client::ClientObserverBase` as follows:
+
+```cpp
+#include <iostream>
+#include <csgopp/client.h>
+
+using csgopp::client::Client;
+using csgopp::client::ClientObserverBase;
+
+class MyObserver final : ClientObserverBase<MyObserver>
+{
+    using ClientObserverBase::ClientObserverBase;
+};
+```
+
+You'll notice we have to pass the concrete type as a template parameter to the `ClientObserverBase`; this ensures we can access the client we're bound to in callbacks.
+To run the client with our observer, we have to instantiate a client.
+
+```cpp
+#include <filesystem>
+#include <google/protobuf/io/coded_stream.h>
+
+// Insert your own demo path
+std::string path = "path/to/my/demo.dem";
+
+// Create a CodedInputStream for protobuf deserialization
+std::ifstream file_stream(path, std::ios::binary);
+IstreamInputStream file_input_stream(&file_stream);
+CodedInputStream coded_input_stream(&file_input_stream);
+
+// Instantiate the client with our observer and advance until the demo ends
+Client<MyObserver> client(coded_input_stream);
+while (client.advance(coded_input_stream));
+```
+
+Now that we're all set up, we can dive into handling demo events and data.
+As an example, let's log when players join a team:
+
+```cpp
+const char* describe_team(uint8_t team)
+{
+    switch (team)
+    {
+    case 1:
+        return "Spectators";
+    case 2:
+        return "Terrorists";
+    case 3:
+        return "Counter-terrorists";
+    default:
+        return "Unknown";
+    }
+}
+
+class MyObserver final : ClientObserverBase<MyObserver>
+{
+    using ClientObserverBase::ClientObserverBase;
+    
+    void on_game_event(Client &client, GameEvent& event) override
+    {
+        if (event.name == "player_team")
+        {
+            const User* user = client.users().at_id(event["userid"].is<int16_t>());
+            const char* team = describe_team(event["team"].is<uint8_t>());
+            std::cout << client.tick() << ": Player " << user->name << " joined " << team << std::endl;
+        }
+    }
+};
+```
+
+There's a couple of interesting things going on here, so let's break them down.
+Even before we talk about the `User`, we have to access data from the `GameEvent`.
+We know what the layout of the `"player_team"` event looks like from the `csgopp.cli` command `generate`, which emits all events and server classes in a demo as slightly invalid C++:
+
+```c++
+struct player_team
+{
+    int16_t userid;
+    uint8_t team;
+    uint8_t oldteam;
+    bool disconnect;
+    bool autoteam;
+    bool silent;
+    bool isbot;
+};
+```
+
+We can query this object dynamically at runtime using `csgopp::common::object` machinery, e.g. `event["userid"].is<int16_t>()`.
+This allows us to then get the associated `User` via `client.users()`, which offers per-id lookup.
+The rest is pretty straightforward.
+But what if we want to delve into entity updates?
+For example, let's take a look at what players are purchasing:
+
+```cpp
+const char* describe_weapon(uint32_t weapon)
+{
+    switch (weapon)
+    {
+        // See csgopp/cli/summary.h for complete list
+        case 1: return "weapon_deagle";
+        case 7: return "weapon_ak47";
+        case 9: return "weapon_awp";
+        case 16: return "weapon_m4a1";
+        case 43: return "weapon_flashbang";
+        case 44: return "weapon_hegrenade";
+        case 45: return "weapon_smokegrenade";
+        case 46: return "weapon_molotov";
+        case 47: return "weapon_decoy";
+        case 48: return "weapon_incgrenade";
+        case 60: return "weapon_m4a1_silencer";
+        default: return "something...";
+    }
+}
+
+class MyObserver final : ClientObserverBase<MyObserver>
+{
+    using ClientObserverBase::ClientObserverBase;
+    
+    const ServerClass* player_server_class{nullptr};
+    Accessor weapon_purchases_accessor;
+
+    void on_server_class_creation(Client& client, const ServerClass* server_class) override
+    {
+        if (server_class->name == "CCSPlayer")
+        {
+            this->player_server_class = server_class;
+            const EntityType& type = *server_class->data_table->type();
+            this->weapon_purchases_accessor = type["cslocaldata"]["m_iWeaponPurchasesThisRound"];
+        }
+    }
+    
+    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
+    {
+        if (entity->server_class == this->player_server_class)
+        {
+            for (uint16_t index : indices)
+            {
+                const EntityDatum& datum = entity->type->prioritized.at(index);
+                if (this->weapon_purchases_accessor > datum)
+                {
+                    const User* user = client.users().at_index(entity->id);
+                    OK(user != nullptr);
+                    int weapon = atoi(datum.property->name.c_str());
+                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
+                }
+            }
+        }
+    }
+}
+```
+
+In order to figure out when a player purchases a weapon, we need to know the offset of the `m_iWeaponPurchasesThisRound` object in the server class.
+We do so in `on_server_class_creation`; we know the player server class is `"CCSPlayer"`, so we save the pointer and find the accessor (read: data offset + type).
+Then, when we get an entity update callback, we check whether the updated datum (discrete field) is within the `m_iWeaponPurchasesThisRound` object.
+From the generated classes, we know that each member of this object is named after its weapon index, e.g. `"001"`, `"002"`, etc., so the rest is as simple as parsing that integer and printing.
+
 ## To Do
 
 - [x] PacketEntities
-- [ ] GameEventList
-- [ ] GameEvent
+- [x] GameEventList
+- [x] GameEvent
 - [x] CreateStringTable
 - [x] UpdateStringTable
 - [ ] UserMessage
