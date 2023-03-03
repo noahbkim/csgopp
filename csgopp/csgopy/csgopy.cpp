@@ -1,15 +1,43 @@
 #include <memory>
 #include <utility>
+#include <iostream>
+#include <fstream>
+
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
+
+#include <google/protobuf/io/coded_stream.h>
 
 #include "csgopy.h"
 #include "csgopp/client.h"
 
 using namespace nanobind::literals;
 
-class PythonObserver : csgopp::game::SimulationObserverBase<PythonObserver>
+using google::protobuf::io::IstreamInputStream;
+using google::protobuf::io::CodedInputStream;
+using csgopp::client::Client;
+
+class PythonAdapter : public csgopp::client::ClientObserverBase<PythonAdapter>
 {
 public:
-    explicit PythonObserver(nanobind::object observer) : observer(std::move(observer)) {}
+    explicit PythonAdapter(Client& client, nanobind::object observer)
+        : ClientObserverBase(client)
+        , observer(std::move(observer))
+    {}
+
+    void on_entity_update(
+        csgopp::client::ClientObserverBase<PythonAdapter>::Client &client,
+        const csgopp::client::entity::Entity *entity,
+        const std::vector<uint16_t> &indices
+    ) override
+    {
+        auto callback = this->observer.attr("on_entity_update");
+        if (callback.is_valid())
+        {
+            callback(indices);
+        }
+    }
 
     void debug() const
     {
@@ -20,10 +48,25 @@ private:
     nanobind::object observer;
 };
 
+void print(const std::string& string)
+{
+    std::cout << string << std::endl;
+}
+
+void parse(const std::string& path, nanobind::object observer)
+{
+    std::ifstream file_stream(path, std::ios::binary);
+    IstreamInputStream file_input_stream(&file_stream);
+    CodedInputStream coded_input_stream(&file_input_stream);
+
+    Client<PythonAdapter> client(coded_input_stream, observer);
+    while (client.advance(coded_input_stream));
+}
+
 NB_MODULE(csgopy, mod) {
-    nanobind::class_<PythonObserver>(mod, "PythonObserver")
-        .def(nanobind::init<nanobind::object>())
-        .def("debug", &PythonObserver::debug);
+    nanobind::exception<csgopp::client::GameError>(mod, "GameError");
+    mod.def("parse", &parse);
+    mod.def("print", &print);
 }
 
 /*

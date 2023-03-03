@@ -4,7 +4,6 @@
 #include "server_class.h"
 #include "entity.h"
 
-
 namespace csgopp::client::data_table
 {
 

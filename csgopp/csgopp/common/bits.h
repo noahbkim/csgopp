@@ -37,20 +37,17 @@ class BitView
 {
 public:
     explicit BitView(const std::string& string)
-        : data(reinterpret_cast<const uint8_t*>(string.data()))
-        , data_size(string.size())
+        : data(reinterpret_cast<const uint8_t*>(string.data())), data_size(string.size())
     {
     }
 
     explicit BitView(const std::vector<uint8_t>& data)
-        : data(reinterpret_cast<const uint8_t*>(data.data()))
-        , data_size(data.size())
+        : data(reinterpret_cast<const uint8_t*>(data.data())), data_size(data.size())
     {
     }
 
     BitView(const char* data, size_t data_size)
-        : data(reinterpret_cast<const uint8_t*>(data))
-        , data_size(data_size)
+        : data(reinterpret_cast<const uint8_t*>(data)), data_size(data_size)
     {
     }
 
@@ -106,8 +103,7 @@ public:
                 bits -= this->buffer_size;
                 value_size += this->buffer_size;
                 this->buffer_size = 0;
-            }
-            else
+            } else
             {
                 *value &= ((static_cast<size_t>(1) << (bits + value_size)) - 1);
                 this->buffer >>= bits;
@@ -258,12 +254,15 @@ struct BitDecoder : Source
         bool ok;
         switch (*value & 0b110000)
         {
-        case 0b010000:ok = this->read(&buffer, 4);
-            break;
-        case 0b100000:ok = this->read(&buffer, 8);
-            break;
-        case 0b110000:ok = this->read(&buffer, 32 - 4);
-            break;
+            case 0b010000:
+                ok = this->read(&buffer, 4);
+                break;
+            case 0b100000:
+                ok = this->read(&buffer, 8);
+                break;
+            case 0b110000:
+                ok = this->read(&buffer, 32 - 4);
+                break;
         }
 
         *value = (*value & 0b1111) | (buffer << 4);
@@ -286,12 +285,15 @@ struct BitDecoder : Source
         bool ok;
         switch (*value & 0b1100000)
         {
-        case 0b0100000:ok = this->read(&buffer, 2);
-            break;
-        case 0b1000000:ok = this->read(&buffer, 4);
-            break;
-        case 0b1100000:ok = this->read(&buffer, 7);
-            break;
+            case 0b0100000:
+                ok = this->read(&buffer, 2);
+                break;
+            case 0b1000000:
+                ok = this->read(&buffer, 4);
+                break;
+            case 0b1100000:
+                ok = this->read(&buffer, 7);
+                break;
         }
 
         *value = (*value & 0b11111) | (buffer << 5);
