@@ -7,12 +7,12 @@
 namespace csgopp::client::data_table
 {
 
-using csgopp::error::GameError;
+using csgopp::client::entity::EntityType;
+using csgopp::common::control::concatenate;
+using csgopp::common::object::shared;
 using csgopp::common::object::shared;
 using csgopp::common::object::Type;
-using csgopp::common::object::shared;
-using csgopp::common::control::concatenate;
-using csgopp::client::entity::EntityType;
+using csgopp::error::GameError;
 
 DataTable::DataTable(const CSVCMsg_SendTable& data)
     : name(data.net_table_name())

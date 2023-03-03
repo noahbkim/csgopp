@@ -10,9 +10,9 @@
 namespace csgopp::client::string_table
 {
 
-using csgopp::common::database::Delete;
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
+using csgopp::common::database::Delete;
 
 struct StringTable
 {
@@ -33,8 +33,20 @@ struct StringTable
     bool data_fixed{};
     size_t data_size_bits{};
 
-    explicit StringTable(const csgo::message::net::CSVCMsg_CreateStringTable& data);
-    StringTable(std::string&& name, size_t size);
+    explicit StringTable(const csgo::message::net::CSVCMsg_CreateStringTable& data)
+        : name(data.name())
+        , entries(data.num_entries())
+        , capacity(data.max_entries())
+        , data_fixed(data.user_data_fixed_size())
+        , data_size_bits(data.user_data_size_bits())
+    {
+    }
+
+    StringTable(std::string&& name, size_t size)
+        : name(std::move(name))
+        , entries(size)
+    {
+    }
 };
 
 struct StringTableDatabase : public DatabaseWithName<StringTable, Delete<StringTable>>

@@ -1,20 +1,40 @@
 add_library(csgopp STATIC
-        demo.cpp demo.h
-        common/lookup.h
         client.cpp client.h
-        common/macro.h
-        common/vector.h
-        client/entity.cpp client/entity.h
-        common/id.h
-        client/server_class.cpp client/server_class.h
-        error.h
-        client/data_table.cpp client/data_table.h
+        client/data_table.cpp
+        client/data_table.h
+        client/data_table/data_property.cpp
+        client/data_table/data_property.h
+        client/data_table/data_table_property.cpp
+        client/data_table/data_table_property.h
+        client/data_table/data_type.cpp
+        client/data_table/data_type.h
+        client/data_table/property.h
+        client/entity.cpp
+        client/entity.h
+        client/game_event.cpp
+        client/game_event.h
+        client/server_class.h
+        client/string_table.h
+        client/user.h
         common/bits.h
-        client/string_table.cpp client/string_table.h
+        common/code.cpp
+        common/code.h
+        common/control.cpp
+        common/control.h
+        common/database.h
+        common/id.h
+        common/layout.h
+        common/lookup.h
+        common/macro.h
+        common/object.cpp
+        common/object.h
+        common/object.h
+        common/reader.h
         common/ring.h
-        common/reader.h common/database.h common/control.h common/object.h
-        common/object.h common/object.cpp
-        client/user.h client/user.cpp common/code.h common/code.cpp common/control.cpp common/layout.h client/game_event.h client/game_event.cpp client/data_table/property.cpp client/data_table/property.h client/data_table/data_type.cpp client/data_table/data_type.h client/data_table/data_property.cpp client/data_table/data_property.h client/data_table/data_table_property.cpp client/data_table/data_table_property.h)
+        common/vector.h
+        demo.cpp
+        demo.h
+        error.h)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(csgopp PRIVATE cxx_std_17)

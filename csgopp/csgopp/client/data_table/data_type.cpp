@@ -5,11 +5,11 @@
 namespace csgopp::client::data_table::data_type
 {
 
+using csgopp::client::data_table::data_property::ArrayProperty;
 using csgopp::client::data_table::data_property::Int32Property;
 using csgopp::client::data_table::data_property::Int64Property;
-using csgopp::client::data_table::data_property::ArrayProperty;
-using common::vector::Vector3;
-using common::vector::Vector2;
+using csgopp::common::vector::Vector2;
+using csgopp::common::vector::Vector3;
 
 // https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h
 

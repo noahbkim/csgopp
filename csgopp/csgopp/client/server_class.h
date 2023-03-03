@@ -14,12 +14,12 @@
 namespace csgopp::client::server_class
 {
 
-using google::protobuf::io::CodedInputStream;
-using csgopp::common::database::Delete;
+using csgopp::client::data_table::DataTable;
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
+using csgopp::common::database::Delete;
 using csgopp::error::GameError;
-using csgopp::client::data_table::DataTable;
+using google::protobuf::io::CodedInputStream;
 
 struct ServerClass
 {

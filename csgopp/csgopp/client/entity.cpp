@@ -6,7 +6,6 @@ namespace csgopp::client::entity
 
 using csgopp::client::data_table::DataTable;
 
-
 void EntityType::collect_properties_head(
     const DataTable* cursor,
     size_t cursor_offset,

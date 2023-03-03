@@ -36,15 +36,15 @@ namespace csgopp::client::data_table
 {
 
 using csgo::message::net::CSVCMsg_SendTable;
-using csgopp::error::GameError;
-using csgopp::common::database::DatabaseWithName;
-using csgopp::common::database::Delete;
-using csgopp::common::code::Context;
-using csgopp::common::code::Definition;
-using csgopp::common::code::Cursor;
-using csgopp::common::object::ArrayType;
 using csgopp::client::entity::EntityType;
 using csgopp::client::server_class::ServerClass;
+using csgopp::common::code::Context;
+using csgopp::common::code::Cursor;
+using csgopp::common::code::Definition;
+using csgopp::common::database::DatabaseWithName;
+using csgopp::common::database::Delete;
+using csgopp::common::object::ArrayType;
+using csgopp::error::GameError;
 
 using Exclude = std::pair<std::string, std::string>;
 

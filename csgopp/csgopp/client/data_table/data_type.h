@@ -11,10 +11,10 @@ namespace csgopp::client::data_table::data_type
 
 using csgopp::client::data_table::property::Property;
 using csgopp::common::bits::BitStream;
-using csgopp::common::object::DefaultValueType;
-using csgopp::common::object::Type;
 using csgopp::common::code::Cursor;
 using csgopp::common::code::Declaration;
+using csgopp::common::object::DefaultValueType;
+using csgopp::common::object::Type;
 using csgopp::common::vector::Vector2;
 using csgopp::common::vector::Vector3;
 

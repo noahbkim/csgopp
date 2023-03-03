@@ -12,16 +12,16 @@
 namespace csgopp::client::game_event
 {
 
-using common::object::DefaultValueType;
-using common::object::Type;
-using common::object::ObjectType;
-using common::object::Instance;
-using common::object::shared;
 using common::code::Cursor;
-using common::code::Definition;
 using common::code::Declaration;
+using common::code::Definition;
 using common::database::DatabaseWithNameId;
 using common::database::Delete;
+using common::object::DefaultValueType;
+using common::object::Instance;
+using common::object::ObjectType;
+using common::object::shared;
+using common::object::Type;
 
 struct GameEventValueType : public virtual Type
 {

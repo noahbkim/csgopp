@@ -8,9 +8,9 @@ namespace csgopp::client::data_table::data_property
 {
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
-using csgopp::client::data_table::property::Property;
-using csgopp::client::data_table::data_type::DataType;
 using csgopp::client::data_table::data_type::DataArrayType;
+using csgopp::client::data_table::data_type::DataType;
+using csgopp::client::data_table::property::Property;
 using csgopp::common::object::ObjectType;
 using csgopp::common::object::Type;
 

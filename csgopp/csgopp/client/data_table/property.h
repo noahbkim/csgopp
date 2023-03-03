@@ -11,6 +11,7 @@ namespace csgopp::client::data_table::property
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::common::bits::BitStream;
 using csgopp::common::code::Context;
+using csgopp::common::code::Cursor;
 using csgopp::common::code::Declaration;
 using csgopp::common::object::ObjectType;
 using csgopp::common::object::Type;
@@ -192,7 +193,10 @@ struct Property : Context<Declaration>
     /// This override is currently just a proof of concept that's helped iron
     /// out the rather circular relationship between the `DataTable` structures
     /// and the `Type` ones.
-    // void apply(Cursor<Declaration> declaration) const override;
+    void apply(Cursor<Declaration> declaration) const override
+    {
+
+    }
 
     /// \brief Check if two properties have the same type.
     ///

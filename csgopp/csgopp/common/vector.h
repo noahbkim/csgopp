@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ostream>
-
 namespace csgopp::common::vector
 {
 

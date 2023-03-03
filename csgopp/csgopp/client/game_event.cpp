@@ -6,8 +6,8 @@
 namespace csgopp::client::game_event
 {
 
-using csgopp::error::GameError;
 using csgopp::common::object::Type;
+using csgopp::error::GameError;
 
 void StringType::emit(Cursor<Declaration>& cursor) const
 {

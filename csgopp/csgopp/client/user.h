@@ -9,9 +9,9 @@
 namespace csgopp::client::user
 {
 
+using csgopp::client::string_table::StringTable;
 using csgopp::common::database::DatabaseWithId;
 using csgopp::common::database::Delete;
-using csgopp::client::string_table::StringTable;
 
 struct User
 {
@@ -35,7 +35,9 @@ struct User
     uint32_t custom_files[4]{};
     uint8_t files_downloaded{};
 
-    explicit User(Index index);
+    explicit User(Index index) : index(index)
+    {
+    }
 };
 
 struct UserDatabase : public DatabaseWithId<User, Delete<User>>

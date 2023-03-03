@@ -9,15 +9,15 @@ namespace csgopp::client::data_table::data_property
 {
 
 using csgopp::client::data_table::data_type::BoolType;
-using csgopp::client::data_table::data_type::UnsignedInt32Type;
-using csgopp::client::data_table::data_type::SignedInt32Type;
-using csgopp::client::data_table::data_type::FloatType;
-using csgopp::client::data_table::data_type::Vector3Type;
-using csgopp::client::data_table::data_type::Vector2Type;
-using csgopp::client::data_table::data_type::StringType;
-using csgopp::client::data_table::data_type::UnsignedInt64Type;
-using csgopp::client::data_table::data_type::SignedInt64Type;
 using csgopp::client::data_table::data_type::DataArrayType;
+using csgopp::client::data_table::data_type::FloatType;
+using csgopp::client::data_table::data_type::SignedInt32Type;
+using csgopp::client::data_table::data_type::SignedInt64Type;
+using csgopp::client::data_table::data_type::StringType;
+using csgopp::client::data_table::data_type::UnsignedInt32Type;
+using csgopp::client::data_table::data_type::UnsignedInt64Type;
+using csgopp::client::data_table::data_type::Vector2Type;
+using csgopp::client::data_table::data_type::Vector3Type;
 using csgopp::common::object::shared;
 
 Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
