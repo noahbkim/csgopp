@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../../object/code.h"
+#include "../../object/object.h"
 #include "netmessages.pb.h"
 #include "property.h"
-#include "../../common/code.h"
-#include "../../common/object.h"
 
 namespace csgopp::client::data_table
 {

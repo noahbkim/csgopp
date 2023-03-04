@@ -1,10 +1,10 @@
 #pragma once
 
-#include "property.h"
 #include "../../common/bits.h"
-#include "../../common/object.h"
-#include "../../common/code.h"
 #include "../../common/vector.h"
+#include "../../object/code.h"
+#include "../../object/object.h"
+#include "property.h"
 
 namespace csgopp::client::data_table::data_type
 {

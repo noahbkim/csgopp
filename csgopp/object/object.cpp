@@ -3,12 +3,6 @@
 namespace csgopp::common::object
 {
 
-
-Reference Accessor::bind(char* address) const
-{
-    return Reference(this->type, address + this->offset);
-}
-
 bool Accessor::contains(const Accessor& other) const
 {
     return (
@@ -47,19 +41,20 @@ bool Accessor::operator>=(const Accessor& other) const
     throw TypeError("indexing is only available on arrays!");
 }
 
-Reference::Reference(const Type* type, char* address)
-    : type(type)
+Reference::Reference(std::shared_ptr<Instance> origin, std::shared_ptr<const Type> type, char* address)
+    : origin(std::move(origin))
+    , type(std::move(type))
     , address(address)
 {
 }
 
 Reference Reference::operator[](const std::string& member_name) const
 {
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type);
+    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(member_name);
-        return Reference(member.type.get(), this->address + member.offset);
+        return Reference(this->origin, member.type, this->address + member.offset);
     }
     else
     {
@@ -69,11 +64,11 @@ Reference Reference::operator[](const std::string& member_name) const
 
 Reference Reference::operator[](size_t element_index) const
 {
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type);
+    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
     {
         size_t element_offset = array_type->at(element_index);
-        return Reference(array_type->element_type.get(), this->address + element_offset);
+        return Reference(this->origin, array_type->element_type, this->address + element_offset);
     }
     else
     {
@@ -81,19 +76,24 @@ Reference Reference::operator[](size_t element_index) const
     }
 }
 
-ConstReference::ConstReference(const Type* type, const char* address)
-    : type(type)
+ConstReference::ConstReference(
+    std::shared_ptr<const Instance> origin,
+    std::shared_ptr<const Type> type,
+    const char* address
+)
+    : origin(std::move(origin))
+    , type(std::move(type))
     , address(address)
 {
 }
 
 ConstReference ConstReference::operator[](const std::string& member_name) const
 {
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type);
+    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(member_name);
-        return ConstReference(member.type.get(), this->address + member.offset);
+        return ConstReference(this->origin, member.type, this->address + member.offset);
     }
     else
     {
@@ -103,11 +103,11 @@ ConstReference ConstReference::operator[](const std::string& member_name) const
 
 ConstReference ConstReference::operator[](size_t element_index) const
 {
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type);
+    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
     {
         size_t element_offset = array_type->at(element_index);
-        return ConstReference(array_type->element_type.get(), this->address + element_offset);
+        return ConstReference(this->origin, array_type->element_type, this->address + element_offset);
     }
     else
     {
@@ -126,20 +126,20 @@ void ValueType::emit(layout::Cursor& cursor) const
     cursor.note(this->info().name());
 }
 
-Accessor::Accessor(const Type* origin, const Type* type, size_t offset)
-    : origin(origin)
-    , type(type)
+Accessor::Accessor(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset)
+    : origin(std::move(origin))
+    , type(std::move(type))
     , offset(offset)
 {
 }
 
 Accessor Accessor::operator[](const std::string& member_name) const
 {
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type);
+    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(member_name);
-        return Accessor(this->origin, member.type.get(), this->offset + member.offset);
+        return Accessor(this->origin, member.type, this->offset + member.offset);
     }
     else
     {
@@ -149,18 +149,17 @@ Accessor Accessor::operator[](const std::string& member_name) const
 
 Accessor Accessor::operator[](size_t element_index) const
 {
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type);
+    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
     {
         size_t element_offset = array_type->at(element_index);
-        return Accessor(this->origin, array_type->element_type.get(), this->offset + element_offset);
+        return Accessor(this->origin, array_type->element_type, this->offset + element_offset);
     }
     else
     {
         throw TypeError("indexing is only available on arrays!");
     }
 }
-
 
 ArrayType::ArrayType(std::shared_ptr<const Type> element_type, size_t length)
     : element_type(std::move(element_type))
@@ -215,7 +214,7 @@ void ArrayType::emit(layout::Cursor& cursor) const
 Accessor ArrayType::operator[](size_t element_index) const
 {
     size_t offset = this->at(element_index);
-    return Accessor(this, this->element_type.get(), offset);
+    return Accessor(this->self.lock(), this->element_type, offset);
 }
 
 size_t ArrayType::at(size_t element_index) const
@@ -389,7 +388,7 @@ void ObjectType::emit(layout::Cursor& cursor) const
 Accessor ObjectType::operator[](const std::string& member_name) const
 {
     const Member& member = this->at(member_name);
-    return Accessor(this, member.type.get(), member.offset);
+    return Accessor(this->self.lock(), member.type, member.offset);
 }
 
 const ObjectType::Member& ObjectType::at(const std::string& member_name) const
@@ -442,6 +441,72 @@ void ObjectType::represent(const char* address, std::ostream& out) const
     out << "}";
 }
 
+Reference Instance::operator[](const std::string& member_name)
+{
+    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
+    if (object_type != nullptr)
+    {
+        const ObjectType::Member& member = object_type->at(member_name);
+        return Reference(this->self.lock(), member.type, this->address + member.offset);
+    }
+    else
+    {
+        throw TypeError("member access is only available on objects!");
+    }
+}
+
+Reference Instance::operator[](size_t element_index)
+{
+    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
+    if (array_type != nullptr)
+    {
+        size_t offset = array_type->at(element_index);
+        return Reference(this->self.lock(), array_type->element_type, this->address + offset);
+    }
+    else
+    {
+        throw TypeError("indexing is only available on arrays!");
+    }
+}
+
+Reference Instance::operator*()
+{
+    return Reference(this->self.lock(), this->type, this->address);
+}
+
+ConstReference Instance::operator[](const std::string& member_name) const
+{
+    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
+    if (object_type != nullptr)
+    {
+        const ObjectType::Member& member = object_type->at(member_name);
+        return ConstReference(this->self.lock(), member.type, this->address + member.offset);
+    }
+    else
+    {
+        throw TypeError("member access is only available on objects!");
+    }
+}
+
+ConstReference Instance::operator[](size_t element_index) const
+{
+    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
+    if (array_type != nullptr)
+    {
+        size_t offset = array_type->at(element_index);
+        return ConstReference(this->self.lock(), array_type->element_type, this->address + offset);
+    }
+    else
+    {
+        throw TypeError("indexing is only available on arrays!");
+    }
+}
+
+ConstReference Instance::operator*() const
+{
+    return ConstReference(this->self.lock(), this->type, this->address);
+}
+
 std::ostream& operator<<(std::ostream& out, const Reference& reference)
 {
     reference.type->represent(reference.address, out);
@@ -451,6 +516,18 @@ std::ostream& operator<<(std::ostream& out, const Reference& reference)
 std::ostream& operator<<(std::ostream& out, const ConstReference& reference)
 {
     reference.type->represent(reference.address, out);
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const Instance* instance)
+{
+    instance->type->represent(instance->address, out);
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const Instance& instance)
+{
+    instance.type->represent(instance.address, out);
     return out;
 }
 

@@ -4,10 +4,10 @@
 #include <string>
 #include <absl/container/flat_hash_map.h>
 
-#include "netmessages.pb.h"
-#include "../common/lookup.h"
-#include "../common/object.h"
 #include "../common/database.h"
+#include "../common/lookup.h"
+#include "../object/object.h"
+#include "netmessages.pb.h"
 
 namespace csgopp::client::game_event
 {

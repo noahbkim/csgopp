@@ -10,8 +10,8 @@
 #include "../common/database.h"
 #include "../common/vector.h"
 #include "../common/macro.h"
-#include "../common/object.h"
-#include "../common/code.h"
+#include "../object/code.h"
+#include "../object/object.h"
 #include "data_table/data_property.h"
 #include "data_table/data_table_property.h"
 

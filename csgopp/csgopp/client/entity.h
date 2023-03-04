@@ -5,11 +5,11 @@
 #include <string_view>
 #include <absl/container/flat_hash_map.h>
 
-#include "../common/vector.h"
-#include "../common/database.h"
-#include "../common/object.h"
-#include "../common/code.h"
 #include "../common/bits.h"
+#include "../common/database.h"
+#include "../common/vector.h"
+#include "../object/code.h"
+#include "../object/object.h"
 #include "data_table.h"
 #include "data_table/data_property.h"
 #include "data_table/data_table_property.h"
@@ -59,12 +59,12 @@ struct EntityDatum : public Accessor
     EntityDatum() = default;
 
     EntityDatum(
-        const struct Type* origin,
+        std::shared_ptr<const Type> origin,
         size_t offset,
         const DataProperty* property,
         std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor(origin, property->type(), offset)
+        : Accessor(std::move(origin), property->type(), offset)
         , property(property)
         , data_type(property->type())
         , parent(std::move(parent))

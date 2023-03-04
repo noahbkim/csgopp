@@ -2,7 +2,7 @@
 #include <locale>
 #include <codecvt>
 
-#include <csgopp/common/object.h>
+#include <object/object.h>
 
 using namespace csgopp::common::object;
 
@@ -15,17 +15,17 @@ struct TestDefaultValueType : public DefaultValueType<T>
     }
 };
 
-#define BOOL std::make_shared<TestDefaultValueType<bool>>()
-#define UINT8 std::make_shared<TestDefaultValueType<uint8_t>>()
-#define UINT32 std::make_shared<TestDefaultValueType<uint32_t>>()
-#define STRING std::make_shared<TestDefaultValueType<std::string>>()
+#define BOOL instantiate<TestDefaultValueType<bool>>::anonymous()
+#define UINT8 instantiate<TestDefaultValueType<uint8_t>>::anonymous()
+#define UINT32 instantiate<TestDefaultValueType<uint32_t>>::anonymous()
+#define STRING instantiate<TestDefaultValueType<std::string>>::anonymous()
 
 struct Vector3
 {
     double x, y, z;
 };
 
-#define VECTOR std::make_shared<TestDefaultValueType<Vector3>>()
+#define VECTOR instantiate<TestDefaultValueType<Vector3>>::anonymous()
 
 TEST(Object, integration)
 {
@@ -33,7 +33,7 @@ TEST(Object, integration)
     entity_builder.member("id", UINT32);
     entity_builder.member("name", STRING);
     entity_builder.member("position", VECTOR);
-    std::shared_ptr<ObjectType> entity_T = std::make_shared<ObjectType>(std::move(entity_builder));
+    std::shared_ptr<ObjectType> entity_T = instantiate<ObjectType>::anonymous(std::move(entity_builder));
 
     struct Entity
     {
@@ -47,14 +47,14 @@ TEST(Object, integration)
     EXPECT_EQ(entity_T->at("position").offset, offsetof(Entity, position));
     EXPECT_EQ(entity_T->size(), sizeof(Entity));
 
-    auto entity_array_T = std::make_shared<ArrayType>(entity_T, 2);
+    auto entity_array_T = instantiate<ArrayType>::anonymous(entity_T, 2);
     EXPECT_EQ(entity_array_T->size(), sizeof(Entity) * 2);
 
     ObjectType::Builder engine_builder;
     engine_builder.member("alive", BOOL);
     engine_builder.member("flags", UINT32);
     engine_builder.member("entities", entity_array_T);
-    std::shared_ptr<ObjectType> engine_T = std::make_shared<ObjectType>(std::move(engine_builder));
+    std::shared_ptr<ObjectType> engine_T = instantiate<ObjectType>::anonymous(std::move(engine_builder));
 
     struct Engine
     {
@@ -63,8 +63,8 @@ TEST(Object, integration)
         Entity entities[2];
     };
 
-    std::shared_ptr<Object> engine(instantiate(engine_T.get()));
-    Object& e = *engine;
+    std::shared_ptr<Instance> engine = engine_T->instantiate();
+    Instance& e = *engine;
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
     e["entities"][0]["id"].is<uint32_t>() = 1;
@@ -90,7 +90,7 @@ TEST(Object, integration)
     EXPECT_THROW(Accessor a = (*engine_T)["hello"], MemberError);
     EXPECT_THROW((*engine_T)["entities"][2], IndexError);
 
-    const Type* entities_array_T = e["entities"].type;
+    std::shared_ptr<const Type> entities_array_T = e["entities"].type;
     As<Entity> first_entity = (*entities_array_T)[0].as<Entity>();
     ASSERT_EQ(e["entities"][first_entity]->name, "noah");
 
@@ -106,19 +106,19 @@ TEST(Object, integration)
 TEST(Object, null)
 {
     ObjectType::Builder builder;
-    std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
+    std::shared_ptr<ObjectType> type(instantiate<ObjectType>::anonymous(std::move(builder)));
     EXPECT_EQ(type->size(), 0);
-    std::shared_ptr<Object> object(instantiate(type.get()));
-    EXPECT_EQ(object->type, type.get());
+    std::shared_ptr<Instance> object(type->instantiate());
+    EXPECT_EQ(object->type, type);
 }
 
 TEST(Object, one_field_primitive)
 {
     ObjectType::Builder builder;
     builder.member("value", UINT32);
-    std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
+    std::shared_ptr<ObjectType> type(instantiate<ObjectType>::anonymous(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(uint32_t));
-    std::shared_ptr<Object> object(instantiate(type.get()));
+    std::shared_ptr<Instance> object(type->instantiate());
     (*object)["value"].is<uint32_t>() = 69;
     EXPECT_EQ((*object)["value"].is<uint32_t>(), 69);
 }
@@ -127,9 +127,9 @@ TEST(Object, one_field_allocating)
 {
     ObjectType::Builder builder;
     builder.member("value", STRING);
-    std::shared_ptr<ObjectType> type(std::make_shared<ObjectType>(std::move(builder)));
+    std::shared_ptr<ObjectType> type(instantiate<ObjectType>::anonymous(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(std::string));
-    std::shared_ptr<Object> object(instantiate(type.get()));
+    std::shared_ptr<Instance> object(type->instantiate());
     EXPECT_EQ((*object)["value"].is<std::string>(), "");
     (*object)["value"].is<std::string>() = "hello, world!";
     EXPECT_EQ((*object)["value"].is<std::string>(), "hello, world!");
@@ -140,10 +140,10 @@ TEST(Object, inherit_simple)
     ObjectType::Builder parent_builder;
     parent_builder.member("first", UINT8);
     parent_builder.member("second", UINT32);
-    std::shared_ptr<ObjectType> parent(std::make_shared<ObjectType>(std::move(parent_builder)));
+    std::shared_ptr<ObjectType> parent(instantiate<ObjectType>::anonymous(std::move(parent_builder)));
     ObjectType::Builder child_builder(parent.get());
     child_builder.member("third", STRING);
-    std::shared_ptr<ObjectType> child(std::make_shared<ObjectType>(std::move(child_builder)));
+    std::shared_ptr<ObjectType> child(instantiate<ObjectType>::anonymous(std::move(child_builder)));
     EXPECT_EQ(child->members.at(0).name, "first");
     EXPECT_EQ(child->members.at(1).name, "second");
     EXPECT_EQ(child->members.at(2).name, "third");
@@ -161,9 +161,9 @@ template<typename T, typename U, typename V>
 void test_alignment()
 {
     ObjectType::Builder builder;
-    builder.member("first", std::make_unique<TestDefaultValueType<T>>());
-    builder.member("second", std::make_unique<TestDefaultValueType<U>>());
-    builder.member("third", std::make_unique<TestDefaultValueType<V>>());
+    builder.member("first", instantiate<TestDefaultValueType<T>>::anonymous());
+    builder.member("second", instantiate<TestDefaultValueType<U>>::anonymous());
+    builder.member("third", instantiate<TestDefaultValueType<V>>::anonymous());
     ObjectType tripe_T(std::move(builder));
     using Actual = Triple<T, U, V>;
     ASSERT_EQ(tripe_T.at("first").offset, offsetof(Actual, first));
