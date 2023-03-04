@@ -57,10 +57,11 @@ struct Type;
 template<typename T>
 struct As
 {
+    std::shared_ptr<const Type> origin;
     size_t offset{0};
 
     As() = default;
-    As(size_t offset);
+    As(std::shared_ptr<const Type> origin, size_t offset);
 
     T* operator()(Reference& reference) const;
     const T* operator()(const Reference& reference) const;
@@ -75,10 +76,11 @@ struct As
 template<typename T>
 struct Is
 {
+    std::shared_ptr<const Type> origin;
     size_t offset{0};
 
     Is() = default;
-    Is(size_t offset);
+    Is(std::shared_ptr<const Type> origin, size_t offset);
 
     T& operator()(Reference& reference) const;
     const T& operator()(const Reference& reference) const;
@@ -92,11 +94,13 @@ struct Is
 
 struct Accessor
 {
+    std::shared_ptr<const Type> origin;
     std::shared_ptr<const Type> type;
     size_t offset{0};
 
     Accessor() = default;
-    explicit Accessor(std::shared_ptr<const Type> type, size_t = 0);
+    explicit Accessor(std::shared_ptr<const Type> type);
+    explicit Accessor(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset);
 
     Accessor operator[](const std::string& member_name) const;
     Accessor operator[](size_t element_index) const;
@@ -127,6 +131,7 @@ struct Type
     virtual void construct(char* address) const = 0;
     virtual void destroy(char* address) const = 0;
 
+    // TODO: these should just be NotImplemented if there's no reasonable default
     virtual void emit(code::Cursor<code::Declaration>& cursor) const = 0;
     virtual void emit(layout::Cursor& cursor) const = 0;
     virtual void represent(const char* address, std::ostream& out) const = 0;
@@ -390,51 +395,66 @@ std::ostream& operator<<(std::ostream& out, const Instance<T>& instance)
     return out;
 }
 
+static inline void validate(const std::shared_ptr<const Type>& a, const std::shared_ptr<const Type>& b)
+{
+    if (a != b)
+    {
+        // TODO: maybe elaborate more on this error for Python users?
+        throw TypeError("the lens and target types are incompatible!");
+    }
+}
+
 template<typename T>
-As<T>::As(size_t offset) : offset(offset)
+As<T>::As(std::shared_ptr<const Type> origin, size_t offset) : origin(std::move(origin)), offset(offset)
 {
 }
 
 template<typename T>
 T* As<T>::operator()(Reference& reference) const
 {
-    return reinterpret_cast<T*>(reference.address.get());
+    validate(this->origin, reference.type);
+    return reinterpret_cast<T*>(reference.address.get() + this->offset);
 }
 
 template<typename T>
 const T* As<T>::operator()(const Reference& reference) const
 {
-    return reinterpret_cast<const T*>(reference.address.get());
+    validate(this->origin, reference.type);
+    return reinterpret_cast<const T*>(reference.address.get() + this->offset);
 }
 
 template<typename T>
 template<typename U>
 T* As<T>::operator()(Instance<U>& instance) const
 {
-    return reinterpret_cast<T*>(instance.address.get());
+    validate(this->origin, instance.type);
+    return reinterpret_cast<T*>(instance.address.get() + this->offset);
 }
 
 template<typename T>
 template<typename U>
 const T* As<T>::operator()(const Instance<U>& instance) const
 {
-    return reinterpret_cast<const T*>(instance.address.get());
+    validate(this->origin, instance.type);
+    return reinterpret_cast<const T*>(instance.address.get() + this->offset);
 }
 
 template<typename T>
-Is<T>::Is(size_t offset) : offset(offset)
+Is<T>::Is(std::shared_ptr<const Type> origin, size_t offset) : origin(std::move(origin)), offset(offset)
 {
 }
 
 template<typename T>
 T& Is<T>::operator()(Reference& reference) const
 {
+    validate(this->origin, reference.type);
     return *reinterpret_cast<T*>(reference.address.get() + this->offset);
 }
 
 template<typename T>
 const T& Is<T>::operator()(const Reference& reference) const
 {
+    validate(this->origin, reference.type);
     return *reinterpret_cast<T*>(reference.address.get() + this->offset);
 }
 
@@ -442,6 +462,7 @@ template<typename T>
 template<typename U>
 T& Is<T>::operator()(Instance<U>& instance) const
 {
+    validate(this->origin, instance.type);
     return *reinterpret_cast<T*>(instance.address.get() + this->offset);
 }
 
@@ -449,26 +470,21 @@ template<typename T>
 template<typename U>
 const T& Is<T>::operator()(const Instance<U>& instance) const
 {
-    if (instance.type == this->origin)
-    {
-        return *reinterpret_cast<const T*>(instance.address.get() + this->offset);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    validate(this->origin, instance.type);
+    return *reinterpret_cast<const T*>(instance.address.get() + this->offset);
 }
 
 template<typename T>
 Reference Accessor::operator()(Instance<T>& instance) const
 {
+    validate(this->origin, instance.type);
     return Reference(instance->type, this->type, instance.address.get() + this->offset);
 }
 
 template<typename T>
 As<T> Accessor::as() const
 {
-    return As<T>(this->offset);
+    return As<T>(this->origin, this->offset);
 }
 
 template<typename T>
@@ -479,7 +495,7 @@ Is<T> Accessor::is() const
     {
         if (value_type->info() == typeid(T))
         {
-            return Is<T>(this->offset);
+            return Is<T>(this->origin, this->offset);
         }
         else
         {

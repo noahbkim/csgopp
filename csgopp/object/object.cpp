@@ -13,8 +13,15 @@ void ValueType::emit(layout::Cursor& cursor) const
     cursor.note(this->info().name());
 }
 
-Accessor::Accessor(std::shared_ptr<const Type> type, size_t offset)
-    : type(std::move(type))
+Accessor::Accessor(std::shared_ptr<const Type> type)
+    : origin(type)
+    , type(std::move(type))
+{
+}
+
+Accessor::Accessor(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset)
+    : origin(std::move(origin))
+    , type(std::move(type))
     , offset(offset)
 {
 }
@@ -25,7 +32,7 @@ Accessor Accessor::operator[](const std::string& member_name) const
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(member_name);
-        return Accessor(member.type, this->offset + member.offset);
+        return Accessor(this->origin, member.type, this->offset + member.offset);
     }
     else
     {
@@ -39,7 +46,7 @@ Accessor Accessor::operator[](size_t element_index) const
     if (array_type != nullptr)
     {
         size_t element_offset = array_type->at(element_index);
-        return Accessor(array_type->element_type, this->offset + element_offset);
+        return Accessor(this->origin, array_type->element_type, this->offset + element_offset);
     }
     else
     {
