@@ -23,6 +23,7 @@ struct Delete
     }
 };
 
+// TODO: replace with std::shared_ptr
 template<typename T, typename Manager = Noop<T>>
 struct Database
 {

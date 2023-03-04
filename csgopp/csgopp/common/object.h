@@ -180,16 +180,16 @@ struct ConstReference
     ConstReference operator[](size_t element_index) const;
 
     template<typename T>
-    const T* operator[](const As<T>& as);
+    const T* operator[](const As<T>& as) const;
 
     template<typename T>
-    const T& operator[](const Is<T>& is);
+    const T& operator[](const Is<T>& is) const;
 
     template<typename T>
-    const T* as();
+    const T* as() const;
 
     template<typename T>
-    const T& is();
+    const T& is() const;
 };
 
 struct ValueType : public virtual Type
@@ -570,25 +570,25 @@ T& Reference::is()
 }
 
 template<typename T>
-const T* ConstReference::operator[](const As<T>& as)
+const T* ConstReference::operator[](const As<T>& as) const
 {
     return as(*this);
 }
 
 template<typename T>
-const T& ConstReference::operator[](const Is<T>& is)
+const T& ConstReference::operator[](const Is<T>& is) const
 {
     return is(*this);
 }
 
 template<typename T>
-const T* ConstReference::as()
+const T* ConstReference::as() const
 {
     return reinterpret_cast<const T*>(this->address);
 }
 
 template<typename T>
-const T& ConstReference::is()
+const T& ConstReference::is() const
 {
     auto* value_type = dynamic_cast<const ValueType*>(this->type);
     if (value_type != nullptr)

@@ -6,37 +6,40 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
+#include <nanobind/stl/shared_ptr.h>
 
 #include <google/protobuf/io/coded_stream.h>
 
-#include "csgopy.h"
-#include "csgopp/client.h"
+#include <csgopp/client.h>
+#include "csgopy/view/object_view.h"
+#include "csgopy/view/entity_view.h"
 
 using namespace nanobind::literals;
 
 using google::protobuf::io::IstreamInputStream;
 using google::protobuf::io::CodedInputStream;
 using csgopp::client::Client;
+using csgopp::client::Entity;
+using csgopy::view::entity_view::EntityView;
 
-class PythonAdapter : public csgopp::client::ClientObserverBase<PythonAdapter>
+
+class PythonObserverAdapter : public csgopp::client::ClientObserverBase<PythonObserverAdapter>
 {
 public:
-    explicit PythonAdapter(Client& client, nanobind::object observer)
+    explicit PythonObserverAdapter(Client& client, nanobind::object observer)
         : ClientObserverBase(client)
         , observer(std::move(observer))
     {}
 
-    void on_entity_update(
-        csgopp::client::ClientObserverBase<PythonAdapter>::Client &client,
-        const csgopp::client::entity::Entity *entity,
-        const std::vector<uint16_t> &indices
-    ) override
+    void on_entity_update(Client &client, const Entity *entity, const std::vector<uint16_t> &indices) override
     {
         auto callback = this->observer.attr("on_entity_update");
+        auto entity_view = std::make_shared<EntityView>(entity);
         if (callback.is_valid())
         {
-            callback(indices);
+            callback(nanobind::cast(entity_view), indices);
         }
+        entity_view->invalidate();
     }
 
     void debug() const
@@ -59,14 +62,16 @@ void parse(const std::string& path, nanobind::object observer)
     IstreamInputStream file_input_stream(&file_stream);
     CodedInputStream coded_input_stream(&file_input_stream);
 
-    Client<PythonAdapter> client(coded_input_stream, observer);
+    Client<PythonObserverAdapter> client(coded_input_stream, observer);
     while (client.advance(coded_input_stream));
 }
 
-NB_MODULE(csgopy, mod) {
-    nanobind::exception<csgopp::client::GameError>(mod, "GameError");
-    mod.def("parse", &parse);
-    mod.def("print", &print);
+NB_MODULE(csgopy, module) {
+    nanobind::exception<csgopp::client::GameError>(module, "GameError");
+    module.def("parse", &parse);
+
+    csgopy::view::object_view::bind(module);
+    csgopy::view::entity_view::bind(module);
 }
 
 /*

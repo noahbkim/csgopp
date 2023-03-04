@@ -5,7 +5,10 @@ else ()
 endif ()
 
 nanobind_add_module(csgopy NB_STATIC
-        csgopy.h csgopy.cpp)
+        csgopy.cpp
+        view.cpp
+        view/object_view.cpp
+        view/entity_view.cpp)
 
 target_link_libraries(csgopy PRIVATE csgopp)
 install(TARGETS csgopy LIBRARY DESTINATION .)
