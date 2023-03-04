@@ -7,28 +7,10 @@ namespace csgopp::common::database
 {
 
 template<typename T>
-struct Noop
-{
-    static void destroy(T*)
-    {
-    }
-};
-
-template<typename T>
-struct Delete
-{
-    static void destroy(T* item)
-    {
-        delete item;
-    }
-};
-
-// TODO: replace with std::shared_ptr
-template<typename T, typename Manager = Noop<T>>
 struct Database
 {
-    using Vector = std::vector<T*>;
     using Value = T;
+    using Vector = std::vector<std::shared_ptr<Value>>;
 
     Vector container;
 
@@ -39,50 +21,42 @@ struct Database
         container.reserve(reserved);
     }
 
-    ~Database()
-    {
-        for (T* item: this->container)
-        {
-            Manager::destroy(item);
-        }
-    }
-
-    [[nodiscard]] Value*& front()
+    [[nodiscard]] std::shared_ptr<Value>& front()
     {
         return this->container.front();
     }
 
-    [[nodiscard]] const Value* front() const
+    [[nodiscard]] const std::shared_ptr<const Value>& front() const
     {
         return this->container.front();
     }
 
-    [[nodiscard]] Value*& at(size_t index)
+    [[nodiscard]] std::shared_ptr<Value>& at(size_t index)
     {
         return this->container.at(index);
     }
 
-    [[nodiscard]] const Value* at(size_t index) const
+    [[nodiscard]] const std::shared_ptr<const Value>& at(size_t index) const
     {
         return this->container.at(index);
     }
 
-    [[nodiscard]] Value*& back()
+    [[nodiscard]] std::shared_ptr<Value>& back()
     {
         return this->container.back();
     }
 
-    [[nodiscard]] const Value* back() const
+    [[nodiscard]] const std::shared_ptr<const Value>& back() const
     {
         return this->container.back();
     }
 
-    [[nodiscard]] Value* get(size_t index)
+    [[nodiscard]] std::shared_ptr<Value> get(size_t index)
     {
         return index < this->container.size() ? this->container.at(index) : nullptr;
     }
 
-    [[nodiscard]] const Value* get(size_t index) const
+    [[nodiscard]] const std::shared_ptr<const Value> get(size_t index) const
     {
         return index < this->container.size() ? this->container.at(index) : nullptr;
     }
@@ -112,23 +86,18 @@ struct Database
         return this->container.cend();
     }
 
-    virtual void emplace(T* item)
+    virtual void emplace(std::shared_ptr<Value>&& item)
     {
-        this->container.emplace_back(item);
+        this->container.emplace_back(std::move(item));
     }
 
-    virtual void emplace(size_t index, T* item)
+    virtual void emplace(size_t index, std::shared_ptr<Value>&& item)
     {
-        if (this->container.size() <= index)
+        if (index >= this->container.size())
         {
             this->container.resize(index + 1);
         }
-        else if (this->container.at(index) != nullptr)
-        {
-            delete this->container.at(index);
-        }
-
-        this->container.at(index) = item;
+        this->container.at(index) = std::move(item);
     }
 
     virtual void reserve(size_t count)
@@ -140,7 +109,7 @@ struct Database
 template<typename T>
 struct NameTableMixin
 {
-    using NameTable = absl::flat_hash_map<std::string_view, T*>;
+    using NameTable = absl::flat_hash_map<std::string_view, std::shared_ptr<T>>;
     NameTable by_name{};
 
     NameTableMixin() = default;
@@ -149,12 +118,12 @@ struct NameTableMixin
     {
     }
 
-    [[nodiscard]] T*& at_name(std::string_view name)
+    [[nodiscard]] std::shared_ptr<T>& at_name(std::string_view name)
     {
         return this->by_name.at(name);
     }
 
-    [[nodiscard]] const T* at_name(std::string_view name) const
+    [[nodiscard]] const std::shared_ptr<const T>& at_name(std::string_view name) const
     {
         return this->by_name.at(name);
     }
@@ -164,9 +133,9 @@ struct NameTableMixin
         return this->by_name.contains(name);
     }
 
-    void emplace(T* member)
+    void emplace(std::shared_ptr<T> member)
     {
-        this->by_name.emplace(member->name, member);
+        this->by_name.emplace(member->name, std::move(member));
     }
 
     void reserve(size_t count)
@@ -175,31 +144,31 @@ struct NameTableMixin
     }
 };
 
-template<typename T, typename Manager = Noop<T>>
-struct DatabaseWithName : public Database<T, Manager>, public NameTableMixin<T>
+template<typename T>
+struct DatabaseWithName : public Database<T>, public NameTableMixin<T>
 {
     DatabaseWithName() = default;
 
     explicit DatabaseWithName(size_t reserved)
-        : Database<T, Manager>(reserved), NameTableMixin<T>(reserved)
+        : Database<T>(reserved), NameTableMixin<T>(reserved)
     {
     }
 
-    void emplace(T* property) override
+    void emplace(std::shared_ptr<T>&& property) override
     {
-        Database<T, Manager>::emplace(property);
         NameTableMixin<T>::emplace(property);
+        Database<T>::emplace(std::move(property));
     }
 
-    void emplace(size_t index, T* property) override
+    void emplace(size_t index, std::shared_ptr<T>&& property) override
     {
-        Database<T, Manager>::emplace(index, property);
         NameTableMixin<T>::emplace(property);
+        Database<T>::emplace(index, std::move(property));
     }
 
     void reserve(size_t count) override
     {
-        Database<T, Manager>::reserve(count);
+        Database<T>::reserve(count);
         NameTableMixin<T>::reserve(count);
     }
 };
@@ -207,7 +176,7 @@ struct DatabaseWithName : public Database<T, Manager>, public NameTableMixin<T>
 template<typename T>
 struct IdTableMixin
 {
-    using IdTable = absl::flat_hash_map<typename T::Id, T*>;
+    using IdTable = absl::flat_hash_map<typename T::Id, std::shared_ptr<T>>;
     IdTable by_id{};
 
     IdTableMixin() = default;
@@ -216,12 +185,12 @@ struct IdTableMixin
     {
     }
 
-    [[nodiscard]] T*& at_id(typename T::Id id)
+    [[nodiscard]] std::shared_ptr<T>& at_id(typename T::Id id)
     {
         return this->by_id.at(id);
     }
 
-    [[nodiscard]] const T* at_id(typename T::Id id) const
+    [[nodiscard]] std::shared_ptr<const T> at_id(typename T::Id id) const
     {
         return this->by_id.at(id);
     }
@@ -231,9 +200,9 @@ struct IdTableMixin
         return this->by_name.contains(id);
     }
 
-    void emplace(T* member)
+    void emplace(std::shared_ptr<T> member)
     {
-        this->by_id.emplace(member->id, member);
+        this->by_id.emplace(member->id, std::move(member));
     }
 
     void reserve(size_t count)
@@ -243,54 +212,56 @@ struct IdTableMixin
 };
 
 
-template<typename T, typename Manager = Noop<T>>
-struct DatabaseWithId : public Database<T, Manager>, public IdTableMixin<T>
+template<typename T>
+struct DatabaseWithId : public Database<T>, public IdTableMixin<T>
 {
     DatabaseWithId() = default;
 
     explicit DatabaseWithId(size_t reserved)
-        : Database<T, Manager>(reserved), IdTableMixin<T>(reserved)
+        : Database<T>(reserved)
+        , IdTableMixin<T>(reserved)
     {
     }
 
-    void emplace(T* property) override
+    void emplace(std::shared_ptr<T>&& property) override
     {
-        Database<T, Manager>::emplace(property);
         IdTableMixin<T>::emplace(property);
+        Database<T>::emplace(std::move(property));
     }
 
-    void emplace(size_t index, T* property) override
+    void emplace(size_t index, std::shared_ptr<T>&& property) override
     {
-        Database<T, Manager>::emplace(index, property);
         IdTableMixin<T>::emplace(property);
+        Database<T>::emplace(index, std::move(property));
     }
 
     void reserve(size_t count) override
     {
-        Database<T, Manager>::reserve(count);
+        Database<T>::reserve(count);
         IdTableMixin<T>::reserve(count);
     }
 };
 
-template<typename T, typename Manager = Noop<T>>
-struct DatabaseWithNameId : public DatabaseWithName<T, Manager>, public IdTableMixin<T>
+template<typename T>
+struct DatabaseWithNameId : public DatabaseWithName<T>, public IdTableMixin<T>
 {
     DatabaseWithNameId() = default;
 
     explicit DatabaseWithNameId(size_t reserved)
-        : DatabaseWithName<T, Manager>(reserved), IdTableMixin<T>(reserved)
+        : DatabaseWithName<T>(reserved)
+        , IdTableMixin<T>(reserved)
     {
     }
 
-    void emplace(T* property) override
+    void emplace(std::shared_ptr<T>&& property) override
     {
-        DatabaseWithName<T, Manager>::emplace(property);
         IdTableMixin<T>::emplace(property);
+        DatabaseWithName<T>::emplace(std::move(property));
     }
 
     void reserve(size_t count) override
     {
-        DatabaseWithName<T, Manager>::reserve(count);
+        DatabaseWithName<T>::reserve(count);
         IdTableMixin<T>::reserve(count);
     }
 };

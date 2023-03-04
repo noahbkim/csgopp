@@ -325,10 +325,10 @@ struct ObjectType : public virtual Type
 template<typename T>
 struct Instance
 {
-    std::shared_ptr<const Type> type;
+    std::shared_ptr<const T> type;
     std::shared_ptr<char[]> address;
 
-    explicit Instance(std::shared_ptr<const Type> type) : type(std::move(type))
+    explicit Instance(std::shared_ptr<const T>&& type) : type(std::move(type))
     {
         this->address = std::make_shared<char[]>(this->type->size());
         this->type->construct(this->address.get());

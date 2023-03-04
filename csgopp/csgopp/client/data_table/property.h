@@ -1,8 +1,8 @@
 #pragma once
 
+#include <object/code.h>
+#include <object/object.h>
 #include "../../common/bits.h"
-#include "../../object/code.h"
-#include "../../object/object.h"
 #include "netmessages.pb.h"
 
 namespace csgopp::client::data_table::property
@@ -10,11 +10,11 @@ namespace csgopp::client::data_table::property
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::common::bits::BitStream;
-using csgopp::common::code::Context;
-using csgopp::common::code::Cursor;
-using csgopp::common::code::Declaration;
-using csgopp::common::object::ObjectType;
-using csgopp::common::object::Type;
+using object::code::Context;
+using object::code::Cursor;
+using object::code::Declaration;
+using object::ObjectType;
+using object::Type;
 
 /// \brief Flags attached to each property by whoever defines it.
 ///
@@ -152,25 +152,22 @@ struct Property : Context<Declaration>
     /// you're not working directly with the virtual interface.
     [[nodiscard]] virtual Kind::T kind() const = 0;
 
-    // TODO: construct_type() also
-    [[nodiscard]] virtual std::shared_ptr<const Type> construct_type() = 0;
-
-    /// \brief Materialize a `object::Type` from the property.
+    /// \brief Materialize an `object::Type` from the property.
     ///
     /// \return a `std::shared_ptr` to a `object::Type` that
     ///     corresponds to this object.
     ///
     /// This method is used internally to construct the dynamic type associated
-    /// with each server class. It's important that we adhere to
-    /// `csgopp::common::object`'s use of `std::shared_ptr` because there isn't
-    /// always a clear owner for a given type.
+    /// with each server class. It's important that we adhere to `object`'s use
+    /// of `std::shared_ptr` because there isn't always a clear owner for a
+    /// given type.
     ///
     /// NOTE: this type is expected to stay alive because it needs to be
     /// referenced from several places that only shared access to the property.
     ///
     /// \sa `csgopp::client::entity`
     /// \sa `csgopp::common::object`
-    [[nodiscard]] virtual const Type* type() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<const Type> construct_type() = 0;
 
     /// \brief Attach this property to an `EntityType`
     ///
@@ -195,7 +192,6 @@ struct Property : Context<Declaration>
     /// and the `Type` ones.
     void apply(Cursor<Declaration> declaration) const override
     {
-
     }
 
     /// \brief Check if two properties have the same type.

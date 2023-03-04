@@ -11,7 +11,6 @@ namespace csgopp::client::user
 
 using csgopp::client::string_table::StringTable;
 using csgopp::common::database::DatabaseWithId;
-using csgopp::common::database::Delete;
 
 struct User
 {
@@ -40,17 +39,17 @@ struct User
     }
 };
 
-struct UserDatabase : public DatabaseWithId<User, Delete<User>>
+struct UserDatabase : public DatabaseWithId<User>
 {
-    using IndexTable = absl::flat_hash_map<typename User::Index, User*>;
-    IndexTable by_index{};
+    using IndexTable = absl::flat_hash_map<typename User::Index, std::shared_ptr<User>>;
+    IndexTable by_index;
 
-    [[nodiscard]] User*& at_index(User::Index index)
+    [[nodiscard]] std::shared_ptr<User> at_index(User::Index index)
     {
         return this->by_index.at(index);
     }
 
-    [[nodiscard]] const User* at_index(User::Index index) const
+    [[nodiscard]] std::shared_ptr<const User> at_index(User::Index index) const
     {
         return this->by_index.at(index);
     }
@@ -60,21 +59,21 @@ struct UserDatabase : public DatabaseWithId<User, Delete<User>>
         return this->by_index.contains(index);
     }
 
-    void emplace(User* user) override
+    void emplace(std::shared_ptr<User>&& user) override
     {
-        DatabaseWithId<User, Delete<User>>::emplace(user);
         this->by_index.emplace(user->index, user);
+        DatabaseWithId<User>::emplace(std::move(user));
     }
 
-    void emplace(size_t index, User* user) override
+    void emplace(size_t index, std::shared_ptr<User>&& user) override
     {
-        DatabaseWithId<User, Delete<User>>::emplace(index, user);
         this->by_index.emplace(user->index, user);
+        DatabaseWithId<User>::emplace(index, std::move(user));
     }
 
     void reserve(size_t count) override
     {
-        DatabaseWithId<User, Delete<User>>::reserve(count);
+        DatabaseWithId<User>::reserve(count);
         this->by_index.reserve(count);
     }
 };

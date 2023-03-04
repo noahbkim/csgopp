@@ -8,7 +8,7 @@
 #include <argparse/argparse.hpp>
 
 #include <csgopp/client.h>
-#include <csgopp/common/object.h>
+#include <object/object.h>
 
 #include "common.h"
 
@@ -19,7 +19,7 @@ using csgopp::client::User;
 using csgopp::client::GameEvent;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::EntityDatum;
-using csgopp::common::object::Accessor;
+using object::Accessor;
 
 const char* describe_game_phase(uint32_t phase)
 {
@@ -129,29 +129,36 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
 {
     using ClientObserverBase::ClientObserverBase;
 
-    const ServerClass* player_server_class{nullptr};
+    std::shared_ptr<const ServerClass> player_server_class;
     Accessor weapon_purchases_accessor;
 
-    void on_server_class_creation(Client& client, const ServerClass* server_class) override
+    void on_server_class_creation(
+        Client& client,
+        const std::shared_ptr<const ServerClass>& server_class
+    ) override
     {
         if (server_class->name == "CCSPlayer")
         {
             this->player_server_class = server_class;
-            const EntityType& type = *server_class->data_table->type();
-            this->weapon_purchases_accessor = type["cslocaldata"]["m_iWeaponPurchasesThisRound"];
+            auto type = server_class->data_table->type();
+            this->weapon_purchases_accessor = Accessor(type)["cslocaldata"]["m_iWeaponPurchasesThisRound"];
         }
     }
 
-    void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices) override
+    void on_entity_update(
+        Client& client,
+        const std::shared_ptr<const Entity>& entity,
+        const std::vector<uint16_t>& indices
+    ) override
     {
         if (entity->server_class == this->player_server_class)
         {
             for (uint16_t index : indices)
             {
                 const EntityDatum& datum = entity->type->prioritized.at(index);
-                if (this->weapon_purchases_accessor > datum)
+                if (this->weapon_purchases_accessor.is_strict_subset_of(datum))
                 {
-                    const User* user = client.users().at_index(entity->id);
+                    const std::shared_ptr<const User>& user = client.users().at_index(entity->id);
                     OK(user != nullptr);
                     int weapon = atoi(datum.property->name.c_str());
                     std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
@@ -162,12 +169,13 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
 
     void on_game_event(Client &client, GameEvent& event) override
     {
-        if (event.name == "round_end")
+        std::string_view name(event.type->name);
+        if (name == "round_end")
         {
             std::cout << client.tick() << ": Round end: " << event["message"].is<std::string>() << std::endl;
-            for (const User* user : client.users())
+            for (const std::shared_ptr<const User>& user : client.users())
             {
-                const Entity* entity = client.entities().get(user->index);
+                const std::shared_ptr<const Entity>& entity = client.entities().get(user->index);
                 if (entity == nullptr)
                 {
                     continue;
@@ -197,9 +205,9 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
                 std::cout << std::endl;
             }
         }
-        else if (event.name == "player_team")
+        else if (name == "player_team")
         {
-            const User* user = client.users().at_id(event["userid"].is<int16_t>());
+            const std::shared_ptr<const User>& user = client.users().at_id(event["userid"].is<int16_t>());
             const char* team = describe_team(event["team"].is<uint8_t>());
             std::cout << client.tick() << ": Player " << user->name << " joined " << team << std::endl;
         }

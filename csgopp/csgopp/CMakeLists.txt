@@ -36,5 +36,5 @@ target_compile_features(csgopp PRIVATE cxx_std_20)
 
 target_include_directories(csgopp PUBLIC ..)
 target_link_libraries(csgopp
-        PUBLIC csgopp.messages
+        PUBLIC csgopp.messages object
         PUBLIC CONAN_PKG::abseil CONAN_PKG::protobuf)

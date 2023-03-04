@@ -9,7 +9,7 @@
 namespace csgopp::client::data_table::data_table_property
 {
 
-using csgopp::common::object::ObjectType;
+using object::ObjectType;
 
 void DataTableProperty::apply(Cursor<Declaration> declaration) const
 {
@@ -45,9 +45,9 @@ std::shared_ptr<const Type> DataTableProperty::construct_type()
     return this->_type;
 }
 
-const Type* DataTableProperty::type() const
+std::shared_ptr<const Type> DataTableProperty::type() const
 {
-    return this->_type.get();
+    return this->_type;
 }
 
 void DataTableProperty::build(ObjectType::Builder& builder)

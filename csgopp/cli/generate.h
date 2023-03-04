@@ -7,8 +7,8 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <argparse/argparse.hpp>
 
-#include <csgopp/common/code.h>
-#include <csgopp/common/layout.h>
+#include <object/code.h>
+#include <object/layout.h>
 #include <csgopp/client/data_table.h>
 #include <csgopp/client/server_class.h>
 #include <csgopp/client.h>
@@ -16,9 +16,9 @@
 #include "common.h"
 
 using argparse::ArgumentParser;
-using csgopp::common::code::Generator;
-using csgopp::common::code::Cursor;
-using csgopp::common::code::Definition;
+using object::code::Generator;
+using object::code::Cursor;
+using object::code::Definition;
 using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
@@ -37,7 +37,7 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
 
     explicit GenerateObserver(Client& client) : ClientObserverBase<GenerateObserver>(client) {}
 
-    void on_data_table_creation(Client& client, const DataTable* data_table) override
+    void on_data_table_creation(Client& client, const std::shared_ptr<const DataTable>& data_table) override
     {
         this->data_table_count += 1;
         if (data_table->type())
@@ -48,12 +48,12 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
         }
     }
 
-    void on_server_class_creation(Client& client, const ServerClass* server_class) override
+    void on_server_class_creation(Client& client, const std::shared_ptr<const ServerClass>& server_class) override
     {
         this->server_class_count += 1;
     }
 
-    void on_game_event_type_creation(Client& client, const GameEventType* game_event_type) override
+    void on_game_event_type_creation(Client& client, const std::shared_ptr<const GameEventType>& game_event_type) override
     {
         Cursor<Definition> cursor(game_event_type_generator.append(game_event_type->name));
         game_event_type->emit(cursor);
@@ -170,7 +170,7 @@ struct GenerateCommand
             return;
         }
 
-        for (const DataTable* data_table : client.data_tables())
+        for (const std::shared_ptr<DataTable>& data_table : client.data_tables())
         {
             if (data_table->type())
             {
@@ -194,12 +194,12 @@ struct GenerateCommand
             return;
         }
 
-        for (const DataTable* data_table : client.data_tables())
+        for (const std::shared_ptr<DataTable>& data_table : client.data_tables())
         {
             if (data_table->type())
             {
                 out << data_table->type()->name;  // Newline is added
-                csgopp::common::layout::Cursor cursor(out);
+                object::layout::Cursor cursor(out);
                 data_table->type()->emit(cursor);
                 out << std::endl;
             }
