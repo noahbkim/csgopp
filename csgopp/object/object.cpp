@@ -1,6 +1,6 @@
 #include "object.h"
 
-namespace csgopp::common::object
+namespace object
 {
 
 void ValueType::emit(code::Cursor<code::Declaration>& cursor) const

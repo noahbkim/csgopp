@@ -12,7 +12,7 @@
 #include "code.h"
 #include "layout.h"
 
-namespace csgopp::common::object
+namespace object
 {
 
 struct Error : std::runtime_error

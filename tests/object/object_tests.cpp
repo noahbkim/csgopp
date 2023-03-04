@@ -4,7 +4,7 @@
 
 #include <object/object.h>
 
-using namespace csgopp::common::object;
+using namespace object;
 
 template<typename T>
 struct TestDefaultValueType : public DefaultValueType<T>
