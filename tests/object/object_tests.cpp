@@ -63,8 +63,8 @@ TEST(Object, integration)
         Entity entities[2];
     };
 
-    std::shared_ptr<Instance> engine = engine_T->instantiate();
-    Instance& e = *engine;
+    std::shared_ptr<Instance<ObjectType>> engine = engine_T->instantiate<Object>();
+    Instance<ObjectType>& e = *engine;
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
     e["entities"][0]["id"].is<uint32_t>() = 1;
@@ -108,7 +108,7 @@ TEST(Object, null)
     ObjectType::Builder builder;
     std::shared_ptr<ObjectType> type(instantiate<ObjectType>::anonymous(std::move(builder)));
     EXPECT_EQ(type->size(), 0);
-    std::shared_ptr<Instance> object(type->instantiate());
+    std::shared_ptr<Instance<ObjectType>> object(type->instantiate<Object>());
     EXPECT_EQ(object->type, type);
 }
 
@@ -118,7 +118,7 @@ TEST(Object, one_field_primitive)
     builder.member("value", UINT32);
     std::shared_ptr<ObjectType> type(instantiate<ObjectType>::anonymous(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(uint32_t));
-    std::shared_ptr<Instance> object(type->instantiate());
+    std::shared_ptr<Instance<ObjectType>> object(type->instantiate<Object>());
     (*object)["value"].is<uint32_t>() = 69;
     EXPECT_EQ((*object)["value"].is<uint32_t>(), 69);
 }
@@ -129,7 +129,7 @@ TEST(Object, one_field_allocating)
     builder.member("value", STRING);
     std::shared_ptr<ObjectType> type(instantiate<ObjectType>::anonymous(std::move(builder)));
     EXPECT_EQ(type->size(), sizeof(std::string));
-    std::shared_ptr<Instance> object(type->instantiate());
+    std::shared_ptr<Instance<ObjectType>> object(type->instantiate<Object>());
     EXPECT_EQ((*object)["value"].is<std::string>(), "");
     (*object)["value"].is<std::string>() = "hello, world!";
     EXPECT_EQ((*object)["value"].is<std::string>(), "hello, world!");
