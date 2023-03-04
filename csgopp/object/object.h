@@ -57,11 +57,10 @@ struct Type;
 template<typename T>
 struct As
 {
-    std::shared_ptr<const Type> origin;
     size_t offset{0};
 
     As() = default;
-    As(std::shared_ptr<const Type> origin, size_t offset);
+    As(size_t offset);
 
     T* operator()(Reference& reference) const;
     const T* operator()(const Reference& reference) const;
@@ -76,12 +75,10 @@ struct As
 template<typename T>
 struct Is
 {
-    std::shared_ptr<const Type> origin;
     size_t offset{0};
 
     Is() = default;
-    Is(std::shared_ptr<const Type> origin, size_t offset);
-    Is(std::shared_ptr<const Type>&& origin, size_t offset);
+    Is(size_t offset);
 
     T& operator()(Reference& reference) const;
     const T& operator()(const Reference& reference) const;
@@ -95,12 +92,11 @@ struct Is
 
 struct Accessor
 {
-    std::shared_ptr<const Type> origin;
     std::shared_ptr<const Type> type;
     size_t offset{0};
 
     Accessor() = default;
-    Accessor(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset);
+    explicit Accessor(std::shared_ptr<const Type> type, size_t = 0);
 
     Accessor operator[](const std::string& member_name) const;
     Accessor operator[](size_t element_index) const;
@@ -114,16 +110,15 @@ struct Accessor
     template<typename T>
     Is<T> is() const;
 
-    [[nodiscard]] bool contains(const Accessor& other) const;
-    bool operator==(const Accessor& other) const;
-    bool operator>(const Accessor& other) const;
-    bool operator>=(const Accessor& other) const;
+    [[nodiscard]] bool is_equal(const Accessor& other) const;
+    [[nodiscard]] bool is_subset_of(const Accessor& other) const;
+    [[nodiscard]] bool is_strict_subset_of(const Accessor& other) const;
+    [[nodiscard]] bool is_superset_of(const Accessor& other) const;
+    [[nodiscard]] bool is_strict_superset_of(const Accessor& other) const;
 };
 
 struct Type
 {
-    std::weak_ptr<const Type> self;
-
     virtual ~Type() = default;
 
     [[nodiscard]] virtual size_t size() const = 0;
@@ -132,59 +127,36 @@ struct Type
     virtual void construct(char* address) const = 0;
     virtual void destroy(char* address) const = 0;
 
-    [[nodiscard]] virtual Accessor operator[](const std::string& member_name) const;
-    [[nodiscard]] virtual Accessor operator[](size_t element_index) const;
-
     virtual void emit(code::Cursor<code::Declaration>& cursor) const = 0;
     virtual void emit(layout::Cursor& cursor) const = 0;
     virtual void represent(const char* address, std::ostream& out) const = 0;
-
-    template<typename I, typename... Args>
-    [[nodiscard]] std::shared_ptr<I> instantiate(Args&&... args) const
-    {
-        size_t buffer_size = sizeof(I) + this->size();
-        std::shared_ptr<uint8_t[]> buffer = std::make_shared<uint8_t[]>(buffer_size);
-        std::shared_ptr<I> instance = std::reinterpret_pointer_cast<I>(std::move(buffer));
-        new(instance.get()) I(std::move(this->self.lock()), std::move(args)...);
-        instance->self = instance;
-        return instance;
-    }
 };
 
 template<typename T>
-struct instantiate
+void leak(T*)
 {
-    template<typename... Args>
-    static std::shared_ptr<T> anonymous(Args&&... args)
-    {
-        auto type = std::make_shared<T>(std::move(args)...);
-        type->self = type;
-        return type;
-    }
+}
 
-    static std::shared_ptr<T> shared()
-    {
-        static T type;
-        static std::shared_ptr<T> pointer(&type, &leak<T>);
-        type.self = pointer;  // This seems potentially annoying
-        return pointer;
-    }
-};
+template<typename T>
+static std::shared_ptr<T> shared()
+{
+    static T type;
+    static std::shared_ptr<T> pointer(&type, &leak<T>);
+    return pointer;
+}
 
 struct Reference
 {
-    std::shared_ptr<void> origin;  // We only care about keeping it alive
     std::shared_ptr<const Type> type;
-    char* address{nullptr};
+    std::shared_ptr<char[]> address;
 
+    Reference() = default;
     Reference(
-        std::shared_ptr<void> origin,
         std::shared_ptr<const Type> type,
-        char* address
+        std::shared_ptr<char[]> address
     )
-        : origin(std::move(origin))
-        , type(std::move(type))
-        , address(address)
+        : type(std::move(type))
+        , address(std::move(address))
     {
     }
 
@@ -206,18 +178,15 @@ struct Reference
 
 struct ConstReference
 {
-    std::shared_ptr<void> origin;
     std::shared_ptr<const Type> type;
-    const char* address{nullptr};
+    std::shared_ptr<const char[]> address;
 
     ConstReference(
-        std::shared_ptr<void> origin,
         std::shared_ptr<const Type> type,
-        const char* address
+        std::shared_ptr<const char[]> address
     )
-        : origin(std::move(origin))
-        , type(std::move(type))
-        , address(address)
+        : type(std::move(type))
+        , address(std::move(address))
     {
     }
 
@@ -272,8 +241,6 @@ struct ArrayType : public virtual Type
 
     void emit(code::Cursor<code::Declaration>&) const override;
     void emit(layout::Cursor&) const override;
-
-    [[nodiscard]] Accessor operator[](size_t element_index) const override;
 
     [[nodiscard]] size_t at(size_t element_index) const;
 
@@ -341,7 +308,6 @@ struct ObjectType : public virtual Type
     void emit(code::Cursor<code::Definition>& cursor) const;
     void emit(layout::Cursor& cursor) const override;
 
-    [[nodiscard]] Accessor operator[](const std::string& member_name) const override;
     [[nodiscard]] const Member& at(const std::string& member_name) const;
 
     [[nodiscard]] Members::const_iterator begin() const;
@@ -355,12 +321,17 @@ template<typename T>
 struct Instance
 {
     std::shared_ptr<const Type> type;
-    std::weak_ptr<Instance> self;
-    char address[];
+    std::shared_ptr<char[]> address;
+
+    explicit Instance(std::shared_ptr<const Type> type) : type(std::move(type))
+    {
+        this->address = std::make_shared<char[]>(this->type->size());
+        this->type->construct(this->address.get());
+    }
 
     ~Instance()
     {
-        this->type->destroy(this->address);
+        this->type->destroy(this->address.get());
     }
 
     Instance(Instance& other) = delete;
@@ -399,32 +370,11 @@ struct Instance
 
     template<typename U>
     const U& is() const;
-
-protected:
-    friend Type;
-
-    explicit Instance(std::shared_ptr<const Type>&& type) : type(std::move(type))
-    {
-        this->type->construct(this->address);
-    }
 };
 
 using Object = Instance<ObjectType>;
 using Array = Instance<ArrayType>;
 using Value = Instance<ValueType>;
-
-template<typename T>
-void leak(T*)
-{
-}
-
-template<typename T>
-std::shared_ptr<T> shared()
-{
-    static T type;
-    static std::shared_ptr<T> pointer(&type, &leak<T>);
-    return pointer;
-}
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>* instance)
@@ -441,118 +391,58 @@ std::ostream& operator<<(std::ostream& out, const Instance<T>& instance)
 }
 
 template<typename T>
-As<T>::As(std::shared_ptr<const Type> origin, size_t offset)
-    : origin(std::move(origin))
-    , offset(offset)
+As<T>::As(size_t offset) : offset(offset)
 {
 }
 
 template<typename T>
 T* As<T>::operator()(Reference& reference) const
 {
-    if (reference.type == this->origin)
-    {
-        return reinterpret_cast<T*>(reference.address);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return reinterpret_cast<T*>(reference.address.get());
 }
 
 template<typename T>
 const T* As<T>::operator()(const Reference& reference) const
 {
-    if (reference.type == this->origin)
-    {
-        return reinterpret_cast<const T*>(reference.address);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return reinterpret_cast<const T*>(reference.address.get());
 }
 
 template<typename T>
 template<typename U>
 T* As<T>::operator()(Instance<U>& instance) const
 {
-    if (instance.type == this->origin)
-    {
-        return reinterpret_cast<T*>(instance.address);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return reinterpret_cast<T*>(instance.address.get());
 }
 
 template<typename T>
 template<typename U>
 const T* As<T>::operator()(const Instance<U>& instance) const
 {
-    if (instance.type == this->origin)
-    {
-        return reinterpret_cast<const T*>(instance.address);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return reinterpret_cast<const T*>(instance.address.get());
 }
 
 template<typename T>
-Is<T>::Is(std::shared_ptr<const Type> origin, size_t offset)
-    : origin(std::move(origin))
-    , offset(offset)
-{
-}
-
-template<typename T>
-Is<T>::Is(std::shared_ptr<const Type>&& origin, size_t offset)
-    : origin(std::move(origin))
-    , offset(offset)
+Is<T>::Is(size_t offset) : offset(offset)
 {
 }
 
 template<typename T>
 T& Is<T>::operator()(Reference& reference) const
 {
-    if (reference.type == this->origin)
-    {
-        return *reinterpret_cast<T*>(reference.address + this->offset);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return *reinterpret_cast<T*>(reference.address.get() + this->offset);
 }
 
 template<typename T>
 const T& Is<T>::operator()(const Reference& reference) const
 {
-    if (reference.type == this->origin)
-    {
-        return *reinterpret_cast<T*>(reference.address + this->offset);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return *reinterpret_cast<T*>(reference.address.get() + this->offset);
 }
 
 template<typename T>
 template<typename U>
 T& Is<T>::operator()(Instance<U>& instance) const
 {
-    if (instance.type == this->origin)
-    {
-        return *reinterpret_cast<T*>(instance.address + this->offset);
-    }
-    else
-    {
-        throw TypeError("accessor target does not match its origin");
-    }
+    return *reinterpret_cast<T*>(instance.address.get() + this->offset);
 }
 
 template<typename T>
@@ -561,7 +451,7 @@ const T& Is<T>::operator()(const Instance<U>& instance) const
 {
     if (instance.type == this->origin)
     {
-        return *reinterpret_cast<const T*>(instance.address + this->offset);
+        return *reinterpret_cast<const T*>(instance.address.get() + this->offset);
     }
     else
     {
@@ -572,13 +462,13 @@ const T& Is<T>::operator()(const Instance<U>& instance) const
 template<typename T>
 Reference Accessor::operator()(Instance<T>& instance) const
 {
-    return Reference(instance->type, this->type, instance.address + this->offset);
+    return Reference(instance->type, this->type, instance.address.get() + this->offset);
 }
 
 template<typename T>
 As<T> Accessor::as() const
 {
-    return As<T>(this->origin, this->offset);
+    return As<T>(this->offset);
 }
 
 template<typename T>
@@ -589,7 +479,7 @@ Is<T> Accessor::is() const
     {
         if (value_type->info() == typeid(T))
         {
-            return Is<T>(this->origin, this->offset);
+            return Is<T>(this->offset);
         }
         else
         {
@@ -617,7 +507,7 @@ U& Reference::operator[](const Is<U>& is)
 template<typename U>
 U* Reference::as()
 {
-    return reinterpret_cast<U*>(this->address);
+    return reinterpret_cast<U*>(this->address.get());
 }
 
 template<typename U>
@@ -628,7 +518,7 @@ U& Reference::is()
     {
         if (value_type->info() == typeid(U))
         {
-            return *reinterpret_cast<U*>(this->address);
+            return *reinterpret_cast<U*>(this->address.get());
         }
         else
         {
@@ -656,7 +546,7 @@ const U& ConstReference::operator[](const Is<U>& is) const
 template<typename U>
 const U* ConstReference::as() const
 {
-    return reinterpret_cast<const U*>(this->address);
+    return reinterpret_cast<const U*>(this->address.get());
 }
 
 template<typename U>
@@ -667,7 +557,7 @@ const U& ConstReference::is() const
     {
         if (value_type->info() == typeid(U))
         {
-            return *reinterpret_cast<const U*>(this->address);
+            return *reinterpret_cast<const U*>(this->address.get());
         }
         else
         {
@@ -723,7 +613,10 @@ Reference Instance<T>::operator[](const std::string& member_name)
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(member_name);
-        return Reference(this->self.lock(), member.type, this->address + member.offset);
+        return Reference(
+            member.type,
+            std::shared_ptr<char[]>(this->address, this->address.get() + member.offset)
+        );
     }
     else
     {
@@ -737,8 +630,11 @@ Reference Instance<T>::operator[](size_t element_index)
     auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
     {
-        size_t offset = array_type->at(element_index);
-        return Reference(this->self.lock(), array_type->element_type, this->address + offset);
+        size_t element_offset = array_type->at(element_index);
+        return Reference(
+            array_type->element_type,
+            std::shared_ptr<char[]>(this->address, this->address.get() + element_offset)
+        );
     }
     else
     {
@@ -749,7 +645,7 @@ Reference Instance<T>::operator[](size_t element_index)
 template<typename T>
 Reference Instance<T>::operator*()
 {
-    return Reference(this->self.lock(), this->type, this->address);
+    return Reference(this->type, this->address);
 }
 
 template<typename T>
@@ -759,7 +655,10 @@ ConstReference Instance<T>::operator[](const std::string& member_name) const
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(member_name);
-        return ConstReference(this->self.lock(), member.type, this->address + member.offset);
+        return ConstReference(
+            member.type,
+            std::shared_ptr<const char[]>(this->address, this->address.get() + member.offset)
+        );
     }
     else
     {
@@ -773,8 +672,11 @@ ConstReference Instance<T>::operator[](size_t element_index) const
     auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
     {
-        size_t offset = array_type->at(element_index);
-        return ConstReference(this->self.lock(), array_type->element_type, this->address + offset);
+        size_t element_offset = array_type->at(element_index);
+        return ConstReference(
+            array_type->element_type,
+            std::shared_ptr<const char[]>(this->address, this->address.get() + element_offset)
+        );
     }
     else
     {
@@ -785,7 +687,7 @@ ConstReference Instance<T>::operator[](size_t element_index) const
 template<typename T>
 ConstReference Instance<T>::operator*() const
 {
-    return ConstReference(this->self.lock(), this->type, this->address);
+    return ConstReference(this->address, this->type, this->address.get());
 }
 
 template<typename T>
@@ -820,14 +722,14 @@ template<typename T>
 template<typename U>
 U* Instance<T>::as()
 {
-    return reinterpret_cast<U*>(this->address);
+    return reinterpret_cast<U*>(this->address.get());
 }
 
 template<typename T>
 template<typename U>
 const U* Instance<T>::as() const
 {
-    return reinterpret_cast<const U*>(this->address);
+    return reinterpret_cast<const U*>(this->address.get());
 }
 
 template<typename T>
@@ -839,7 +741,7 @@ U& Instance<T>::is()
     {
         if (value_type->info() == typeid(U))
         {
-            return *reinterpret_cast<U*>(this->address);
+            return *reinterpret_cast<U*>(this->address.get());
         }
         else
         {
@@ -861,7 +763,7 @@ const U& Instance<T>::is() const
     {
         if (value_type->info() == typeid(U))
         {
-            return *reinterpret_cast<U*>(this->address);
+            return *reinterpret_cast<U*>(this->address.get());
         }
         else
         {
