@@ -25,7 +25,7 @@ DataTable::DataTable(const CSVCMsg_SendTable& data)
 }
 
 void collect_properties_tail(
-    std::vector<EntityDatum>& prioritized,
+    std::shared_ptr<EntityType>& entity_type,
     const DataTable* cursor,
     size_t cursor_offset,
     const std::shared_ptr<const PropertyNode>& parent,
@@ -33,7 +33,7 @@ void collect_properties_tail(
 );
 
 void collect_properties_head(
-    std::vector<EntityDatum>& prioritized,
+    std::shared_ptr<EntityType>& entity_type,
     const DataTable* cursor,
     size_t cursor_offset,
     const std::shared_ptr<const PropertyNode>& parent,
@@ -60,6 +60,7 @@ void collect_properties_head(
         {
             // EntityDatum creation
             container.emplace_back(
+                entity_type,
                 data_property->type(),
                 data_property,
                 cursor_offset + property->offset,
@@ -75,7 +76,7 @@ void collect_properties_head(
             if (data_table_property->collapsible())
             {
                 collect_properties_head(
-                    prioritized,
+                    entity_type,
                     data_table_property->data_table.get(),
                     cursor_offset + property->offset,
                     child,
@@ -86,7 +87,7 @@ void collect_properties_head(
             else
             {
                 collect_properties_tail(
-                    prioritized,
+                    entity_type,
                     data_table_property->data_table.get(),
                     cursor_offset + property->offset,
                     child,
@@ -98,7 +99,7 @@ void collect_properties_head(
 }
 
 void collect_properties_tail(
-    std::vector<EntityDatum>& prioritized,
+    std::shared_ptr<EntityType>& entity_type,
     const DataTable* cursor,
     size_t cursor_offset,
     const std::shared_ptr<const PropertyNode>& parent,
@@ -106,10 +107,10 @@ void collect_properties_tail(
 )
 {
     std::vector<EntityDatum> container;
-    collect_properties_head(prioritized, cursor, cursor_offset, parent, excludes, container);
+    collect_properties_head(entity_type, cursor, cursor_offset, parent, excludes, container);
     for (const EntityDatum& absolute : container)
     {
-        prioritized.emplace_back(absolute);
+        entity_type->prioritized.emplace_back(absolute);
     }
 }
 
@@ -158,13 +159,15 @@ std::shared_ptr<const EntityType> DataTable::construct_type()
             property->build(builder);
         }
 
-        // Create prioritized
         auto entity_type = std::make_shared<EntityType>(std::move(builder));
+
+        // Create prioritized
         entity_type->prioritized.reserve(entity_type->members.size());
         absl::flat_hash_set<ExcludeView> accumulated_excludes;
-        collect_properties_tail(entity_type->prioritized, this, 0, nullptr, accumulated_excludes);
+        collect_properties_tail(entity_type, this, 0, nullptr, accumulated_excludes);
         prioritize(entity_type->prioritized);
 
+        // Assign
         this->_type = entity_type;
     }
 

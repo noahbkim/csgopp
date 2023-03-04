@@ -3,6 +3,7 @@
 #include <absl/container/flat_hash_map.h>
 #include <memory>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "../common/bits.h"
@@ -56,12 +57,13 @@ struct EntityDatum : public Accessor
     EntityDatum() = default;
     EntityDatum(const EntityDatum& other) = default;
     EntityDatum(
+        std::shared_ptr<const Type> origin,  // TODO: limitation: can't be EntityType because of casting
         std::shared_ptr<const DataType> type,
         std::shared_ptr<const DataProperty> property,
         size_t offset,
         std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor(nullptr, type, offset)
+        : Accessor(std::move(origin), type, offset)
         , type(std::move(type))
         , property(std::move(property))
         , parent(std::move(parent))
