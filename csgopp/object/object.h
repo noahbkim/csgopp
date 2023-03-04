@@ -50,7 +50,6 @@ static constexpr size_t align(size_t offset, size_t alignment)
 template<typename T>
 struct Instance;
 
-template<typename T>
 struct Reference;
 
 struct Type;
@@ -64,11 +63,8 @@ struct As
     As() = default;
     As(std::shared_ptr<const Type> origin, size_t offset);
 
-    template<typename U>
-    T* operator()(Reference<U>& reference) const;
-
-    template<typename U>
-    const T* operator()(const Reference<U>& reference) const;
+    T* operator()(Reference& reference) const;
+    const T* operator()(const Reference& reference) const;
 
     template<typename U>
     T* operator()(Instance<U>& instance) const;
@@ -87,11 +83,8 @@ struct Is
     Is(std::shared_ptr<const Type> origin, size_t offset);
     Is(std::shared_ptr<const Type>&& origin, size_t offset);
 
-    template<typename U>
-    T& operator()(Reference<U>& reference) const;
-
-    template<typename U>
-    const T& operator()(const Reference<U>& reference) const;
+    T& operator()(Reference& reference) const;
+    const T& operator()(const Reference& reference) const;
 
     template<typename U>
     T& operator()(Instance<U>& instance) const;
@@ -113,7 +106,7 @@ struct Accessor
     Accessor operator[](size_t element_index) const;
 
     template<typename T>
-    Reference<T> operator()(Instance<T>& instance) const;
+    Reference operator()(Instance<T>& instance) const;
 
     template<typename T>
     As<T> as() const;
@@ -178,15 +171,14 @@ struct instantiate
     }
 };
 
-template<typename T>
 struct Reference
 {
-    std::shared_ptr<Instance<T>> origin;  // Dually ensures data stays alive
+    std::shared_ptr<void> origin;  // We only care about keeping it alive
     std::shared_ptr<const Type> type;
     char* address{nullptr};
 
     Reference(
-        std::shared_ptr<Instance<T>> origin,
+        std::shared_ptr<void> origin,
         std::shared_ptr<const Type> type,
         char* address
     )
@@ -212,15 +204,14 @@ struct Reference
     U& is();
 };
 
-template<typename T>
 struct ConstReference
 {
-    std::shared_ptr<const Instance<T>> origin;
+    std::shared_ptr<void> origin;
     std::shared_ptr<const Type> type;
     const char* address{nullptr};
 
     ConstReference(
-        std::shared_ptr<const Instance<T>> origin,
+        std::shared_ptr<void> origin,
         std::shared_ptr<const Type> type,
         const char* address
     )
@@ -377,13 +368,13 @@ struct Instance
     Instance& operator=(Instance& other) = delete;
     Instance& operator=(Instance&& other) = delete;
 
-    Reference<T> operator[](const std::string& member_name);
-    Reference<T> operator[](size_t element_index);
-    Reference<T> operator*();
+    Reference operator[](const std::string& member_name);
+    Reference operator[](size_t element_index);
+    Reference operator*();
 
-    ConstReference<T> operator[](const std::string& member_name) const;
-    ConstReference<T> operator[](size_t element_index) const;
-    ConstReference<T> operator*() const;
+    ConstReference operator[](const std::string& member_name) const;
+    ConstReference operator[](size_t element_index) const;
+    ConstReference operator*() const;
 
     template<typename U>
     U* operator[](const As<U>& as);
@@ -436,20 +427,6 @@ std::shared_ptr<T> shared()
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const Reference<T>& reference)
-{
-    reference.type->represent(reference.address, out);
-    return out;
-}
-
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const ConstReference<T>& reference)
-{
-    reference.type->represent(reference.address, out);
-    return out;
-}
-
-template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>* instance)
 {
     instance->type->represent(instance->address, out);
@@ -471,8 +448,7 @@ As<T>::As(std::shared_ptr<const Type> origin, size_t offset)
 }
 
 template<typename T>
-template<typename U>
-T* As<T>::operator()(Reference<U>& reference) const
+T* As<T>::operator()(Reference& reference) const
 {
     if (reference.type == this->origin)
     {
@@ -485,8 +461,7 @@ T* As<T>::operator()(Reference<U>& reference) const
 }
 
 template<typename T>
-template<typename U>
-const T* As<T>::operator()(const Reference<U>& reference) const
+const T* As<T>::operator()(const Reference& reference) const
 {
     if (reference.type == this->origin)
     {
@@ -541,8 +516,7 @@ Is<T>::Is(std::shared_ptr<const Type>&& origin, size_t offset)
 }
 
 template<typename T>
-template<typename U>
-T& Is<T>::operator()(Reference<U>& reference) const
+T& Is<T>::operator()(Reference& reference) const
 {
     if (reference.type == this->origin)
     {
@@ -555,8 +529,7 @@ T& Is<T>::operator()(Reference<U>& reference) const
 }
 
 template<typename T>
-template<typename U>
-const T& Is<T>::operator()(const Reference<U>& reference) const
+const T& Is<T>::operator()(const Reference& reference) const
 {
     if (reference.type == this->origin)
     {
@@ -597,6 +570,12 @@ const T& Is<T>::operator()(const Instance<U>& instance) const
 }
 
 template<typename T>
+Reference Accessor::operator()(Instance<T>& instance) const
+{
+    return Reference(instance->type, this->type, instance.address + this->offset);
+}
+
+template<typename T>
 As<T> Accessor::as() const
 {
     return As<T>(this->origin, this->offset);
@@ -623,60 +602,26 @@ Is<T> Accessor::is() const
     }
 }
 
-template<typename T>
-Reference<T> Reference<T>::operator[](const std::string& member_name) const
-{
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
-    if (object_type != nullptr)
-    {
-        const ObjectType::Member& member = object_type->at(member_name);
-        return Reference(this->origin, member.type, this->address + member.offset);
-    }
-    else
-    {
-        throw TypeError("member access is only available on objects!");
-    }
-}
-
-template<typename T>
-Reference<T> Reference<T>::operator[](size_t element_index) const
-{
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
-    if (array_type != nullptr)
-    {
-        size_t element_offset = array_type->at(element_index);
-        return Reference(this->origin, array_type->element_type, this->address + element_offset);
-    }
-    else
-    {
-        throw TypeError("indexing is only available on arrays!");
-    }
-}
-
-template<typename T>
 template<typename U>
-U* Reference<T>::operator[](const As<U>& as)
+U* Reference::operator[](const As<U>& as)
 {
     return as(*this);
 }
 
-template<typename T>
 template<typename U>
-U& Reference<T>::operator[](const Is<U>& is)
+U& Reference::operator[](const Is<U>& is)
 {
     return is(*this);
 }
 
-template<typename T>
 template<typename U>
-U* Reference<T>::as()
+U* Reference::as()
 {
     return reinterpret_cast<U*>(this->address);
 }
 
-template<typename T>
 template<typename U>
-U& Reference<T>::is()
+U& Reference::is()
 {
     auto* value_type = dynamic_cast<const ValueType*>(this->type.get());
     if (value_type != nullptr)
@@ -696,60 +641,26 @@ U& Reference<T>::is()
     }
 }
 
-template<typename T>
-ConstReference<T> ConstReference<T>::operator[](const std::string& member_name) const
-{
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
-    if (object_type != nullptr)
-    {
-        const ObjectType::Member& member = object_type->at(member_name);
-        return ConstReference(this->origin, member.type, this->address + member.offset);
-    }
-    else
-    {
-        throw TypeError("member access is only available on objects!");
-    }
-}
-
-template<typename T>
-ConstReference<T> ConstReference<T>::operator[](size_t element_index) const
-{
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
-    if (array_type != nullptr)
-    {
-        size_t element_offset = array_type->at(element_index);
-        return ConstReference(this->origin, array_type->element_type, this->address + element_offset);
-    }
-    else
-    {
-        throw TypeError("indexing is only available on arrays!");
-    }
-}
-
-template<typename T>
 template<typename U>
-const U* ConstReference<T>::operator[](const As<U>& as) const
+const U* ConstReference::operator[](const As<U>& as) const
 {
     return as(*this);
 }
 
-template<typename T>
 template<typename U>
-const U& ConstReference<T>::operator[](const Is<U>& is) const
+const U& ConstReference::operator[](const Is<U>& is) const
 {
     return is(*this);
 }
 
-template<typename T>
 template<typename U>
-const U* ConstReference<T>::as() const
+const U* ConstReference::as() const
 {
     return reinterpret_cast<const U*>(this->address);
 }
 
-template<typename T>
 template<typename U>
-const U& ConstReference<T>::is() const
+const U& ConstReference::is() const
 {
     auto* value_type = dynamic_cast<const ValueType*>(this->type.get());
     if (value_type != nullptr)
@@ -806,7 +717,7 @@ void DefaultValueType<T>::destroy(char* address) const
 }
 
 template<typename T>
-Reference<T> Instance<T>::operator[](const std::string& member_name)
+Reference Instance<T>::operator[](const std::string& member_name)
 {
     auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
     if (object_type != nullptr)
@@ -821,7 +732,7 @@ Reference<T> Instance<T>::operator[](const std::string& member_name)
 }
 
 template<typename T>
-Reference<T> Instance<T>::operator[](size_t element_index)
+Reference Instance<T>::operator[](size_t element_index)
 {
     auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
@@ -836,13 +747,13 @@ Reference<T> Instance<T>::operator[](size_t element_index)
 }
 
 template<typename T>
-Reference<T> Instance<T>::operator*()
+Reference Instance<T>::operator*()
 {
     return Reference(this->self.lock(), this->type, this->address);
 }
 
 template<typename T>
-ConstReference<T> Instance<T>::operator[](const std::string& member_name) const
+ConstReference Instance<T>::operator[](const std::string& member_name) const
 {
     auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
     if (object_type != nullptr)
@@ -857,7 +768,7 @@ ConstReference<T> Instance<T>::operator[](const std::string& member_name) const
 }
 
 template<typename T>
-ConstReference<T> Instance<T>::operator[](size_t element_index) const
+ConstReference Instance<T>::operator[](size_t element_index) const
 {
     auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
@@ -872,7 +783,7 @@ ConstReference<T> Instance<T>::operator[](size_t element_index) const
 }
 
 template<typename T>
-ConstReference<T> Instance<T>::operator*() const
+ConstReference Instance<T>::operator*() const
 {
     return ConstReference(this->self.lock(), this->type, this->address);
 }
