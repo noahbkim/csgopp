@@ -156,13 +156,13 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
             for (uint16_t index : indices)
             {
                 const EntityDatum& datum = entity->type->prioritized.at(index);
-                if (this->weapon_purchases_accessor.is_strict_subset_of(datum))
-                {
-                    const std::shared_ptr<const User>& user = client.users().at_index(entity->id);
-                    OK(user != nullptr);
-                    int weapon = atoi(datum.property->name.c_str());
-                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
-                }
+//                if (this->weapon_purchases_accessor.is_strict_subset_of(datum))
+//                {
+//                    const std::shared_ptr<const User>& user = client.users().at_index(entity->id);
+//                    OK(user != nullptr);
+//                    int weapon = atoi(datum.property->name.c_str());
+//                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
+//                }
             }
         }
     }
@@ -173,7 +173,7 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         if (name == "round_end")
         {
             std::cout << client.tick() << ": Round end: " << event["message"].is<std::string>() << std::endl;
-            for (const std::shared_ptr<const User>& user : client.users())
+            for (const std::shared_ptr<User>& user : client.users())
             {
                 const std::shared_ptr<const Entity>& entity = client.entities().get(user->index);
                 if (entity == nullptr)

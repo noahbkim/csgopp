@@ -60,7 +60,6 @@ void collect_properties_head(
         {
             // EntityDatum creation
             container.emplace_back(
-                entity_type,
                 data_property->type(),
                 data_property,
                 cursor_offset + property->offset,

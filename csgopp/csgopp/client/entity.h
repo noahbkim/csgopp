@@ -45,11 +45,11 @@ struct PropertyNode
 };
 
 // Maps properties and types
-struct EntityDatum : public Accessor
+struct EntityDatum
 {
-    // TODO: These can be raw pointers because they live as long as the type
     std::shared_ptr<const DataType> type;
     std::shared_ptr<const DataProperty> property;
+    size_t offset{0};
 
     // Accessing the canonical name of this offset
     std::shared_ptr<const PropertyNode> parent;
@@ -57,15 +57,14 @@ struct EntityDatum : public Accessor
     EntityDatum() = default;
     EntityDatum(const EntityDatum& other) = default;
     EntityDatum(
-        std::shared_ptr<const Type> origin,  // TODO: limitation: can't be EntityType because of casting
         std::shared_ptr<const DataType> type,
         std::shared_ptr<const DataProperty> property,
         size_t offset,
         std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor(std::move(origin), type, offset)
-        , type(std::move(type))
+        : type(std::move(type))
         , property(std::move(property))
+        , offset(offset)
         , parent(std::move(parent))
     {
     }
@@ -104,6 +103,16 @@ struct Entity final : public Instance<EntityType>
     std::shared_ptr<const ServerClass> server_class;
 
     Entity(std::shared_ptr<const EntityType>&& type, Id id, std::shared_ptr<const ServerClass> server_class);
+
+    // TODO: naming?
+    [[nodiscard]] object::ConstReference at(size_t prioritized_index) const
+    {
+        const EntityDatum& datum = this->type->prioritized[prioritized_index];
+        return object::ConstReference(
+            datum.type,
+            std::shared_ptr<const char[]>(this->address, this->address.get() + datum.offset)
+        );
+    }
 };
 
 using EntityDatabase = Database<Entity>;

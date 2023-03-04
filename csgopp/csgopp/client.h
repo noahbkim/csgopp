@@ -1539,8 +1539,8 @@ void Client<Observer>::_update_entity(Entity& entity, BitStream& stream)
     for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
-        const EntityDatum& offset = entity.type->prioritized[i];
-        offset.type->update(entity.address.get() + offset.offset, stream, offset.property.get());
+        const EntityDatum& datum = entity.type->prioritized[i];
+        datum.type->update(entity.address.get() + datum.offset, stream, datum.property.get());
     }
 }
 
