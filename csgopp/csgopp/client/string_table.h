@@ -67,16 +67,16 @@ struct StringTableDatabase : public DatabaseWithName<StringTable>
         }
     }
 
-    void emplace(std::shared_ptr<StringTable>&& string_table) override
+    void emplace(std::shared_ptr<StringTable> string_table) override
     {
         this->on_emplace(string_table);
-        DatabaseWithName::emplace(std::move(string_table));
+        DatabaseWithName::emplace(string_table);
     }
 
-    void emplace(size_t index, std::shared_ptr<StringTable>&& string_table) override
+    void emplace(size_t index, std::shared_ptr<StringTable> string_table) override
     {
         this->on_emplace(string_table);
-        DatabaseWithName::emplace(index, std::move(string_table));
+        DatabaseWithName::emplace(index, string_table);
     }
 };
 

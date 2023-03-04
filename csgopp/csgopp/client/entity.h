@@ -54,14 +54,14 @@ struct EntityDatum : public Accessor
     std::shared_ptr<const PropertyNode> parent;
 
     EntityDatum() = default;
-
+    EntityDatum(const EntityDatum& other) = default;
     EntityDatum(
         std::shared_ptr<const DataType> type,
         std::shared_ptr<const DataProperty> property,
         size_t offset,
         std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor()
+        : Accessor(nullptr, type, offset)
         , type(std::move(type))
         , property(std::move(property))
         , parent(std::move(parent))

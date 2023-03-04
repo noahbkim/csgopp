@@ -837,7 +837,7 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         {
             auto entry = std::make_shared<StringTable::Entry>();
             VERIFY(data.read_string(entry->string));
-            string_table->entries.emplace(std::move(entry));
+            string_table->entries.emplace(std::shared_ptr(entry));
 
             uint8_t has_data;
             VERIFY(data.read(&has_data, 1));
@@ -1208,7 +1208,7 @@ void Client<Observer>::advance_packet_create_string_table(CodedInputStream& stre
     BEFORE(Observer, StringTableCreationObserver);
     auto string_table = std::make_shared<StringTable>(data);
     this->populate_string_table(*string_table, data.string_data(), data.num_entries());
-    this->_string_tables.emplace(std::move(string_table));
+    this->_string_tables.emplace(std::shared_ptr(string_table));
     AFTER(StringTableCreationObserver, std::as_const(string_table));
 
     VERIFY(stream.BytesUntilLimit() == 0);
@@ -1266,7 +1266,7 @@ void Client<Observer>::populate_string_table(
         if (auto_increment == string_table.entries.size())
         {
             entry = std::make_shared<StringTable::Entry>();
-            string_table.entries.emplace(std::move(entry));
+            string_table.entries.emplace(std::shared_ptr(entry));
         }
         else
         {
@@ -1274,9 +1274,10 @@ void Client<Observer>::populate_string_table(
             if (entry == nullptr)
             {
                 entry = std::make_shared<StringTable::Entry>();
-                string_table.entries.emplace(auto_increment, std::move(entry));
+                string_table.entries.emplace(auto_increment, std::shared_ptr(entry));
             }
         }
+        VERIFY(entry != nullptr);
 
         uint8_t has_string;
         VERIFY(string_data.read(&has_string, 1));

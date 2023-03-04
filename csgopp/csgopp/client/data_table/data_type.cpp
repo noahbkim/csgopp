@@ -307,8 +307,9 @@ inline void update_float_cell_coordinates(char* address, BitStream& stream, cons
 {
     float& value = *reinterpret_cast<float*>(address);
 
+    // TODO: these should be static, we guarantee theem externally
     const auto* float_property = dynamic_cast<const Underlying*>(property);
-    OK(float_property != nullptr);
+    assert(float_property != nullptr);
 
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
@@ -332,7 +333,7 @@ inline void update_float_cell_coordinates_integral(char* address, BitStream& str
     float& value = *reinterpret_cast<float*>(address);
 
     const auto* float_property = dynamic_cast<const Underlying*>(property);
-    OK(float_property != nullptr);
+    assert(float_property != nullptr);
 
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
@@ -354,7 +355,7 @@ template<typename Underlying>
 inline void update_float_scaled(char* address, BitStream& stream, const Property* property)
 {
     const auto* float_property = dynamic_cast<const Underlying*>(property);
-    OK(float_property != nullptr);
+    assert(float_property != nullptr);
 
     uint32_t buffer;
     OK(stream.read(&buffer, float_property->bits));
@@ -544,7 +545,7 @@ void SignedInt64Type::represent(const char* address, std::ostream& out) const
 void DataArrayType::update(char* address, BitStream& stream, const Property* property) const
 {
     const auto* array_property = dynamic_cast<const ArrayProperty*>(property);
-    OK(array_property != nullptr);
+    assert(array_property != nullptr);
 
     // Count how many elements we're receiving
     uint8_t size_bits = common::bits::width(this->length) + 1;
@@ -554,7 +555,7 @@ void DataArrayType::update(char* address, BitStream& stream, const Property* pro
 
     // Inner type cannot be an object; this has to be a runtime invariant
     const auto* value_type = dynamic_cast<const DataType*>(this->element_type.get());
-    OK(value_type != nullptr);
+    assert(value_type != nullptr);
 
     for (size_t i = 0; i < data_length; ++i)
     {

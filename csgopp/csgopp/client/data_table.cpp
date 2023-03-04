@@ -47,7 +47,7 @@ void collect_properties_head(
         excludes.emplace(item);
     }
 
-    for (const std::shared_ptr<const DataTable::Property>& property : cursor->properties)
+    for (const std::shared_ptr<DataTable::Property>& property : cursor->properties)
     {
         if (excludes.contains(std::make_pair(cursor->name, property->name)))
         {

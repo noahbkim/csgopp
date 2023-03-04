@@ -33,6 +33,7 @@ std::shared_ptr<const Type> DataTableProperty::construct_type()
 {
     if (this->type() == nullptr)
     {
+        assert(this->data_table != nullptr);
         if (this->data_table->is_array)
         {
             this->_type = this->data_table->construct_array_type();

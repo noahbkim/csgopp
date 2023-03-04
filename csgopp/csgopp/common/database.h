@@ -26,7 +26,7 @@ struct Database
         return this->container.front();
     }
 
-    [[nodiscard]] const std::shared_ptr<const Value>& front() const
+    [[nodiscard]] const std::shared_ptr<Value>& front() const
     {
         return this->container.front();
     }
@@ -36,7 +36,7 @@ struct Database
         return this->container.at(index);
     }
 
-    [[nodiscard]] const std::shared_ptr<const Value>& at(size_t index) const
+    [[nodiscard]] const std::shared_ptr<Value>& at(size_t index) const
     {
         return this->container.at(index);
     }
@@ -46,7 +46,7 @@ struct Database
         return this->container.back();
     }
 
-    [[nodiscard]] const std::shared_ptr<const Value>& back() const
+    [[nodiscard]] const std::shared_ptr<Value>& back() const
     {
         return this->container.back();
     }
@@ -56,7 +56,7 @@ struct Database
         return index < this->container.size() ? this->container.at(index) : nullptr;
     }
 
-    [[nodiscard]] const std::shared_ptr<const Value> get(size_t index) const
+    [[nodiscard]] std::shared_ptr<Value> get(size_t index) const
     {
         return index < this->container.size() ? this->container.at(index) : nullptr;
     }
@@ -86,12 +86,12 @@ struct Database
         return this->container.cend();
     }
 
-    virtual void emplace(std::shared_ptr<Value>&& item)
+    virtual void emplace(std::shared_ptr<Value> item)
     {
         this->container.emplace_back(std::move(item));
     }
 
-    virtual void emplace(size_t index, std::shared_ptr<Value>&& item)
+    virtual void emplace(size_t index, std::shared_ptr<Value> item)
     {
         if (index >= this->container.size())
         {
@@ -123,7 +123,7 @@ struct NameTableMixin
         return this->by_name.at(name);
     }
 
-    [[nodiscard]] const std::shared_ptr<const T>& at_name(std::string_view name) const
+    [[nodiscard]] const std::shared_ptr<T>& at_name(std::string_view name) const
     {
         return this->by_name.at(name);
     }
@@ -154,13 +154,13 @@ struct DatabaseWithName : public Database<T>, public NameTableMixin<T>
     {
     }
 
-    void emplace(std::shared_ptr<T>&& property) override
+    void emplace(std::shared_ptr<T> property) override
     {
         NameTableMixin<T>::emplace(property);
         Database<T>::emplace(std::move(property));
     }
 
-    void emplace(size_t index, std::shared_ptr<T>&& property) override
+    void emplace(size_t index, std::shared_ptr<T> property) override
     {
         NameTableMixin<T>::emplace(property);
         Database<T>::emplace(index, std::move(property));
@@ -190,7 +190,7 @@ struct IdTableMixin
         return this->by_id.at(id);
     }
 
-    [[nodiscard]] std::shared_ptr<const T> at_id(typename T::Id id) const
+    [[nodiscard]] const std::shared_ptr<T>& at_id(typename T::Id id) const
     {
         return this->by_id.at(id);
     }
@@ -223,13 +223,13 @@ struct DatabaseWithId : public Database<T>, public IdTableMixin<T>
     {
     }
 
-    void emplace(std::shared_ptr<T>&& property) override
+    void emplace(std::shared_ptr<T> property) override
     {
         IdTableMixin<T>::emplace(property);
         Database<T>::emplace(std::move(property));
     }
 
-    void emplace(size_t index, std::shared_ptr<T>&& property) override
+    void emplace(size_t index, std::shared_ptr<T> property) override
     {
         IdTableMixin<T>::emplace(property);
         Database<T>::emplace(index, std::move(property));
@@ -253,7 +253,7 @@ struct DatabaseWithNameId : public DatabaseWithName<T>, public IdTableMixin<T>
     {
     }
 
-    void emplace(std::shared_ptr<T>&& property) override
+    void emplace(std::shared_ptr<T> property) override
     {
         IdTableMixin<T>::emplace(property);
         DatabaseWithName<T>::emplace(std::move(property));

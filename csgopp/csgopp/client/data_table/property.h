@@ -180,6 +180,7 @@ struct Property : Context<Declaration>
     /// \sa `DataTableProperty::build`
     virtual void build(ObjectType::Builder& builder)
     {
+        // TODO: context should be a subobject
         this->offset = builder.member(this->name, this->construct_type(), this);
     }
 

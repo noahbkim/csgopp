@@ -59,16 +59,16 @@ struct UserDatabase : public DatabaseWithId<User>
         return this->by_index.contains(index);
     }
 
-    void emplace(std::shared_ptr<User>&& user) override
+    void emplace(std::shared_ptr<User> user) override
     {
         this->by_index.emplace(user->index, user);
-        DatabaseWithId<User>::emplace(std::move(user));
+        DatabaseWithId<User>::emplace(user);
     }
 
-    void emplace(size_t index, std::shared_ptr<User>&& user) override
+    void emplace(size_t index, std::shared_ptr<User> user) override
     {
         this->by_index.emplace(user->index, user);
-        DatabaseWithId<User>::emplace(index, std::move(user));
+        DatabaseWithId<User>::emplace(index, user);
     }
 
     void reserve(size_t count) override
