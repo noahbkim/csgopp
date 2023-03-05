@@ -14,9 +14,9 @@ const char* HELP = " Use -h to see help.";
 int main(int argc, char** argv)
 {
     ArgumentParser parser("csgopp.cli");
-//    GenerateCommand generate(parser);
+    GenerateCommand generate(parser);
     AdvanceCommand advance(parser);
-//    SummaryCommand summary(parser);
+    SummaryCommand summary(parser);
 
     try
     {
@@ -28,19 +28,18 @@ int main(int argc, char** argv)
         return 1;
     }
 
-//    if (parser.is_subcommand_used(generate.name))
-//    {
-//        return generate.main();
-//    }
-//    else
-        if (parser.is_subcommand_used(advance.name))
+    if (parser.is_subcommand_used(generate.name))
+    {
+        return generate.main();
+    }
+    else if (parser.is_subcommand_used(advance.name))
     {
         return advance.main();
     }
-//    else if (parser.is_subcommand_used(summary.name))
-//    {
-//        return summary.main();
-//    }
+    else if (parser.is_subcommand_used(summary.name))
+    {
+        return summary.main();
+    }
     else
     {
         std::cerr << "Expected a subcommand." << HELP << std::endl;

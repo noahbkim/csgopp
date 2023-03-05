@@ -158,7 +158,7 @@ struct SummaryClient final : public Client
                     const std::shared_ptr<const User>& user = this->users().at_index(entity->id);
                     OK(user != nullptr);
                     int weapon = atoi(ref.property->name.c_str());
-//                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
+                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
                 }
             }
         }
