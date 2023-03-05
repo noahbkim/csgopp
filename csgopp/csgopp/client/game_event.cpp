@@ -6,7 +6,7 @@
 namespace csgopp::client::game_event
 {
 
-using csgopp::common::object::Type;
+using object::Type;
 using csgopp::error::GameError;
 
 void StringType::emit(Cursor<Declaration>& cursor) const
@@ -158,7 +158,7 @@ GameEventType::GameEventType(Builder&& builder, Id id, std::string&& name)
 {
 }
 
-GameEventType* GameEventType::build(csgo::message::net::CSVCMsg_GameEventList_descriptor_t&& descriptor)
+std::shared_ptr<GameEventType> GameEventType::build(csgo::message::net::CSVCMsg_GameEventList_descriptor_t&& descriptor)
 {
     ObjectType::Builder builder;
     builder.name = descriptor.name();
@@ -168,7 +168,11 @@ GameEventType* GameEventType::build(csgo::message::net::CSVCMsg_GameEventList_de
         builder.member(std::move(*key.mutable_name()), lookup_type(key.type()));
     }
 
-    return new GameEventType(std::move(builder), descriptor.eventid(), std::move(*descriptor.mutable_name()));
+    return std::make_shared<GameEventType>(
+        std::move(builder),
+        descriptor.eventid(),
+        std::move(*descriptor.mutable_name())
+    );
 }
 
 }

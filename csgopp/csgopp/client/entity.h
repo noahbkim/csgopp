@@ -1,72 +1,71 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <string_view>
 #include <absl/container/flat_hash_map.h>
+#include <memory>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "../common/vector.h"
-#include "../common/database.h"
-#include "../common/object.h"
-#include "../common/code.h"
 #include "../common/bits.h"
+#include "../common/database.h"
+#include "../common/vector.h"
 #include "data_table.h"
 #include "data_table/data_property.h"
 #include "data_table/data_table_property.h"
+#include <object/code.h>
+#include <object/object.h>
 
 namespace csgopp::client::entity
 {
 
-using csgopp::common::database::Delete;
-using csgopp::common::database::Database;
-using csgopp::common::object::ObjectType;
-using csgopp::common::object::Instance;
-using csgopp::common::object::Type;
-using csgopp::common::object::Accessor;
-using csgopp::client::data_table::DataTable;
-using csgopp::client::data_table::property::Property;
-using csgopp::client::data_table::data_type::DataType;
 using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::client::data_table::data_table_property::DataTableProperty;
+using csgopp::client::data_table::data_type::DataType;
+using csgopp::client::data_table::DataTable;
+using csgopp::client::data_table::property::Property;
 using csgopp::client::server_class::ServerClass;
+using csgopp::common::database::Database;
+using object::Accessor;
+using object::ConstReference;
+using object::Instance;
+using object::ObjectType;
+using object::Type;
 
 // Allows us to get the qualified name of a property
 struct PropertyNode
 {
     std::shared_ptr<const struct PropertyNode> parent;
-    const DataTableProperty* property{nullptr};
+    std::shared_ptr<const DataTableProperty> property;
 
     PropertyNode() = default;
 
-    PropertyNode(std::shared_ptr<const struct PropertyNode> parent, const DataTableProperty* property)
+    PropertyNode(std::shared_ptr<const struct PropertyNode> parent, std::shared_ptr<const DataTableProperty> property)
         : parent(std::move(parent))
-        , property(property)
+        , property(std::move(property))
     {}
 };
 
 // Maps properties and types
-struct EntityDatum : public Accessor
+struct EntityDatum
 {
-    // TODO: we can reduce one memory lookup by somehow getting this type to be DataType* type
-    const DataProperty* property{nullptr};
-
-    // Caching this dramatically improves runtime
-    const DataType* data_type{nullptr};
+    std::shared_ptr<const DataType> type;
+    std::shared_ptr<const DataProperty> property;
+    size_t offset{0};
 
     // Accessing the canonical name of this offset
     std::shared_ptr<const PropertyNode> parent;
 
     EntityDatum() = default;
-
+    EntityDatum(const EntityDatum& other) = default;
     EntityDatum(
-        const struct Type* origin,
+        std::shared_ptr<const DataType> type,
+        std::shared_ptr<const DataProperty> property,
         size_t offset,
-        const DataProperty* property,
         std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor(origin, property->type(), offset)
-        , property(property)
-        , data_type(property->type())
+        : type(std::move(type))
+        , property(std::move(property))
+        , offset(offset)
         , parent(std::move(parent))
     {
     }
@@ -91,30 +90,29 @@ using ExcludeView = std::pair<std::string_view, std::string_view>;
 
 struct EntityType final : public ObjectType
 {
-    /// Fine
-    const DataTable* data_table;
-
     /// Flattened, reordered members used for updates
     std::vector<EntityDatum> prioritized;
 
-    EntityType(Builder&& builder, const DataTable* data_table);
+    using ObjectType::ObjectType;
+};
 
-    void collect_properties_head(
-        const DataTable* cursor,
-        size_t cursor_offset,
-        const std::shared_ptr<const PropertyNode>& parent,
-        absl::flat_hash_set<ExcludeView>& excludes,
-        std::vector<EntityDatum>& container
-    );
+struct EntityConstReference : public ConstReference
+{
+    std::shared_ptr<const DataProperty> property;
+    std::shared_ptr<const PropertyNode> parent;
 
-    void collect_properties_tail(
-        const DataTable* cursor,
-        size_t cursor_offset,
-        const std::shared_ptr<const PropertyNode>& parent,
-        absl::flat_hash_set<ExcludeView>& excludes
-    );
-
-    void prioritize();
+    EntityConstReference(
+        std::shared_ptr<const char[]> origin,
+        std::shared_ptr<const Type> type,
+        size_t offset,
+        std::shared_ptr<const DataProperty> property,
+        std::shared_ptr<const PropertyNode> parent
+    )
+        : ConstReference(std::move(origin), std::move(type), offset)
+        , property(std::move(property))
+        , parent(std::move(parent))
+    {
+    }
 };
 
 struct Entity final : public Instance<EntityType>
@@ -122,11 +120,24 @@ struct Entity final : public Instance<EntityType>
     using Id = uint32_t;
 
     Id id;
-    const ServerClass* server_class;
+    std::shared_ptr<const ServerClass> server_class;
 
-    Entity(const EntityType* type, char* address, Id id, const ServerClass* server_class);
+    Entity(std::shared_ptr<const EntityType>&& type, Id id, std::shared_ptr<const ServerClass> server_class);
+
+    // TODO: naming?
+    [[nodiscard]] EntityConstReference at(size_t prioritized_index) const
+    {
+        const EntityDatum& datum = this->type->prioritized[prioritized_index];
+        return EntityConstReference(
+            this->address,
+            datum.type,
+            datum.offset,
+            datum.property,
+            datum.parent
+        );
+    }
 };
 
-using EntityDatabase = Database<Entity, Delete<Entity>>;
+using EntityDatabase = Database<Entity>;
 
 }

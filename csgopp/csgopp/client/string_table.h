@@ -12,7 +12,6 @@ namespace csgopp::client::string_table
 
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
-using csgopp::common::database::Delete;
 
 struct StringTable
 {
@@ -26,7 +25,7 @@ struct StringTable
     };
 
     std::string name;
-    Database<Entry, Delete<Entry>> entries;
+    Database<Entry> entries;
 
     // Deserialization details that need to persist for updates
     size_t capacity{};
@@ -49,14 +48,14 @@ struct StringTable
     }
 };
 
-struct StringTableDatabase : public DatabaseWithName<StringTable, Delete<StringTable>>
+struct StringTableDatabase : public DatabaseWithName<StringTable>
 {
     using DatabaseWithName::DatabaseWithName;
 
-    StringTable* instance_baseline{nullptr};
-    StringTable* user_info{nullptr};
+    std::shared_ptr<StringTable> instance_baseline;
+    std::shared_ptr<StringTable> user_info;
 
-    void on_emplace(StringTable* string_table)
+    void on_emplace(const std::shared_ptr<StringTable>& string_table)
     {
         if (string_table->name == "instancebaseline")
         {
@@ -68,16 +67,16 @@ struct StringTableDatabase : public DatabaseWithName<StringTable, Delete<StringT
         }
     }
 
-    void emplace(StringTable* string_table) override
+    void emplace(std::shared_ptr<StringTable> string_table) override
     {
-        DatabaseWithName::emplace(string_table);
         this->on_emplace(string_table);
+        DatabaseWithName::emplace(string_table);
     }
 
-    void emplace(size_t index, StringTable* string_table) override
+    void emplace(size_t index, std::shared_ptr<StringTable> string_table) override
     {
-        DatabaseWithName::emplace(index, string_table);
         this->on_emplace(string_table);
+        DatabaseWithName::emplace(index, string_table);
     }
 };
 

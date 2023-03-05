@@ -61,7 +61,6 @@ using csgopp::common::database::DatabaseWithName;
 using csgopp::common::reader::ContainerReader;
 using csgopp::common::reader::BigEndian;
 using csgopp::common::reader::LittleEndian;
-using csgopp::common::object::instantiate;
 using csgopp::error::GameError;
 using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::is_array_index;
@@ -174,7 +173,7 @@ struct ClientObserverBase
     };
 
     /// Called by the default data table creation observer.
-    virtual void on_data_table_creation(Client& client, const DataTable* data_table)
+    virtual void on_data_table_creation(Client& client, const std::shared_ptr<const DataTable>& data_table)
     {
     }
 
@@ -187,14 +186,14 @@ struct ClientObserverBase
         {
         }
 
-        virtual void handle(Client& client, const DataTable* data_table)
+        virtual void handle(Client& client, const std::shared_ptr<const DataTable>& data_table)
         {
             client.observer.on_data_table_creation(client, data_table);
         }
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_server_class_creation(Client& client, const ServerClass* server_class)
+    virtual void on_server_class_creation(Client& client, const std::shared_ptr<const ServerClass>& server_class)
     {
     }
 
@@ -207,14 +206,14 @@ struct ClientObserverBase
         {
         }
 
-        virtual void handle(Client& client, const ServerClass* server_class)
+        virtual void handle(Client& client, const std::shared_ptr<const ServerClass>& server_class)
         {
             client.observer.on_server_class_creation(client, server_class);
         }
     };
 
     /// Called by the default server class creation observer.
-    virtual void on_string_table_creation(Client& client, const StringTable* string_table)
+    virtual void on_string_table_creation(Client& client, const std::shared_ptr<const StringTable>& string_table)
     {
     }
 
@@ -227,14 +226,14 @@ struct ClientObserverBase
         {
         }
 
-        virtual void handle(Client& client, const StringTable* string_table)
+        virtual void handle(Client& client, const std::shared_ptr<const StringTable>& string_table)
         {
             client.observer.on_string_table_creation(client, string_table);
         }
     };
 
     /// Called by the default server class update observer.
-    virtual void on_string_table_update(Client& client, const StringTable* string_table)
+    virtual void on_string_table_update(Client& client, const std::shared_ptr<const StringTable>& string_table)
     {
     }
 
@@ -243,18 +242,18 @@ struct ClientObserverBase
     {
         StringTableUpdateObserver() = default;
 
-        explicit StringTableUpdateObserver(Client& client, const StringTable* string_table)
+        explicit StringTableUpdateObserver(Client& client, const std::shared_ptr<const StringTable>& string_table)
         {
         }
 
-        virtual void handle(Client& client, const StringTable* string_table)
+        virtual void handle(Client& client, const std::shared_ptr<const StringTable>& string_table)
         {
             client.observer.on_string_table_update(client, string_table);
         }
     };
 
     /// Called by the default server class update observer.
-    virtual void on_entity_creation(Client& client, const Entity* entity)
+    virtual void on_entity_creation(Client& client, const std::shared_ptr<const Entity>& entity)
     {
     }
 
@@ -263,18 +262,26 @@ struct ClientObserverBase
     {
         EntityCreationObserver() = default;
 
-        explicit EntityCreationObserver(Client& client, Entity::Id id, const ServerClass* server_class)
+        explicit EntityCreationObserver(
+            Client& client,
+            Entity::Id id,
+            const std::shared_ptr<const ServerClass>& server_class
+        )
         {
         }
 
-        virtual void handle(Client& client, const Entity* entity)
+        virtual void handle(Client& client, const std::shared_ptr<const Entity>& entity)
         {
             client.observer.on_entity_creation(client, entity);
         }
     };
 
     /// Called by the default server class update observer.
-    virtual void on_entity_update(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
+    virtual void on_entity_update(
+        Client& client,
+        const std::shared_ptr<const Entity>& entity,
+        const std::vector<uint16_t>& indices
+    )
     {
     }
 
@@ -283,11 +290,19 @@ struct ClientObserverBase
     {
         EntityUpdateObserver() = default;
 
-        explicit EntityUpdateObserver(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
+        explicit EntityUpdateObserver(
+            Client& client,
+            const std::shared_ptr<const Entity>& entity,
+            const std::vector<uint16_t>& indices
+        )
         {
         }
 
-        virtual void handle(Client& client, const Entity* entity, const std::vector<uint16_t>& indices)
+        virtual void handle(
+            Client& client,
+            const std::shared_ptr<Entity>& entity,
+            const std::vector<uint16_t>& indices
+        )
         {
             client.observer.on_entity_update(client, entity, indices);
         }
@@ -303,11 +318,11 @@ struct ClientObserverBase
     {
         EntityDeletionObserver() = default;
 
-        explicit EntityDeletionObserver(Client& client, const Entity* entity)
+        explicit EntityDeletionObserver(Client& client, const std::shared_ptr<const Entity>& entity)
         {
         }
 
-        virtual void handle(Client& client, const Entity* entity)
+        virtual void handle(Client& client, const std::shared_ptr<const Entity>& entity)
         {
             client.observer.on_entity_creation(client, entity);
         }
@@ -325,13 +340,14 @@ struct ClientObserverBase
         {
         }
 
+        // Could be move
         virtual void handle(Client& client, GameEvent& game_event)
         {
             client.observer.on_game_event(client, game_event);
         }
     };
 
-    virtual void on_game_event_type_creation(Client& client, const GameEventType* event)
+    virtual void on_game_event_type_creation(Client& client, const std::shared_ptr<const GameEventType>& event)
     {
     }
 
@@ -343,13 +359,13 @@ struct ClientObserverBase
         {
         }
 
-        virtual void handle(Client& client, const GameEventType* event)
+        virtual void handle(Client& client, const std::shared_ptr<const GameEventType>& event)
         {
             client.observer.on_game_event_type_creation(client, event);
         }
     };
 
-    virtual void on_user_creation(Client& client, const User* user)
+    virtual void on_user_creation(Client& client, const std::shared_ptr<const User>& user)
     {
     }
 
@@ -357,17 +373,17 @@ struct ClientObserverBase
     {
         UserCreationObserver() = default;
 
-        explicit UserCreationObserver(Client& client)
+        explicit UserCreationObserver(Client& client, User::Index index)
         {
         }
 
-        virtual void handle(Client& client, const User* user)
+        virtual void handle(Client& client, const std::shared_ptr<const User>& user)
         {
             client.observer.on_user_creation(client, user);
         }
     };
 
-    virtual void on_user_update(Client& client, const User* user)
+    virtual void on_user_update(Client& client, const std::shared_ptr<const User>& user)
     {
     }
 
@@ -375,11 +391,11 @@ struct ClientObserverBase
     {
         UserUpdateObserver() = default;
 
-        explicit UserUpdateObserver(Client& client, const User* user)
+        explicit UserUpdateObserver(Client& client, const std::shared_ptr<const User>& user)
         {
         }
 
-        virtual void handle(Client& client, const User* user)
+        virtual void handle(Client& client, const std::shared_ptr<const User>& user)
         {
             client.observer.on_user_update(client, user);
         }
@@ -536,15 +552,15 @@ protected:
     DatabaseWithName<DataTable> create_data_tables(CodedInputStream& stream);
     Database<ServerClass> create_server_classes(CodedInputStream& stream, DatabaseWithName<DataTable>& new_data_tables);
 
-    void populate_string_table(StringTable* string_table, const std::string& blob, int32_t count);
+    void populate_string_table(StringTable& string_table, const std::string& blob, int32_t count);
 
     void _get_update_indices(BitStream& stream);
-    void _update_entity(Entity* entity, BitStream& stream);
+    void _update_entity(Entity& entity, BitStream& stream);
     void create_entity(Entity::Id id, BitStream& stream);
     void update_entity(Entity::Id id, BitStream& stream);
     void delete_entity(Entity::Id id);
 
-    void _update_user(User* user, const std::string& data);
+    void _update_user(User& user, const std::string& data);
     void update_user(size_t index, const std::string& data);
 
 private:
@@ -816,12 +832,12 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
         uint16_t entry_count;
         VERIFY(data.read(&entry_count, 16));
 
-        StringTable* string_table = new StringTable(std::move(name), entry_count);
+        auto string_table = std::make_shared<StringTable>(std::move(name), entry_count);
         for (uint16_t j = 0; j < entry_count; ++j)
         {
-            StringTable::Entry* entry = new StringTable::Entry();
+            auto entry = std::make_shared<StringTable::Entry>();
             VERIFY(data.read_string(entry->string));
-            string_table->entries.emplace(entry);
+            string_table->entries.emplace(std::shared_ptr(entry));
 
             uint8_t has_data;
             VERIFY(data.read(&has_data, 1));
@@ -838,7 +854,7 @@ void Client<Observer>::advance_string_tables(CodedInputStream& stream)
             }
         }
 
-        this->_string_tables.emplace(string_table);
+        this->_string_tables.emplace(std::shared_ptr(string_table));
         AFTER(StringTableCreationObserver, std::as_const(string_table));
     }
 
@@ -921,12 +937,13 @@ void Client<Observer>::advance_packet_server_info(CodedInputStream& stream)
 
 struct UnboundDataTableProperty
 {
+    // Lifetime strictly shorter than property
     DataTable::DataTableProperty* property;
     std::string name;
 
     UnboundDataTableProperty(DataTable::DataTableProperty* property, std::string&& name)
         : property(property)
-        , name(name)
+        , name(std::move(name))
     {
     }
 };
@@ -952,8 +969,8 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
         // Actually do event handling if we're not at the terminator.
         if (!data.is_end())
         {
-            auto* data_table = new DataTable(data);
-            DataTable::DataProperty* preceding_array_element{nullptr};
+            auto data_table = std::make_shared<DataTable>(data);
+            std::unique_ptr<DataTable::DataProperty> preceding_array_element;
 
             // Do a check to see if our items are all the same type and enumerated; if so we'll turn them into a single
             // array later on.
@@ -973,41 +990,41 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                     continue;
                 }
 
-                DataTable::Property* property;
+                std::unique_ptr<DataTable::Property> property;
                 switch (property_data.type())
                 {
                     using Kind = DataTable::Property::Kind;
                 case Kind::INT32:
-                    property = new DataTable::Int32Property(std::move(property_data));
+                    property = std::make_unique<DataTable::Int32Property>(std::move(property_data));
                     break;
                 case Kind::FLOAT:
-                    property = new DataTable::FloatProperty(std::move(property_data));
+                    property = std::make_unique<DataTable::FloatProperty>(std::move(property_data));
                     break;
                 case Kind::VECTOR3:
-                    property = new DataTable::Vector3Property(std::move(property_data));
+                    property = std::make_unique<DataTable::Vector3Property>(std::move(property_data));
                     break;
                 case Kind::VECTOR2:
-                    property = new DataTable::Vector2Property(std::move(property_data));
+                    property = std::make_unique<DataTable::Vector2Property>(std::move(property_data));
                     break;
                 case Kind::STRING:
-                    property = new DataTable::StringProperty(std::move(property_data));
+                    property = std::make_unique<DataTable::StringProperty>(std::move(property_data));
                     break;
                 case Kind::ARRAY:
                     VERIFY(preceding_array_element != nullptr);
-                    property = new DataTable::ArrayProperty(
+                    property = std::make_unique<DataTable::ArrayProperty>(
                         std::move(property_data),
-                        preceding_array_element
+                        std::move(preceding_array_element)
                     );
-                    preceding_array_element = nullptr;
                     break;
                 case Kind::DATA_TABLE:
-                    property = new_data_table_properties.emplace_back(
-                        new DataTable::DataTableProperty(std::move(property_data)),
+                    property = std::make_unique<DataTable::DataTableProperty>(std::move(property_data));
+                    new_data_table_properties.emplace_back(
+                        static_cast<DataTable::DataTableProperty*>(property.get()),  // TODO: could be better
                         std::move(*property_data.mutable_dt_name())
-                    ).property;
+                    );
                     break;
                 case Kind::INT64:
-                    property = new DataTable::Int64Property(std::move(property_data));
+                    property = std::make_unique<DataTable::Int64Property>(std::move(property_data));
                     break;
                 default:
                     throw csgopp::error::GameError("unreachable");
@@ -1018,13 +1035,13 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 {
                     if (coalesced_array_element == nullptr)
                     {
-                        coalesced_array_element = property;
+                        coalesced_array_element = property.get();
                     }
 
                     if (
                         is_array_index(property->name, coalesced_array_index)
                         && property->equals(coalesced_array_element)
-                        )
+                    )
                     {
                         coalesced_array_index += 1;
                     }
@@ -1037,21 +1054,23 @@ DatabaseWithName<DataTable> Client<Observer>::create_data_tables(CodedInputStrea
                 // If there's an array property, the element_type type always precedes it; don't both adding
                 if (property->flags & DataTable::Property::Flags::INSIDE_ARRAY)
                 {
+                    // TODO: maybe there's a safer way to guarantee this?
                     VERIFY(preceding_array_element == nullptr);
-                    DataTable::DataProperty* data_property = dynamic_cast<DataTable::DataProperty*>(property);
-                    VERIFY(data_property != nullptr);
-                    preceding_array_element = data_property;
+                    DataTable::Property* property_pointer = property.release();
+                    auto* data_property_pointer = dynamic_cast<DataTable::DataProperty*>(property_pointer);
+                    VERIFY(data_property_pointer != nullptr);
+                    preceding_array_element = std::unique_ptr<DataTable::DataProperty>(data_property_pointer);
                 }
                 else
                 {
-                    data_table->properties.emplace(property);
+                    data_table->properties.emplace(std::move(property));
                 }
             }
 
             data_table->is_array = data_table->properties.size() > 0 && is_coalesced_array;
 
             VERIFY(preceding_array_element == nullptr);
-            new_data_tables.emplace(data_table);
+            new_data_tables.emplace(std::move(data_table));
         }
 
         // Related to inline parsing at start of block
@@ -1085,7 +1104,7 @@ Database<ServerClass> Client<Observer>::create_server_classes(
 
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
-        auto* server_class = new ServerClass();
+        auto server_class = std::make_shared<ServerClass>();
         VERIFY(csgopp::demo::ReadLittleEndian16(stream, &server_class->index));
         VERIFY(csgopp::demo::ReadCStyleString(stream, &server_class->name));
 
@@ -1098,22 +1117,22 @@ Database<ServerClass> Client<Observer>::create_server_classes(
             [&data_table_name]() { return "failed to find referenced data table " + data_table_name; }
         );
         server_class->data_table->server_class = server_class;
-        new_server_classes.emplace(server_class);
+        new_server_classes.emplace(std::move(server_class));
     }
 
-    for (ServerClass* server_class : new_server_classes)
+    for (const std::shared_ptr<ServerClass>& server_class : new_server_classes)
     {
-        for (DataTable::Property* property : server_class->data_table->properties)
+        for (const std::shared_ptr<DataTable::Property>& property : server_class->data_table->properties)
         {
             if (property->name == "baseclass")
             {
-                if (auto* data_table_property = dynamic_cast<DataTable::DataTableProperty*>(property))
+                if (auto data_table_property = std::dynamic_pointer_cast<DataTable::DataTableProperty>(property))
                 {
                     ASSERT(server_class->base_class == nullptr, "received two base classes for one server class");
                     VERIFY(data_table_property != nullptr);
                     VERIFY(data_table_property->data_table != nullptr);
-                    VERIFY(data_table_property->data_table->server_class != nullptr);
-                    server_class->base_class = data_table_property->data_table->server_class;
+                    VERIFY(!data_table_property->data_table->server_class.expired());
+                    server_class->base_class = data_table_property->data_table->server_class.lock();
                 }
             }
         }
@@ -1129,25 +1148,25 @@ void Client<Observer>::create_data_tables_and_server_classes(CodedInputStream& s
     Database<ServerClass> new_server_classes = this->create_server_classes(stream, new_data_tables);
 
     // Materialize types
-    for (ServerClass* server_class : new_server_classes)
+    for (const std::shared_ptr<ServerClass>& server_class : new_server_classes)
     {
         server_class->data_table->construct_type();
     }
 
     // Now we can emplace and emit
     this->_data_tables.reserve(new_data_tables.size());
-    for (DataTable* data_table : new_data_tables)
+    for (const std::shared_ptr<DataTable>& data_table : new_data_tables)
     {
         BEFORE(Observer, DataTableCreationObserver);
-        this->_data_tables.emplace(data_table);
+        this->_data_tables.emplace(std::shared_ptr(data_table));
         AFTER(DataTableCreationObserver, std::as_const(data_table));
     }
 
     this->_server_classes.reserve(new_server_classes.size());
-    for (ServerClass* server_class : new_server_classes)
+    for (const std::shared_ptr<ServerClass>& server_class : new_server_classes)
     {
         BEFORE(Observer, ServerClassCreationObserver);
-        this->_server_classes.emplace(server_class->index, server_class);
+        this->_server_classes.emplace(server_class->index, std::shared_ptr(server_class));
         AFTER(ServerClassCreationObserver, std::as_const(server_class));
     }
 }
@@ -1187,9 +1206,9 @@ void Client<Observer>::advance_packet_create_string_table(CodedInputStream& stre
     VERIFY(data.ParseFromCodedStream(&stream));
 
     BEFORE(Observer, StringTableCreationObserver);
-    StringTable* string_table = new StringTable(data);
-    this->populate_string_table(string_table, data.string_data(), data.num_entries());
-    this->_string_tables.emplace(string_table);
+    auto string_table = std::make_shared<StringTable>(data);
+    this->populate_string_table(*string_table, data.string_data(), data.num_entries());
+    this->_string_tables.emplace(std::shared_ptr(string_table));
     AFTER(StringTableCreationObserver, std::as_const(string_table));
 
     VERIFY(stream.BytesUntilLimit() == 0);
@@ -1206,11 +1225,11 @@ void Client<Observer>::advance_packet_update_string_table(CodedInputStream& stre
     VERIFY(data.ParseFromCodedStream(&stream));
 
     size_t index = data.table_id();
-    StringTable* string_table = this->_string_tables.at(index);  // TODO revisit if we remove
+    auto string_table = this->_string_tables.at(index);  // TODO revisit if we remove
     ASSERT(string_table != nullptr, "expected a string table at index %zd", index);
 
     BEFORE(Observer, StringTableUpdateObserver, string_table);
-    this->populate_string_table(string_table, data.string_data(), data.num_changed_entries());
+    this->populate_string_table(*string_table, data.string_data(), data.num_changed_entries());
     AFTER(StringTableUpdateObserver, std::as_const(string_table));
 
     VERIFY(stream.BytesUntilLimit() == 0);
@@ -1218,7 +1237,11 @@ void Client<Observer>::advance_packet_update_string_table(CodedInputStream& stre
 }
 
 template<typename Observer>
-void Client<Observer>::populate_string_table(StringTable* string_table, const std::string& blob, int32_t count)
+void Client<Observer>::populate_string_table(
+    StringTable& string_table,
+    const std::string& blob,
+    int32_t count
+)
 {
     BitStream string_data(blob);
     uint8_t verification_bit;
@@ -1227,7 +1250,7 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
 
     Ring<std::string_view, 32> string_table_entry_history;  // 32 appears to be constant
 
-    size_t index_size = csgopp::common::bits::width(string_table->capacity);
+    size_t index_size = csgopp::common::bits::width(string_table.capacity);
     StringTable::Index auto_increment = 0;
     for (int32_t i = 0; i < count; ++i)
     {
@@ -1239,20 +1262,22 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
         }
 
         // Append
-        StringTable::Entry* entry;
-        if (auto_increment == string_table->entries.size())
+        std::shared_ptr<StringTable::Entry> entry;
+        if (auto_increment == string_table.entries.size())
         {
-            entry = new StringTable::Entry();
-            string_table->entries.emplace(entry);
+            entry = std::make_shared<StringTable::Entry>();
+            string_table.entries.emplace(std::shared_ptr(entry));
         }
         else
         {
-            entry = string_table->entries.at(auto_increment);
+            entry = string_table.entries.at(auto_increment);
             if (entry == nullptr)
             {
-                entry = string_table->entries.at(auto_increment) = new StringTable::Entry();
+                entry = std::make_shared<StringTable::Entry>();
+                string_table.entries.emplace(auto_increment, std::shared_ptr(entry));
             }
         }
+        VERIFY(entry != nullptr);
 
         uint8_t has_string;
         VERIFY(string_data.read(&has_string, 1));
@@ -1280,11 +1305,11 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
         VERIFY(string_data.read(&has_data, 1));
         if (has_data)
         {
-            if (string_table->data_fixed)  // < 8 bits
+            if (string_table.data_fixed)  // < 8 bits
             {
-                VERIFY(string_table->data_size_bits <= 8);
+                VERIFY(string_table.data_size_bits <= 8);
                 entry->data.push_back(0);
-                string_data.read(&entry->data.back(), string_table->data_size_bits);
+                string_data.read(&entry->data.back(), string_table.data_size_bits);
             }
             else
             {
@@ -1298,7 +1323,7 @@ void Client<Observer>::populate_string_table(StringTable* string_table, const st
             }
         }
 
-        if (string_table->name == "userinfo")
+        if (string_table.name == "userinfo")
         {
             size_t user_index = std::stoull(entry->string);
             this->update_user(user_index, entry->data);
@@ -1384,10 +1409,9 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
     csgo::message::net::CSVCMsg_GameEvent data;
     data.ParseFromCodedStream(&stream);
 
-    const GameEventType* game_event_type = this->_game_event_types.at_id(data.eventid());
-    GameEvent* game_event = instantiate<GameEventType, GameEvent>(game_event_type);
-    game_event->id = data.eventid();
-    game_event->name = game_event_type->name;
+    const std::shared_ptr<GameEventType>& game_event_type = this->_game_event_types.at_id(data.eventid());
+    GameEvent game_event(game_event_type);
+    game_event.id = data.eventid();
 
     for (size_t i = 0; i < data.keys_size(); ++i)
     {
@@ -1395,11 +1419,10 @@ void Client<Observer>::advance_packet_game_event(CodedInputStream& stream)
         csgo::message::net::CSVCMsg_GameEvent_key_t& key = *data.mutable_keys(i);
         auto* game_event_value_type = dynamic_cast<const game_event::GameEventValueType*>(member.type.get());
         VERIFY(game_event_value_type != nullptr);
-        game_event_value_type->update(game_event->address + member.offset, std::move(key));
+        game_event_value_type->update(game_event.address.get() + member.offset, std::move(key));
     }
 
-    AFTER(GameEventObserver, *game_event);
-    delete game_event;
+    AFTER(GameEventObserver, game_event);
 
     VERIFY(stream.BytesUntilLimit() == 0);
     stream.PopLimit(limit);
@@ -1511,13 +1534,13 @@ void Client<Observer>::_get_update_indices(BitStream& stream)
 // THIS MUST BE CALLED AFTER _get_update_indices
 /// \sa https://github.com/markus-wa/demoinfocs-golang/blob/9c61151c71c3821c194f60380cac3777e18e7f6d/pkg/demoinfocs/sendtables/entity.go#L104
 template<typename Observer>
-void Client<Observer>::_update_entity(Entity* entity, BitStream& stream)
+void Client<Observer>::_update_entity(Entity& entity, BitStream& stream)
 {
     for (uint16_t i : this->_update_entity_indices)
     {
         // Actually update the field
-        const EntityDatum& offset = entity->type->prioritized[i];
-        offset.data_type->update(entity->address + offset.offset, stream, offset.property);
+        const EntityDatum& datum = entity.type->prioritized[i];
+        datum.type->update(entity.address.get() + datum.offset, stream, datum.property.get());
     }
 }
 
@@ -1527,7 +1550,7 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
     size_t server_class_index_size = csgopp::common::bits::width(this->_server_classes.size()) + 1;
     ServerClass::Index server_class_id;
     VERIFY(stream.read(&server_class_id, server_class_index_size));
-    ServerClass* server_class = this->_server_classes.at(server_class_id);
+    const std::shared_ptr<ServerClass>& server_class = this->_server_classes.at(server_class_id);
 
     uint16_t serial_number;
     VERIFY(stream.read(&serial_number, ENTITY_HANDLE_SERIAL_NUMBER_BITS));
@@ -1535,7 +1558,7 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
     BEFORE(Observer, EntityCreationObserver, id, std::as_const(server_class));
 
     VERIFY(server_class->data_table->type() != nullptr);
-    Entity* entity = instantiate<EntityType, Entity>(
+    std::shared_ptr<Entity> entity = std::make_shared<Entity>(
         server_class->data_table->type(),
         id,
         server_class
@@ -1543,22 +1566,22 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 
     // Update from baseline in string table
     VERIFY(this->_string_tables.instance_baseline != nullptr);
-    for (StringTable::Entry* entry : this->_string_tables.instance_baseline->entries)
+    for (std::shared_ptr<StringTable::Entry>& entry : this->_string_tables.instance_baseline->entries)
     {
         if (std::stoi(entry->string) == server_class->index)
         {
             BitStream baseline(entry->data);
             // TODO: this could be optimized if it's slow--it's probably not
             this->_get_update_indices(baseline);
-            this->_update_entity(entity, baseline);
+            this->_update_entity(*entity, baseline);
             break;
         }
     }
 
     // Update from provided data
     this->_get_update_indices(stream);
-    this->_update_entity(entity, stream);
-    this->_entities.emplace(id, entity);
+    this->_update_entity(*entity, stream);
+    this->_entities.emplace(id, std::shared_ptr(entity));
     AFTER(EntityCreationObserver, std::as_const(entity))
 }
 
@@ -1566,44 +1589,43 @@ void Client<Observer>::create_entity(Entity::Id id, BitStream& stream)
 template<typename Observer>
 void Client<Observer>::update_entity(Entity::Id id, BitStream& stream)
 {
-    Entity* entity = this->_entities.at(id);
+    const std::shared_ptr<Entity>& entity = this->_entities.at(id);
     // don't want a callback during entity creation so repeat this code
     this->_get_update_indices(stream);
-    BEFORE(Observer, EntityUpdateObserver, std::as_const(entity), std::as_const(this->_update_entity_indices));
-    this->_update_entity(entity, stream);
-    AFTER(EntityUpdateObserver, std::as_const(entity), std::as_const(this->_update_entity_indices));
+    BEFORE(Observer, EntityUpdateObserver, entity, std::as_const(this->_update_entity_indices));
+    this->_update_entity(*entity, stream);
+    AFTER(EntityUpdateObserver, entity, std::as_const(this->_update_entity_indices));
 }
 
 template<typename Observer>
 void Client<Observer>::delete_entity(Entity::Id id)
 {
     VERIFY(id < this->_entities.size());
-    Entity* entity = this->_entities.at(id);
+    std::shared_ptr<Entity> entity = this->_entities.at(id);
     VERIFY(entity != nullptr);
 
     BEFORE(Observer, EntityDeletionObserver, std::as_const(entity));
     this->_entities.at(id) = nullptr;
     AFTER(EntityDeletionObserver, std::as_const(entity));
-    delete entity;
 }
 
 template<typename Observer>
-void Client<Observer>::_update_user(User* user, const std::string& data)
+void Client<Observer>::_update_user(User& user, const std::string& data)
 {
     ContainerReader<std::string> reader(data);
-    user->version = reader.deserialize<uint64_t, BigEndian>();
-    user->xuid = reader.deserialize<uint64_t, BigEndian>();
-    user->name = reader.terminated(128);
-    user->id = reader.deserialize<int32_t, BigEndian>();
-    user->guid = reader.terminated(33);
-    user->friends_id = reader.deserialize<uint32_t, BigEndian>();
-    user->friends_name = reader.terminated(128);
-    user->is_fake = reader.deserialize<uint8_t>() != 0;
-    user->is_hltv = reader.deserialize<uint8_t>() != 0;
-    user->custom_files[0] = reader.deserialize<uint32_t, LittleEndian>();
-    user->custom_files[1] = reader.deserialize<uint32_t, LittleEndian>();
-    user->custom_files[2] = reader.deserialize<uint32_t, LittleEndian>();
-    user->custom_files[3] = reader.deserialize<uint32_t, LittleEndian>();
+    user.version = reader.deserialize<uint64_t, BigEndian>();
+    user.xuid = reader.deserialize<uint64_t, BigEndian>();
+    user.name = reader.terminated(128);
+    user.id = reader.deserialize<int32_t, BigEndian>();
+    user.guid = reader.terminated(33);
+    user.friends_id = reader.deserialize<uint32_t, BigEndian>();
+    user.friends_name = reader.terminated(128);
+    user.is_fake = reader.deserialize<uint8_t>() != 0;
+    user.is_hltv = reader.deserialize<uint8_t>() != 0;
+    user.custom_files[0] = reader.deserialize<uint32_t, LittleEndian>();
+    user.custom_files[1] = reader.deserialize<uint32_t, LittleEndian>();
+    user.custom_files[2] = reader.deserialize<uint32_t, LittleEndian>();
+    user.custom_files[3] = reader.deserialize<uint32_t, LittleEndian>();
 }
 
 template<typename Observer>
@@ -1616,17 +1638,18 @@ void Client<Observer>::update_user(size_t index, const std::string& data)
 
     if (index >= this->_users.size() || this->_users.at(index) == nullptr)
     {
-        User* user = new User(index + 1);  // Always entity index + 1
-        BEFORE(Observer, UserCreationObserver);
-        this->_update_user(user, data);
-        this->_users.emplace(index, user);
-        AFTER(UserCreationObserver, user);
+        User::Index user_index = index + 1;
+        BEFORE(Observer, UserCreationObserver, user_index);
+        auto user = std::make_shared<User>(user_index);  // Always entity index + 1
+        this->_update_user(*user, data);
+        this->_users.emplace(index, std::shared_ptr(user));
+        AFTER(UserCreationObserver, std::as_const(user));
     }
     else
     {
-        User* user = this->_users.at(index);
-        BEFORE(Observer, UserUpdateObserver, user);
-        this->_update_user(user, data);
+        std::shared_ptr<User>& user = this->_users.at(index);
+        BEFORE(Observer, UserUpdateObserver, std::as_const(user));
+        this->_update_user(*user, data);
         AFTER(UserUpdateObserver, user);
     }
 }
@@ -1660,8 +1683,8 @@ void Client<Observer>::advance_packet_game_event_list(CodedInputStream& stream)
     for (csgo::message::net::CSVCMsg_GameEventList_descriptor_t& descriptor : *data.mutable_descriptors())
     {
         BEFORE(Observer, GameEventTypeCreationObserver);
-        GameEventType* game_event_type = GameEventType::build(std::move(descriptor));
-        this->_game_event_types.emplace(game_event_type);
+        std::shared_ptr<GameEventType> game_event_type = GameEventType::build(std::move(descriptor));
+        this->_game_event_types.emplace(std::shared_ptr(game_event_type));  // TODO: ergonomics
         AFTER(GameEventTypeCreationObserver, std::as_const(game_event_type));
     }
 

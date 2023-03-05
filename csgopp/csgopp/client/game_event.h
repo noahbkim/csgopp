@@ -4,24 +4,24 @@
 #include <string>
 #include <absl/container/flat_hash_map.h>
 
-#include "netmessages.pb.h"
-#include "../common/lookup.h"
-#include "../common/object.h"
 #include "../common/database.h"
+#include "../common/lookup.h"
+#include "netmessages.pb.h"
+#include <object/code.h>
+#include <object/object.h>
 
 namespace csgopp::client::game_event
 {
 
-using common::code::Cursor;
-using common::code::Declaration;
-using common::code::Definition;
 using common::database::DatabaseWithNameId;
-using common::database::Delete;
-using common::object::DefaultValueType;
-using common::object::Instance;
-using common::object::ObjectType;
-using common::object::shared;
-using common::object::Type;
+using object::code::Cursor;
+using object::code::Declaration;
+using object::code::Definition;
+using object::DefaultValueType;
+using object::Instance;
+using object::ObjectType;
+using object::shared;
+using object::Type;
 
 struct GameEventValueType : public virtual Type
 {
@@ -93,7 +93,7 @@ struct GameEventType final : public ObjectType
 
     GameEventType(Builder&& builder, Id id, std::string&& name);
 
-    static GameEventType* build(csgo::message::net::CSVCMsg_GameEventList_descriptor_t&& descriptor);
+    static std::shared_ptr<GameEventType> build(csgo::message::net::CSVCMsg_GameEventList_descriptor_t&& descriptor);
 };
 
 std::shared_ptr<Type> lookup_type(int32_t type);
@@ -103,11 +103,9 @@ struct GameEvent final : public Instance<GameEventType>
     using Id = GameEventType::Id;
 
     Id id;
-    std::string_view name;
-
     using Instance<GameEventType>::Instance;
 };
 
-using GameEventTypeDatabase = DatabaseWithNameId<GameEventType, Delete<GameEventType>>;
+using GameEventTypeDatabase = DatabaseWithNameId<GameEventType>;
 
 }

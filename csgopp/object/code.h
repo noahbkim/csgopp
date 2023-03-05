@@ -7,7 +7,7 @@
 #include <absl/container/flat_hash_set.h>
 #include <absl/container/flat_hash_map.h>
 
-namespace csgopp::common::code
+namespace object::code
 {
 
 using Dependencies = absl::flat_hash_set<std::string>;

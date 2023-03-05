@@ -4,7 +4,7 @@
 #include <vector>
 #include <ostream>
 
-namespace csgopp::common::layout
+namespace object::layout
 {
 
 struct Cursor

@@ -4,16 +4,16 @@
 #include <absl/container/flat_hash_map.h>
 #include <google/protobuf/io/coded_stream.h>
 
-#include "netmessages.pb.h"
-#include "../error.h"
-#include "../common/lookup.h"
 #include "../common/database.h"
-#include "../common/vector.h"
+#include "../common/lookup.h"
 #include "../common/macro.h"
-#include "../common/object.h"
-#include "../common/code.h"
+#include "../common/vector.h"
+#include "../error.h"
 #include "data_table/data_property.h"
 #include "data_table/data_table_property.h"
+#include "netmessages.pb.h"
+#include <object/code.h>
+#include <object/object.h>
 
 namespace csgopp::client::server_class
 {
@@ -38,13 +38,12 @@ namespace csgopp::client::data_table
 using csgo::message::net::CSVCMsg_SendTable;
 using csgopp::client::entity::EntityType;
 using csgopp::client::server_class::ServerClass;
-using csgopp::common::code::Context;
-using csgopp::common::code::Cursor;
-using csgopp::common::code::Definition;
 using csgopp::common::database::DatabaseWithName;
-using csgopp::common::database::Delete;
-using csgopp::common::object::ArrayType;
 using csgopp::error::GameError;
+using object::ArrayType;
+using object::code::Context;
+using object::code::Cursor;
+using object::code::Definition;
 
 using Exclude = std::pair<std::string, std::string>;
 
@@ -107,7 +106,7 @@ struct DataTable : Context<Definition>
     using DataTableProperty = data_table_property::DataTableProperty;
 
     // Internal use
-    using PropertyDatabase = DatabaseWithName<Property, Delete<Property>>;
+    using PropertyDatabase = DatabaseWithName<Property>;
 
     /// \brief The name of the data table.
     std::string name;
@@ -128,7 +127,8 @@ struct DataTable : Context<Definition>
     // Additional, computed members
 
     /// \brief The server class defined by this data table.
-    ServerClass* server_class{nullptr};
+    // TODO: std::shared_ptr<const DataTable> base_class;
+    std::weak_ptr<ServerClass> server_class;
 
     /// \brief Whether this data table can be represented by an array.
     ///
@@ -153,7 +153,7 @@ struct DataTable : Context<Definition>
     /// \brief Return the constructed type; not possible to guarantee this statically.
     ///
     /// \return a shared pointer to the allocated type.
-    [[nodiscard]] const EntityType* type() const;
+    [[nodiscard]] std::shared_ptr<const EntityType> type() const;
 
     /// \brief Build an array entity type from the data table properties.
     ///
@@ -170,7 +170,7 @@ private:
     std::shared_ptr<const ArrayType> _array_type;
 };
 
-using DataTableDatabase = DatabaseWithName<DataTable, Delete<DataTable>>;
+using DataTableDatabase = DatabaseWithName<DataTable>;
 
 /// \brief Determine whether a data table property name is an array index.
 ///

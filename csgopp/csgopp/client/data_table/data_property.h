@@ -1,5 +1,6 @@
 #pragma once
 
+#include <object/object.h>
 #include "netmessages.pb.h"
 #include "property.h"
 #include "data_type.h"
@@ -11,8 +12,8 @@ using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::client::data_table::data_type::DataArrayType;
 using csgopp::client::data_table::data_type::DataType;
 using csgopp::client::data_table::property::Property;
-using csgopp::common::object::ObjectType;
-using csgopp::common::object::Type;
+using object::ObjectType;
+using object::Type;
 
 struct DataProperty : public Property
 {
@@ -24,8 +25,16 @@ struct DataProperty : public Property
     {
     }
 
-    /// \brief Must be a ValueType
-    [[nodiscard]] const DataType* type() const override = 0;
+    /// \brief Materialize a `object::Type` from the property.
+    ///
+    /// \return a `std::shared_ptr` to a `object::Type` that
+    ///     corresponds to this object.
+    ///
+    /// Return the constructed type; unchecked.
+    ///
+    /// \sa `csgopp::client::entity`
+    /// \sa `csgopp::common::object`
+    [[nodiscard]] virtual std::shared_ptr<const DataType> type() const = 0;
 };
 
 /// \brief Represents an integer with maximum width 32 bits. Can be boolean.
@@ -37,9 +46,8 @@ struct Int32Property final : public DataProperty
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const DataType> construct_data_type() const;
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -55,9 +63,8 @@ struct FloatProperty final : public DataProperty
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const DataType> construct_data_type() const;
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -73,9 +80,8 @@ struct Vector3Property final : public DataProperty
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const DataType> construct_data_type() const;
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -91,9 +97,8 @@ struct Vector2Property final : public DataProperty
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const DataType> construct_data_type() const;
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -105,9 +110,8 @@ struct StringProperty final : public DataProperty
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const DataType> construct_data_type() const;
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 };
@@ -121,12 +125,12 @@ struct ArrayProperty final : public DataProperty
     std::unique_ptr<DataProperty> element;
     int32_t length;
 
-    ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, DataProperty* element);
+    ArrayProperty(CSVCMsg_SendTable_sendprop_t&& data, std::unique_ptr<DataProperty>&& element);
 
     [[nodiscard]] Kind::T kind() const override;
 
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 
@@ -144,9 +148,8 @@ struct Int64Property final : public DataProperty
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const DataType> construct_data_type() const;
     [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
-    [[nodiscard]] const DataType* type() const override;
+    [[nodiscard]] std::shared_ptr<const DataType> type() const override;
 
     [[nodiscard]] bool equals(const Property* other) const override;
 };

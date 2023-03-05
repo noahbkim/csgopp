@@ -2,7 +2,7 @@
 
 #define TAB "    "
 
-namespace csgopp::common::code
+namespace object::code
 {
 
 void Definition::write(std::ostream& out) const

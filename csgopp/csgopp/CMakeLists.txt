@@ -17,29 +17,24 @@ add_library(csgopp STATIC
         client/string_table.h
         client/user.h
         common/bits.h
-        common/code.cpp
-        common/code.h
         common/control.cpp
         common/control.h
         common/database.h
         common/id.h
-        common/layout.h
         common/lookup.h
         common/macro.h
-        common/object.cpp
-        common/object.h
-        common/object.h
         common/reader.h
         common/ring.h
         common/vector.h
         demo.cpp
         demo.h
-        error.h)
+        error.h
+)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_features(csgopp PRIVATE cxx_std_17)
+target_compile_features(csgopp PRIVATE cxx_std_20)
 
 target_include_directories(csgopp PUBLIC ..)
 target_link_libraries(csgopp
-        PUBLIC csgopp.messages
+        PUBLIC csgopp.messages object
         PUBLIC CONAN_PKG::abseil CONAN_PKG::protobuf)
