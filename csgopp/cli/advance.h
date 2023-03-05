@@ -11,15 +11,14 @@
 #include "common.h"
 
 using argparse::ArgumentParser;
-using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::GameEvent;
 using csgopp::client::User;
 using csgopp::client::Entity;
 
-struct AdvanceObserver : ClientObserverBase<AdvanceObserver>
+struct AdvanceClient final : Client
 {
-    using ClientObserverBase::ClientObserverBase;
+    using Client::Client;
 };
 
 struct AdvanceCommand
@@ -40,7 +39,7 @@ struct AdvanceCommand
         std::string path = this->parser.get("demo");
         if (!std::filesystem::exists(path))
         {
-            std::cerr << "No such file " << path << std::endl;
+            std::cerr << "No such file " << std::filesystem::absolute(path) << std::endl;
             return -1;
         }
 
@@ -52,7 +51,7 @@ struct AdvanceCommand
         {
             Timer client_timer;
 
-            Client<AdvanceObserver> client(coded_input_stream);
+            AdvanceClient client(coded_input_stream);
             while (client.advance(coded_input_stream));
 
             uint32_t frames = client.cursor();

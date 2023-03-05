@@ -13,7 +13,6 @@
 #include "common.h"
 
 using argparse::ArgumentParser;
-using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::User;
 using csgopp::client::GameEvent;
@@ -127,17 +126,14 @@ const char* describe_weapon(uint32_t weapon)
     }
 }
 
-struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
+struct SummaryClient final : public Client
 {
-    using ClientObserverBase::ClientObserverBase;
+    using Client::Client;
 
     std::shared_ptr<const ServerClass> player_server_class;
     Accessor weapon_purchases_accessor;
 
-    void on_server_class_creation(
-        Client& client,
-        const std::shared_ptr<const ServerClass>& server_class
-    ) override
+    void on_server_class_creation(const std::shared_ptr<const ServerClass>& server_class) override
     {
         if (server_class->name == "CCSPlayer")
         {
@@ -148,7 +144,6 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
     }
 
     void on_entity_update(
-        Client& client,
         const std::shared_ptr<const Entity>& entity,
         const std::vector<uint16_t>& indices
     ) override
@@ -160,7 +155,7 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
                 EntityConstReference ref = entity->at(index);
                 if (this->weapon_purchases_accessor.is_strict_superset_of(ref))
                 {
-                    const std::shared_ptr<const User>& user = client.users().at_index(entity->id);
+                    const std::shared_ptr<const User>& user = this->users().at_index(entity->id);
                     OK(user != nullptr);
                     int weapon = atoi(ref.property->name.c_str());
 //                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
@@ -169,15 +164,15 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         }
     }
 
-    void on_game_event(Client &client, GameEvent& event) override
+    void on_game_event(GameEvent&& event) override
     {
         std::string_view name(event.type->name);
         if (name == "round_end")
         {
-            std::cout << client.tick() << ": Round end: " << event["message"].is<std::string>() << std::endl;
-            for (const std::shared_ptr<User>& user : client.users())
+            std::cout << this->tick() << ": Round end: " << event["message"].is<std::string>() << std::endl;
+            for (const std::shared_ptr<User>& user : this->users())
             {
-                const std::shared_ptr<const Entity>& entity = client.entities().get(user->index);
+                const std::shared_ptr<const Entity>& entity = this->entities().get(user->index);
                 if (entity == nullptr)
                 {
                     continue;
@@ -209,9 +204,9 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         }
         else if (name == "player_team")
         {
-            const std::shared_ptr<const User>& user = client.users().at_id(event["userid"].is<int16_t>());
+            const std::shared_ptr<const User>& user = this->users().at_id(event["userid"].is<int16_t>());
             const char* team = describe_team(event["team"].is<uint8_t>());
-            std::cout << client.tick() << ": Player " << user->name << " joined " << team << std::endl;
+            std::cout << this->tick() << ": Player " << user->name << " joined " << team << std::endl;
         }
     }
 };
@@ -244,7 +239,7 @@ struct SummaryCommand
 
         try
         {
-            Client<SummaryObserver> client(coded_input_stream);
+            SummaryClient client(coded_input_stream);
             while (client.advance(coded_input_stream));
         }
         catch (const csgopp::error::GameError& error)

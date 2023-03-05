@@ -23,10 +23,9 @@ using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
 using csgopp::client::GameEventType;
-using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 
-struct GenerateObserver : public ClientObserverBase<GenerateObserver>
+struct GenerateClient final : public Client
 {
     size_t server_class_count = 0;
     size_t data_table_count = 0;
@@ -35,9 +34,9 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
     Generator class_type_generator;
     Generator game_event_type_generator;
 
-    explicit GenerateObserver(Client& client) : ClientObserverBase<GenerateObserver>(client) {}
+    using Client::Client;
 
-    void on_data_table_creation(Client& client, const std::shared_ptr<const DataTable>& data_table) override
+    void on_data_table_creation(const std::shared_ptr<const DataTable>& data_table) override
     {
         this->data_table_count += 1;
         if (data_table->type())
@@ -48,12 +47,12 @@ struct GenerateObserver : public ClientObserverBase<GenerateObserver>
         }
     }
 
-    void on_server_class_creation(Client& client, const std::shared_ptr<const ServerClass>& server_class) override
+    void on_server_class_creation(const std::shared_ptr<const ServerClass>& server_class) override
     {
         this->server_class_count += 1;
     }
 
-    void on_game_event_type_creation(Client& client, const std::shared_ptr<const GameEventType>& game_event_type) override
+    void on_game_event_type_creation(const std::shared_ptr<const GameEventType>& game_event_type) override
     {
         Cursor<Definition> cursor(game_event_type_generator.append(game_event_type->name));
         game_event_type->emit(cursor);
@@ -90,7 +89,7 @@ struct GenerateCommand
         root.add_subparser(this->parser);
     }
 
-    void write_definitions(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    void write_definitions(const std::filesystem::path& path, GenerateClient& client) const
     {
         std::ofstream out(path);
         if (!out)
@@ -122,17 +121,17 @@ struct GenerateCommand
             out << std::endl;
         }
 
-        client.observer.class_type_generator.write(out);
+        client.class_type_generator.write(out);
 
         if (this->parser.get<bool>("-n"))
         {
             out << "}" << std::endl;
         }
 
-        std::cout << "wrote " << client.observer.entity_type_count << " server class structs to " << path << std::endl;
+        std::cout << "wrote " << client.entity_type_count << " server class structs to " << path << std::endl;
     }
 
-    void write_events(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    void write_events(const std::filesystem::path& path, GenerateClient& client) const
     {
         std::ofstream out(path);
         if (!out)
@@ -151,17 +150,17 @@ struct GenerateCommand
             out << std::endl;
         }
 
-        client.observer.game_event_type_generator.write(out, false);
+        client.game_event_type_generator.write(out, false);
 
         if (this->parser.get<bool>("-n"))
         {
             out << "}" << std::endl;
         }
 
-        std::cout << "wrote " << client.observer.game_event_type_count << " event structs to " << path << std::endl;
+        std::cout << "wrote " << client.game_event_type_count << " event structs to " << path << std::endl;
     }
 
-    void write_prioritized(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    void write_prioritized(const std::filesystem::path& path, GenerateClient& client) const
     {
         std::ofstream out(path);
         if (!out)
@@ -185,7 +184,7 @@ struct GenerateCommand
         std::cout << "wrote prioritized to " << path << std::endl;
     }
 
-    void write_layout(const std::filesystem::path& path, Client<GenerateObserver>& client) const
+    void write_layout(const std::filesystem::path& path, GenerateClient& client) const
     {
         std::ofstream out(path);
         if (!out)
@@ -224,7 +223,7 @@ struct GenerateCommand
 
         try
         {
-            Client<GenerateObserver> client(coded_input_stream);
+            GenerateClient client(coded_input_stream);
             std::string network_protocol = std::to_string(client.header().network_protocol);
             std::cout << "found network protocol version " << network_protocol << std::endl;
 
@@ -234,8 +233,8 @@ struct GenerateCommand
             std::filesystem::path directory(std::filesystem::absolute(this->parser.present("-d").value_or(".")));
             std::string file(this->parser.present("-f").value_or(network_protocol));
 
-            std::cout << "found " << client.observer.data_table_count << " data tables" << std::endl;
-            std::cout << "found " << client.observer.server_class_count << " server classes" << std::endl;
+            std::cout << "found " << client.data_table_count << " data tables" << std::endl;
+            std::cout << "found " << client.server_class_count << " server classes" << std::endl;
 
             this->write_definitions(directory / (file + ".classes.h"), client);
             this->write_events(directory / (file + ".events.h"), client);

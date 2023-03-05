@@ -346,7 +346,7 @@ struct Instance
     std::shared_ptr<const T> type;
     std::shared_ptr<char[]> address;
 
-    explicit Instance(std::shared_ptr<const T>&& type) : type(std::move(type))
+    explicit Instance(std::shared_ptr<const T> type) : type(std::move(type))
     {
         this->address = std::make_shared<char[]>(this->type->size());
         this->type->construct(this->address.get());
@@ -356,11 +356,6 @@ struct Instance
     {
         this->type->destroy(this->address.get());
     }
-
-    Instance(Instance& other) = delete;
-    Instance(Instance&& other) = delete;
-    Instance& operator=(Instance& other) = delete;
-    Instance& operator=(Instance&& other) = delete;
 
     Reference operator[](const std::string& member_name);
     Reference operator[](size_t element_index);

@@ -35,12 +35,12 @@ struct DataTableProperty final : public Property
 {
     std::shared_ptr<DataTable> data_table;
 
-    // No constructor because data_table is set later on
     explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
+    DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data, std::shared_ptr<DataTable> data_table);
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const Type> construct_type();
+    [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
     [[nodiscard]] std::shared_ptr<const Type> type() const;
 
     /// \brief Add the referenced data table as a member of the `EntityType`.

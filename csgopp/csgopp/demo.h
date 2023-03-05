@@ -65,7 +65,7 @@ LOOKUP(describe_command, Command::Type, const char*,
     CASE(Command::STRING_TABLES, "STRING_TABLES")
     DEFAULT(throw GameError("unknown command: " + std::to_string(key))));
 
-LOOKUP(describe_net_message, int32_t, const char*,
+LOOKUP(describe_net_message, uint32_t, const char*,
     CASE(0, "net_NOP")
     CASE(1, "net_Disconnect")
     CASE(2, "net_File")
