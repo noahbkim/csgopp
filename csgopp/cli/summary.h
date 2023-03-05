@@ -19,7 +19,9 @@ using csgopp::client::User;
 using csgopp::client::GameEvent;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::EntityDatum;
+using csgopp::client::entity::EntityConstReference;
 using object::Accessor;
+using object::ConstReference;
 
 const char* describe_game_phase(uint32_t phase)
 {
@@ -155,14 +157,14 @@ struct SummaryObserver final : public ClientObserverBase<SummaryObserver>
         {
             for (uint16_t index : indices)
             {
-                const EntityDatum& datum = entity->type->prioritized.at(index);
-//                if (this->weapon_purchases_accessor.is_strict_subset_of(datum))
-//                {
-//                    const std::shared_ptr<const User>& user = client.users().at_index(entity->id);
-//                    OK(user != nullptr);
-//                    int weapon = atoi(datum.property->name.c_str());
+                EntityConstReference ref = entity->at(index);
+                if (this->weapon_purchases_accessor.is_strict_superset_of(ref))
+                {
+                    const std::shared_ptr<const User>& user = client.users().at_index(entity->id);
+                    OK(user != nullptr);
+                    int weapon = atoi(ref.property->name.c_str());
 //                    std::cout << user->name << " purchased " << describe_weapon(weapon) << std::endl;
-//                }
+                }
             }
         }
     }

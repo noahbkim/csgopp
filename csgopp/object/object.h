@@ -92,11 +92,24 @@ struct Is
     const T& operator()(const Instance<U>& instance) const;
 };
 
-struct Accessor
+struct Lens
 {
-    std::shared_ptr<const Type> origin;
     std::shared_ptr<const Type> type;
     size_t offset{0};
+
+    Lens() = default;
+    Lens(std::shared_ptr<const Type> type, size_t offset = 0);
+
+    [[nodiscard]] bool is_equal(const Lens& other) const;
+    [[nodiscard]] bool is_subset_of(const Lens& other) const;
+    [[nodiscard]] bool is_strict_subset_of(const Lens& other) const;
+    [[nodiscard]] bool is_superset_of(const Lens& other) const;
+    [[nodiscard]] bool is_strict_superset_of(const Lens& other) const;
+};
+
+struct Accessor : public Lens
+{
+    std::shared_ptr<const Type> origin;
 
     Accessor() = default;
     explicit Accessor(std::shared_ptr<const Type> type);
@@ -113,12 +126,6 @@ struct Accessor
 
     template<typename T>
     Is<T> is() const;
-
-    [[nodiscard]] bool is_equal(const Accessor& other) const;
-    [[nodiscard]] bool is_subset_of(const Accessor& other) const;
-    [[nodiscard]] bool is_strict_subset_of(const Accessor& other) const;
-    [[nodiscard]] bool is_superset_of(const Accessor& other) const;
-    [[nodiscard]] bool is_strict_superset_of(const Accessor& other) const;
 };
 
 struct Type
@@ -150,19 +157,24 @@ static std::shared_ptr<T> shared()
     return pointer;
 }
 
-struct Reference
+struct Reference : public Lens
 {
-    std::shared_ptr<const Type> type;
-    std::shared_ptr<char[]> address;
+    std::shared_ptr<char[]> origin;
 
     Reference() = default;
     Reference(
+        std::shared_ptr<char[]> origin,
         std::shared_ptr<const Type> type,
-        std::shared_ptr<char[]> address
+        size_t offset
     )
-        : type(std::move(type))
-        , address(std::move(address))
+        : Lens(std::move(type), offset)
+        , origin(std::move(origin))
     {
+    }
+
+    [[nodiscard]] char* address() const
+    {
+        return this->origin.get() + this->offset;
     }
 
     Reference operator[](const std::string& member_name) const;
@@ -181,18 +193,23 @@ struct Reference
     U& is();
 };
 
-struct ConstReference
+struct ConstReference : public Lens
 {
-    std::shared_ptr<const Type> type;
-    std::shared_ptr<const char[]> address;
+    std::shared_ptr<const char[]> origin;
 
     ConstReference(
+        std::shared_ptr<const char[]> origin,
         std::shared_ptr<const Type> type,
-        std::shared_ptr<const char[]> address
+        size_t offset
     )
-        : type(std::move(type))
-        , address(std::move(address))
+        : Lens(std::move(type), offset)
+        , origin(std::move(origin))
     {
+    }
+
+    [[nodiscard]] const char* address() const
+    {
+        return this->origin.get() + this->offset;
     }
 
     ConstReference operator[](const std::string& member_name) const;
@@ -413,14 +430,14 @@ template<typename T>
 T* As<T>::operator()(Reference& reference) const
 {
     validate(this->origin, reference.type);
-    return reinterpret_cast<T*>(reference.address.get() + this->offset);
+    return reinterpret_cast<T*>(reference.address() + this->offset);
 }
 
 template<typename T>
 const T* As<T>::operator()(const Reference& reference) const
 {
     validate(this->origin, reference.type);
-    return reinterpret_cast<const T*>(reference.address.get() + this->offset);
+    return reinterpret_cast<const T*>(reference.address() + this->offset);
 }
 
 template<typename T>
@@ -448,14 +465,14 @@ template<typename T>
 T& Is<T>::operator()(Reference& reference) const
 {
     validate(this->origin, reference.type);
-    return *reinterpret_cast<T*>(reference.address.get() + this->offset);
+    return *reinterpret_cast<T*>(reference.address() + this->offset);
 }
 
 template<typename T>
 const T& Is<T>::operator()(const Reference& reference) const
 {
     validate(this->origin, reference.type);
-    return *reinterpret_cast<T*>(reference.address.get() + this->offset);
+    return *reinterpret_cast<T*>(reference.address() + this->offset);
 }
 
 template<typename T>
@@ -478,7 +495,7 @@ template<typename T>
 Reference Accessor::operator()(Instance<T>& instance) const
 {
     validate(this->origin, instance.type);
-    return Reference(instance->type, this->type, instance.address.get() + this->offset);
+    return Reference(instance.address, this->type, instance.address.get() + this->offset);
 }
 
 template<typename T>
@@ -523,7 +540,7 @@ U& Reference::operator[](const Is<U>& is)
 template<typename U>
 U* Reference::as()
 {
-    return reinterpret_cast<U*>(this->address.get());
+    return reinterpret_cast<U*>(this->address());
 }
 
 template<typename U>
@@ -534,7 +551,7 @@ U& Reference::is()
     {
         if (value_type->info() == typeid(U))
         {
-            return *reinterpret_cast<U*>(this->address.get());
+            return *reinterpret_cast<U*>(this->address());
         }
         else
         {
@@ -562,7 +579,7 @@ const U& ConstReference::operator[](const Is<U>& is) const
 template<typename U>
 const U* ConstReference::as() const
 {
-    return reinterpret_cast<const U*>(this->address.get());
+    return reinterpret_cast<const U*>(this->address());
 }
 
 template<typename U>
@@ -573,7 +590,7 @@ const U& ConstReference::is() const
     {
         if (value_type->info() == typeid(U))
         {
-            return *reinterpret_cast<const U*>(this->address.get());
+            return *reinterpret_cast<const U*>(this->address());
         }
         else
         {
@@ -630,8 +647,9 @@ Reference Instance<T>::operator[](const std::string& member_name)
     {
         const ObjectType::Member& member = object_type->at(member_name);
         return Reference(
+            this->address,
             member.type,
-            std::shared_ptr<char[]>(this->address, this->address.get() + member.offset)
+            member.offset
         );
     }
     else
@@ -648,8 +666,9 @@ Reference Instance<T>::operator[](size_t element_index)
     {
         size_t element_offset = array_type->at(element_index);
         return Reference(
+            this->address,
             array_type->element_type,
-            std::shared_ptr<char[]>(this->address, this->address.get() + element_offset)
+            element_offset
         );
     }
     else
@@ -672,8 +691,9 @@ ConstReference Instance<T>::operator[](const std::string& member_name) const
     {
         const ObjectType::Member& member = object_type->at(member_name);
         return ConstReference(
+            this->address,
             member.type,
-            std::shared_ptr<const char[]>(this->address, this->address.get() + member.offset)
+            member.offset
         );
     }
     else
@@ -690,8 +710,9 @@ ConstReference Instance<T>::operator[](size_t element_index) const
     {
         size_t element_offset = array_type->at(element_index);
         return ConstReference(
+            this->address,
             array_type->element_type,
-            std::shared_ptr<const char[]>(this->address, this->address.get() + element_offset)
+            element_offset
         );
     }
     else

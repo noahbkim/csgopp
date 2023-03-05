@@ -13,16 +13,58 @@ void ValueType::emit(layout::Cursor& cursor) const
     cursor.note(this->info().name());
 }
 
+Lens::Lens(std::shared_ptr<const Type> type, size_t offset)
+    : type(std::move(type))
+    , offset(offset)
+{
+}
+
+bool Lens::is_equal(const Lens& other) const
+{
+    return this->offset == other.offset && this->type->size() == other.type->size();
+}
+
+bool Lens::is_subset_of(const Lens& other) const
+{
+    return (
+        other.offset <= this->offset
+        && this->offset + this->type->size() <= other.offset + other.type->size()
+    );
+}
+
+bool Lens::is_strict_subset_of(const Lens& other) const
+{
+    return (
+        other.offset <= this->offset
+        && this->offset + this->type->size() < other.offset + other.type->size()
+    );
+}
+
+bool Lens::is_superset_of(const Lens& other) const
+{
+    return (
+        this->offset <= other.offset
+        && other.offset + other.type->size() <= this->offset + this->type->size()
+    );
+}
+
+bool Lens::is_strict_superset_of(const Lens& other) const
+{
+    return (
+        this->offset <= other.offset
+        && other.offset + other.type->size() < this->offset + this->type->size()
+    );
+}
+
 Accessor::Accessor(std::shared_ptr<const Type> type)
-    : origin(type)
-    , type(std::move(type))
+    : Lens(type, 0)
+    , origin(std::move(type))
 {
 }
 
 Accessor::Accessor(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset)
-    : origin(std::move(origin))
-    , type(std::move(type))
-    , offset(offset)
+    : Lens(std::move(type), offset)
+    , origin(std::move(origin))
 {
 }
 
@@ -54,31 +96,6 @@ Accessor Accessor::operator[](size_t element_index) const
     }
 }
 
-bool Accessor::is_equal(const Accessor& other) const
-{
-    return this->offset == other.offset && this->type->size() == other.type->size();
-}
-
-bool Accessor::is_subset_of(const Accessor& other) const
-{
-    return other.offset <= this->offset && this->type->size() <= other.type->size();
-}
-
-bool Accessor::is_strict_subset_of(const Accessor& other) const
-{
-    return other.offset <= this->offset && this->type->size() < other.type->size();
-}
-
-bool Accessor::is_superset_of(const Accessor& other) const
-{
-    return this->offset <= other.offset && other.type->size() <= this->type->size();
-}
-
-bool Accessor::is_strict_superset_of(const Accessor& other) const
-{
-    return this->offset <= other.offset && other.type->size() < this->type->size();
-}
-
 Reference Reference::operator[](const std::string& member_name) const
 {
     auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
@@ -86,8 +103,9 @@ Reference Reference::operator[](const std::string& member_name) const
     {
         const ObjectType::Member& member = object_type->at(member_name);
         return Reference(
+            this->origin,
             member.type,
-            std::shared_ptr<char[]>(this->address, this->address.get() + member.offset)
+            this->offset + member.offset
         );
     }
     else
@@ -103,8 +121,9 @@ Reference Reference::operator[](size_t element_index) const
     {
         size_t element_offset = array_type->at(element_index);
         return Reference(
+            this->origin,
             array_type->element_type,
-            std::shared_ptr<char[]>(this->address, this->address.get() + element_offset)
+            this->offset + element_offset
         );
     }
     else
@@ -120,8 +139,9 @@ ConstReference ConstReference::operator[](const std::string& member_name) const
     {
         const ObjectType::Member& member = object_type->at(member_name);
         return ConstReference(
+            this->origin,
             member.type,
-            std::shared_ptr<const char[]>(this->address, this->address.get() + member.offset)
+            this->offset + member.offset
         );
     }
     else
@@ -137,8 +157,9 @@ ConstReference ConstReference::operator[](size_t element_index) const
     {
         size_t element_offset = array_type->at(element_index);
         return ConstReference(
+            this->origin,
             array_type->element_type,
-            std::shared_ptr<const char[]>(this->address, this->address.get() + element_offset)
+            this->offset + element_offset
         );
     }
     else
@@ -417,13 +438,13 @@ void ObjectType::represent(const char* address, std::ostream& out) const
 
 std::ostream& operator<<(std::ostream& out, const Reference& reference)
 {
-    reference.type->represent(reference.address.get(), out);
+    reference.type->represent(reference.address(), out);
     return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const ConstReference& reference)
 {
-    reference.type->represent(reference.address.get(), out);
+    reference.type->represent(reference.address(), out);
     return out;
 }
 

@@ -26,6 +26,7 @@ using csgopp::client::data_table::property::Property;
 using csgopp::client::server_class::ServerClass;
 using csgopp::common::database::Database;
 using object::Accessor;
+using object::ConstReference;
 using object::Instance;
 using object::ObjectType;
 using object::Type;
@@ -95,6 +96,25 @@ struct EntityType final : public ObjectType
     using ObjectType::ObjectType;
 };
 
+struct EntityConstReference : public ConstReference
+{
+    std::shared_ptr<const DataProperty> property;
+    std::shared_ptr<const PropertyNode> parent;
+
+    EntityConstReference(
+        std::shared_ptr<const char[]> origin,
+        std::shared_ptr<const Type> type,
+        size_t offset,
+        std::shared_ptr<const DataProperty> property,
+        std::shared_ptr<const PropertyNode> parent
+    )
+        : ConstReference(std::move(origin), std::move(type), offset)
+        , property(std::move(property))
+        , parent(std::move(parent))
+    {
+    }
+};
+
 struct Entity final : public Instance<EntityType>
 {
     using Id = uint32_t;
@@ -105,12 +125,15 @@ struct Entity final : public Instance<EntityType>
     Entity(std::shared_ptr<const EntityType>&& type, Id id, std::shared_ptr<const ServerClass> server_class);
 
     // TODO: naming?
-    [[nodiscard]] object::ConstReference at(size_t prioritized_index) const
+    [[nodiscard]] EntityConstReference at(size_t prioritized_index) const
     {
         const EntityDatum& datum = this->type->prioritized[prioritized_index];
-        return object::ConstReference(
+        return EntityConstReference(
+            this->address,
             datum.type,
-            std::shared_ptr<const char[]>(this->address, this->address.get() + datum.offset)
+            datum.offset,
+            datum.property,
+            datum.parent
         );
     }
 };
