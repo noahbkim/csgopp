@@ -92,13 +92,14 @@ struct Is
     const T& operator()(const Instance<U>& instance) const;
 };
 
+// How could this be abused?
 struct Lens
 {
     std::shared_ptr<const Type> type;
     size_t offset{0};
 
     Lens() = default;
-    Lens(std::shared_ptr<const Type> type, size_t offset = 0);
+    explicit Lens(std::shared_ptr<const Type> type, size_t offset = 0);
 
     [[nodiscard]] bool is_equal(const Lens& other) const;
     [[nodiscard]] bool is_subset_of(const Lens& other) const;
