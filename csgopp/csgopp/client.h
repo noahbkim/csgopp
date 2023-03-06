@@ -72,13 +72,7 @@ using csgopp::client::entity::EntityDatum;
 using csgopp::client::game_event::GameEventType;
 using csgopp::client::game_event::GameEvent;
 using csgopp::client::user::User;
-
-constexpr size_t MAX_EDICT_BITS = 11;
-constexpr size_t ENTITY_HANDLE_INDEX_MASK = (1 << MAX_EDICT_BITS) - 1;
-constexpr size_t ENTITY_HANDLE_SERIAL_NUMBER_BITS = 10;
-constexpr size_t ENTITY_HANDLE_BITS = MAX_EDICT_BITS + ENTITY_HANDLE_SERIAL_NUMBER_BITS;
-constexpr size_t INVALID_ENTITY_HANDLE = (1 << ENTITY_HANDLE_BITS) - 1;
-
+using csgopp::demo::Header;
 
 /// \brief The core DEMO parser and game client.
 ///
@@ -101,7 +95,9 @@ public:
     using GameEventTypeDatabase = csgopp::client::game_event::GameEventTypeDatabase;
     using UserDatabase = csgopp::client::user::UserDatabase;
 
+    explicit Client() = default;
     explicit Client(CodedInputStream& stream);
+    explicit Client(Header header);
 
     /// How about now? Is the issue any better?
     virtual bool advance(CodedInputStream& stream);
@@ -181,7 +177,7 @@ public:
     virtual inline void before_user_update(const std::shared_ptr<const User>& user) {}
     virtual inline void on_user_update(const std::shared_ptr<const User>& user) {}
 
-    [[nodiscard]] const demo::Header& header() const { return this->_header; }
+    [[nodiscard]] const Header& header() const { return this->_header; }
     [[nodiscard]] uint32_t cursor() const { return this->_cursor; }
     [[nodiscard]] uint32_t tick() const { return this->_tick; }
     [[nodiscard]] const DataTableDatabase& data_tables() const { return this->_data_tables; }
@@ -192,7 +188,7 @@ public:
     [[nodiscard]] const UserDatabase& users() const { return this->_users; }
 
 protected:
-    demo::Header _header;
+    Header _header;
     uint32_t _cursor{0};
     uint32_t _tick{0};
     DataTableDatabase _data_tables;

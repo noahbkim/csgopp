@@ -5,8 +5,17 @@ namespace csgopp::client
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 
-Client::Client(CodedInputStream& stream)
-    : _header(stream)
+constexpr size_t MAX_EDICT_BITS = 11;
+constexpr size_t ENTITY_HANDLE_INDEX_MASK = (1 << MAX_EDICT_BITS) - 1;
+constexpr size_t ENTITY_HANDLE_SERIAL_NUMBER_BITS = 10;
+constexpr size_t ENTITY_HANDLE_BITS = MAX_EDICT_BITS + ENTITY_HANDLE_SERIAL_NUMBER_BITS;
+constexpr size_t INVALID_ENTITY_HANDLE = (1 << ENTITY_HANDLE_BITS) - 1;
+
+Client::Client(CodedInputStream& stream) : _header(stream)
+{
+}
+
+Client::Client(Header header) : _header(header)
 {
 }
 

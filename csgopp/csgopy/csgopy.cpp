@@ -15,7 +15,6 @@
 using namespace nanobind::literals;
 
 using csgopp::client::Client;
-using csgopp::client::ClientObserverBase;
 using csgopp::client::entity::EntityConstReference;
 using csgopp::client::entity::EntityType;
 using csgopp::client::Entity;
@@ -97,32 +96,10 @@ struct EntityAdapter : public Adapter<const Entity>
     }
 };
 
-class PythonObserverAdapter : public ClientObserverBase<PythonObserverAdapter>
+class ClientAdapter final : public Client
 {
 public:
-    explicit PythonObserverAdapter(Client& client, nanobind::object observer)
-        : ClientObserverBase(client)
-        , observer(std::move(observer))
-    {}
-
-    void on_entity_update(
-        Client &client,
-        const std::shared_ptr<const Entity>& entity,
-        const std::vector<uint16_t>& indices
-    ) override
-    {
-        auto callback = this->observer.attr("on_entity_update");
-        callback(EntityAdapter(entity), indices);
-    }
-
-    void on_user_creation(Client& client, const std::shared_ptr<const User>& user) override
-    {
-        auto callback = this->observer.attr("on_user_creation");
-        callback(UserAdapter(user));
-    }
-
-private:
-    nanobind::object observer;
+    using Client::Client;
 };
 
 void print(const std::string& string)
@@ -136,7 +113,7 @@ void parse(const std::string& path, nanobind::object observer)
     IstreamInputStream file_input_stream(&file_stream);
     CodedInputStream coded_input_stream(&file_input_stream);
 
-    Client<PythonObserverAdapter> client(coded_input_stream, std::move(observer));
+    Client client(coded_input_stream, std::move(observer));
     while (client.advance(coded_input_stream));
 }
 
