@@ -18,7 +18,23 @@ using csgopp::client::Entity;
 
 struct AdvanceClient final : Client
 {
-    using Client::Client;
+    // Pack this in here since it's opaque in Python
+    std::ifstream file_stream;
+    IstreamInputStream file_input_stream;
+    CodedInputStream coded_input_stream;
+
+    explicit AdvanceClient(auto path)
+        : file_input_stream(&this->file_stream)
+        , coded_input_stream(&this->file_input_stream)
+    {
+        this->file_stream.open(path, std::ios::binary);
+        this->_header = csgopp::demo::Header(this->coded_input_stream);
+    }
+
+    bool advance()
+    {
+        return Client::advance(this->coded_input_stream);
+    }
 };
 
 struct AdvanceCommand
@@ -43,16 +59,12 @@ struct AdvanceCommand
             return -1;
         }
 
-        std::ifstream file_stream(path, std::ios::binary);
-        IstreamInputStream file_input_stream(&file_stream);
-        CodedInputStream coded_input_stream(&file_input_stream);
-
         try
         {
             Timer client_timer;
 
-            AdvanceClient client(coded_input_stream);
-            while (client.advance(coded_input_stream));
+            AdvanceClient client(path);
+            while (client.advance());
 
             uint32_t frames = client.cursor();
             uint32_t ms = client_timer.elapsed();

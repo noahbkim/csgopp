@@ -52,27 +52,27 @@
 namespace csgopp::client
 {
 
-using google::protobuf::io::CodedInputStream;
+using csgopp::client::data_table::DataTable;
+using csgopp::client::data_table::is_array_index;
+using csgopp::client::entity::Entity;
+using csgopp::client::entity::EntityDatum;
+using csgopp::client::entity::EntityType;
+using csgopp::client::game_event::GameEvent;
+using csgopp::client::game_event::GameEventType;
+using csgopp::client::server_class::ServerClass;
+using csgopp::client::string_table::StringTable;
+using csgopp::client::user::User;
 using csgopp::common::bits::BitStream;
-using csgopp::common::ring::Ring;
 using csgopp::common::control::lookup;
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
-using csgopp::common::reader::ContainerReader;
 using csgopp::common::reader::BigEndian;
+using csgopp::common::reader::ContainerReader;
 using csgopp::common::reader::LittleEndian;
-using csgopp::error::GameError;
-using csgopp::client::data_table::DataTable;
-using csgopp::client::data_table::is_array_index;
-using csgopp::client::server_class::ServerClass;
-using csgopp::client::string_table::StringTable;
-using csgopp::client::entity::EntityType;
-using csgopp::client::entity::Entity;
-using csgopp::client::entity::EntityDatum;
-using csgopp::client::game_event::GameEventType;
-using csgopp::client::game_event::GameEvent;
-using csgopp::client::user::User;
+using csgopp::common::ring::Ring;
 using csgopp::demo::Header;
+using csgopp::error::GameError;
+using google::protobuf::io::CodedInputStream;
 
 /// \brief The core DEMO parser and game client.
 ///
@@ -162,6 +162,7 @@ public:
     virtual inline void on_string_table_creation(const std::shared_ptr<const StringTable>& string_table) {}
     virtual inline void before_string_table_update(const std::shared_ptr<const StringTable>& string_table) {}
     virtual inline void on_string_table_update(const std::shared_ptr<const StringTable>& string_table) {}
+    // TODO: reorder
     virtual inline void before_entity_creation(Entity::Id id, const std::shared_ptr<const ServerClass>& server_class) {}
     virtual inline void on_entity_creation(const std::shared_ptr<const Entity>& entity) {}
     virtual inline void before_entity_update(const std::shared_ptr<const Entity>& entity, const std::vector<uint16_t>& indices) {}
