@@ -38,6 +38,7 @@ using object::Lens;
 using object::IndexError;
 using object::Instance;
 using object::MemberError;
+using object::Accessor;
 using object::Type;
 using object::TypeError;
 using object::ValueType;
@@ -162,6 +163,11 @@ struct EntityTypeAdapter : public Adapter<const EntityType>
     }
 };
 
+struct AccessorAdapter
+{
+    static nanobind::class_<Accessor> bind(nanobind::module_& module, nanobind::class_<Lens>& base);
+};
+
 template<typename T = Type>
 struct TypeAdapter : public Adapter<const T>
 {
@@ -177,6 +183,15 @@ struct TypeAdapter : public Adapter<const T>
         ;
     }
 };
+
+nanobind::class_<Accessor> AccessorAdapter::bind(nanobind::module_& module, nanobind::class_<Lens>& base)
+{
+    return nanobind::class_<Accessor>(module, "Accessor", base)
+        .def("origin", [](const Accessor* accessor) { return TypeAdapter<Type>(accessor->origin); })
+        .def("__getitem__", [](const Accessor* self, const std::string& name) { return self->operator[](name); })
+        .def("__getitem__", [](const Accessor* self, size_t index) { return self->operator[](index); })
+    ;
+}
 
 struct LensAdapter
 {
@@ -335,8 +350,8 @@ struct ClientAdapter : public Client
     [[maybe_unused]] void on_string_table_update(const StringTableAdapter&) {}
     [[maybe_unused]] void before_entity_creation(Entity::Id, const ServerClassAdapter&) {}
     [[maybe_unused]] void on_entity_creation(const UserAdapter&) {}
-    [[maybe_unused]] void before_entity_update(const EntityAdapter&, const std::vector<EntityConstReference>&) {}
-    [[maybe_unused]] void on_entity_update(const EntityAdapter&, const std::vector<EntityConstReference>&) {}
+    [[maybe_unused]] void before_entity_update(const EntityAdapter&, const std::vector<uint16_t>&) {}
+    [[maybe_unused]] void on_entity_update(const EntityAdapter&, const std::vector<uint16_t>&) {}
     [[maybe_unused]] void before_entity_deletion(const EntityAdapter&) {}
     [[maybe_unused]] void on_entity_deletion(const EntityAdapter&) {}
     [[maybe_unused]] void before_user_update(const UserAdapter&) {}
@@ -443,12 +458,12 @@ struct ClientAdapterTrampoline final : public ClientAdapter
 
     void before_entity_update(const std::shared_ptr<const Entity>& entity, const std::vector<uint16_t>& indices) override
     {
-        NB_OVERRIDE_PURE_ONLY_VOID(before_entity_update, EntityAdapter(entity), bind_indices(entity, indices));
+        NB_OVERRIDE_PURE_ONLY_VOID(before_entity_update, EntityAdapter(entity), indices);
     }
 
     void on_entity_update(const std::shared_ptr<const Entity>& entity, const std::vector<uint16_t>& indices) override
     {
-        NB_OVERRIDE_PURE_ONLY_VOID(on_entity_update, EntityAdapter(entity), bind_indices(entity, indices));
+        NB_OVERRIDE_PURE_ONLY_VOID(on_entity_update, EntityAdapter(entity), indices);
     }
 
     void before_entity_deletion(const std::shared_ptr<const Entity>& entity) override
@@ -550,7 +565,7 @@ NB_MODULE(csgopy, module) {
 
     // We need to do this for ClientAdapter base class rather than add template argument because it gets confused
     auto client = nanobind::class_<Client>(module, "BaseClient")
-        .def_prop_ro("header", &ClientAdapter::header)
+        .def("header", &ClientAdapter::header)
         .def("cursor", &ClientAdapter::cursor)
         .def("tick", &ClientAdapter::tick)
     ;

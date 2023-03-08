@@ -52,6 +52,8 @@ struct Instance;
 
 struct Reference;
 
+struct ConstReference;
+
 struct Type;
 
 template<typename T>
@@ -86,10 +88,10 @@ struct Is
     const T& operator()(const Reference& reference) const;
 
     template<typename U>
-    T& operator()(Instance<U>& instance) const;
+    T& operator()(Instance<const U>& instance) const;
 
     template<typename U>
-    const T& operator()(const Instance<U>& instance) const;
+    const T& operator()(const Instance<const U>& instance) const;
 };
 
 // How could this be abused?
@@ -120,7 +122,10 @@ struct Accessor : public Lens
     Accessor operator[](size_t element_index) const;
 
     template<typename T>
-    Reference operator()(Instance<T>& instance) const;
+    Reference operator()(Instance<const T>& instance);
+
+    template<typename T>
+    ConstReference operator()(const Instance<const T>& instance) const;
 
     template<typename T>
     As<T> as() const;
@@ -480,7 +485,7 @@ const T& Is<T>::operator()(const Reference& reference) const
 
 template<typename T>
 template<typename U>
-T& Is<T>::operator()(Instance<U>& instance) const
+T& Is<T>::operator()(Instance<const U>& instance) const
 {
     validate(this->origin, instance.type);
     return *reinterpret_cast<T*>(instance.address.get() + this->offset);
@@ -488,17 +493,24 @@ T& Is<T>::operator()(Instance<U>& instance) const
 
 template<typename T>
 template<typename U>
-const T& Is<T>::operator()(const Instance<U>& instance) const
+const T& Is<T>::operator()(const Instance<const U>& instance) const
 {
     validate(this->origin, instance.type);
     return *reinterpret_cast<const T*>(instance.address.get() + this->offset);
 }
 
 template<typename T>
-Reference Accessor::operator()(Instance<T>& instance) const
+Reference Accessor::operator()(Instance<const T>& instance)
 {
     validate(this->origin, instance.type);
     return Reference(instance.address, this->type, instance.address.get() + this->offset);
+}
+
+template<typename T>
+ConstReference Accessor::operator()(const Instance<const T>& instance) const
+{
+    validate(this->origin, instance.type);
+    return ConstReference(instance.address, this->type, instance.address.get() + this->offset);
 }
 
 template<typename T>
