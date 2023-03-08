@@ -11,15 +11,30 @@
 #include "common.h"
 
 using argparse::ArgumentParser;
-using csgopp::client::ClientObserverBase;
 using csgopp::client::Client;
 using csgopp::client::GameEvent;
 using csgopp::client::User;
 using csgopp::client::Entity;
 
-struct AdvanceObserver : ClientObserverBase<AdvanceObserver>
+struct AdvanceClient final : Client
 {
-    using ClientObserverBase::ClientObserverBase;
+    // Pack this in here since it's opaque in Python
+    std::ifstream file_stream;
+    IstreamInputStream file_input_stream;
+    CodedInputStream coded_input_stream;
+
+    explicit AdvanceClient(auto path)
+        : file_input_stream(&this->file_stream)
+        , coded_input_stream(&this->file_input_stream)
+    {
+        this->file_stream.open(path, std::ios::binary);
+        this->_header = csgopp::demo::Header(this->coded_input_stream);
+    }
+
+    bool advance()
+    {
+        return Client::advance(this->coded_input_stream);
+    }
 };
 
 struct AdvanceCommand
@@ -40,20 +55,16 @@ struct AdvanceCommand
         std::string path = this->parser.get("demo");
         if (!std::filesystem::exists(path))
         {
-            std::cerr << "No such file " << path << std::endl;
+            std::cerr << "No such file " << std::filesystem::absolute(path) << std::endl;
             return -1;
         }
-
-        std::ifstream file_stream(path, std::ios::binary);
-        IstreamInputStream file_input_stream(&file_stream);
-        CodedInputStream coded_input_stream(&file_input_stream);
 
         try
         {
             Timer client_timer;
 
-            Client<AdvanceObserver> client(coded_input_stream);
-            while (client.advance(coded_input_stream));
+            AdvanceClient client(path);
+            while (client.advance());
 
             uint32_t frames = client.cursor();
             uint32_t ms = client_timer.elapsed();

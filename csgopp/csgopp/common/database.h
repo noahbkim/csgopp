@@ -110,7 +110,7 @@ template<typename T>
 struct NameTableMixin
 {
     using NameTable = absl::flat_hash_map<std::string_view, std::shared_ptr<T>>;
-    NameTable by_name{};
+    NameTable by_name;
 
     NameTableMixin() = default;
 
@@ -177,7 +177,7 @@ template<typename T>
 struct IdTableMixin
 {
     using IdTable = absl::flat_hash_map<typename T::Id, std::shared_ptr<T>>;
-    IdTable by_id{};
+    IdTable by_id;
 
     IdTableMixin() = default;
 

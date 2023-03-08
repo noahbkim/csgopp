@@ -24,10 +24,10 @@ using object::Type;
 
 /// \brief Represents the object described by another data table.
 ///
-/// `DataTable` properties are used to represent nested structs in the entity
+/// `DataTable` properties are used to format nested structs in the entity
 /// data structure. Most of the time, data tables correspond to allocated
 /// `ServerClass` instances, but they can also contain arbitrary nested data
-/// as well as represent separately serialized arrays. These cases have to be
+/// as well as format separately serialized arrays. These cases have to be
 /// accounted for in `DataTableProperty::build()`.
 ///
 /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_send.cpp#L691
@@ -35,12 +35,12 @@ struct DataTableProperty final : public Property
 {
     std::shared_ptr<DataTable> data_table;
 
-    // No constructor because data_table is set later on
     explicit DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data);
+    DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data, std::shared_ptr<DataTable> data_table);
 
     [[nodiscard]] Kind::T kind() const override;
 
-    [[nodiscard]] std::shared_ptr<const Type> construct_type();
+    [[nodiscard]] std::shared_ptr<const Type> construct_type() override;
     [[nodiscard]] std::shared_ptr<const Type> type() const;
 
     /// \brief Add the referenced data table as a member of the `EntityType`.

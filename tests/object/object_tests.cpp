@@ -9,7 +9,7 @@ using namespace object;
 template<typename T>
 struct TestDefaultValueType : public DefaultValueType<T>
 {
-    void represent(const char* address, std::ostream& out) const override
+    void format(const char* address, std::ostream& out) const override
     {
 
     }

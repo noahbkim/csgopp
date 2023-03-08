@@ -10,10 +10,18 @@
 #include "../error.h"
 #include "data_table.h"
 
+namespace csgopp::client::entity
+{
+
+struct EntityType;
+
+}
+
 namespace csgopp::client::server_class
 {
 
 using csgopp::client::data_table::DataTable;
+using csgopp::client::entity::EntityType;
 using csgopp::common::database::Database;
 using csgopp::common::database::DatabaseWithName;
 using csgopp::error::GameError;
@@ -27,6 +35,8 @@ struct ServerClass
     std::string name;
     std::shared_ptr<DataTable> data_table;
     std::shared_ptr<ServerClass> base_class;
+
+    std::shared_ptr<const EntityType> type() const;
 };
 
 using ServerClassDatabase = DatabaseWithName<ServerClass>;

@@ -52,6 +52,8 @@ struct Instance;
 
 struct Reference;
 
+struct ConstReference;
+
 struct Type;
 
 template<typename T>
@@ -86,10 +88,10 @@ struct Is
     const T& operator()(const Reference& reference) const;
 
     template<typename U>
-    T& operator()(Instance<U>& instance) const;
+    T& operator()(Instance<const U>& instance) const;
 
     template<typename U>
-    const T& operator()(const Instance<U>& instance) const;
+    const T& operator()(const Instance<const U>& instance) const;
 };
 
 // How could this be abused?
@@ -120,7 +122,10 @@ struct Accessor : public Lens
     Accessor operator[](size_t element_index) const;
 
     template<typename T>
-    Reference operator()(Instance<T>& instance) const;
+    Reference operator()(Instance<const T>& instance);
+
+    template<typename T>
+    ConstReference operator()(const Instance<const T>& instance) const;
 
     template<typename T>
     As<T> as() const;
@@ -135,6 +140,7 @@ struct Type
 
     [[nodiscard]] virtual size_t size() const = 0;
     [[nodiscard]] virtual size_t alignment() const = 0;
+    [[nodiscard]] virtual std::string represent() const = 0;
 
     virtual void construct(char* address) const = 0;
     virtual void destroy(char* address) const = 0;
@@ -142,7 +148,7 @@ struct Type
     // TODO: these should just be NotImplemented if there's no reasonable default
     virtual void emit(code::Cursor<code::Declaration>& cursor) const = 0;
     virtual void emit(layout::Cursor& cursor) const = 0;
-    virtual void represent(const char* address, std::ostream& out) const = 0;
+    virtual void format(const char* address, std::ostream& out) const = 0;
 };
 
 template<typename T>
@@ -198,6 +204,7 @@ struct ConstReference : public Lens
 {
     std::shared_ptr<const char[]> origin;
 
+    ConstReference() = default;
     ConstReference(
         std::shared_ptr<const char[]> origin,
         std::shared_ptr<const Type> type,
@@ -232,6 +239,9 @@ struct ConstReference : public Lens
 struct ValueType : public virtual Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
+
+    [[nodiscard]] std::string represent() const override;
+
     void emit(code::Cursor<code::Declaration>&) const override;
     void emit(layout::Cursor&) const override;
 };
@@ -258,6 +268,7 @@ struct ArrayType : public virtual Type
     ArrayType(std::shared_ptr<const Type> element_type, size_t length);
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
+    [[nodiscard]] std::string represent() const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
@@ -267,7 +278,7 @@ struct ArrayType : public virtual Type
 
     [[nodiscard]] size_t at(size_t element_index) const;
 
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct ObjectType : public virtual Type
@@ -323,6 +334,7 @@ struct ObjectType : public virtual Type
     explicit ObjectType(Builder&& builder);
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
+    [[nodiscard]] std::string represent() const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
@@ -337,7 +349,7 @@ struct ObjectType : public virtual Type
     [[nodiscard]] Members::const_iterator begin_self() const;
     [[nodiscard]] Members::const_iterator end() const;
 
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 template<typename T>
@@ -346,7 +358,7 @@ struct Instance
     std::shared_ptr<const T> type;
     std::shared_ptr<char[]> address;
 
-    explicit Instance(std::shared_ptr<const T>&& type) : type(std::move(type))
+    explicit Instance(std::shared_ptr<const T> type) : type(std::move(type))
     {
         this->address = std::make_shared<char[]>(this->type->size());
         this->type->construct(this->address.get());
@@ -356,11 +368,6 @@ struct Instance
     {
         this->type->destroy(this->address.get());
     }
-
-    Instance(Instance& other) = delete;
-    Instance(Instance&& other) = delete;
-    Instance& operator=(Instance& other) = delete;
-    Instance& operator=(Instance&& other) = delete;
 
     Reference operator[](const std::string& member_name);
     Reference operator[](size_t element_index);
@@ -402,14 +409,14 @@ using Value = Instance<ValueType>;
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>* instance)
 {
-    instance->type->represent(instance->address, out);
+    instance->type->format(instance->address, out);
     return out;
 }
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>& instance)
 {
-    instance.type->represent(instance.address, out);
+    instance.type->format(instance.address, out);
     return out;
 }
 
@@ -478,7 +485,7 @@ const T& Is<T>::operator()(const Reference& reference) const
 
 template<typename T>
 template<typename U>
-T& Is<T>::operator()(Instance<U>& instance) const
+T& Is<T>::operator()(Instance<const U>& instance) const
 {
     validate(this->origin, instance.type);
     return *reinterpret_cast<T*>(instance.address.get() + this->offset);
@@ -486,17 +493,24 @@ T& Is<T>::operator()(Instance<U>& instance) const
 
 template<typename T>
 template<typename U>
-const T& Is<T>::operator()(const Instance<U>& instance) const
+const T& Is<T>::operator()(const Instance<const U>& instance) const
 {
     validate(this->origin, instance.type);
     return *reinterpret_cast<const T*>(instance.address.get() + this->offset);
 }
 
 template<typename T>
-Reference Accessor::operator()(Instance<T>& instance) const
+Reference Accessor::operator()(Instance<const T>& instance)
 {
     validate(this->origin, instance.type);
     return Reference(instance.address, this->type, instance.address.get() + this->offset);
+}
+
+template<typename T>
+ConstReference Accessor::operator()(const Instance<const T>& instance) const
+{
+    validate(this->origin, instance.type);
+    return ConstReference(instance.address, this->type, instance.address.get() + this->offset);
 }
 
 template<typename T>

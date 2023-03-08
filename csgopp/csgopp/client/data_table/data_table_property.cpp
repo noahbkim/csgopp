@@ -24,6 +24,12 @@ DataTableProperty::DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data)
 {
 }
 
+DataTableProperty::DataTableProperty(CSVCMsg_SendTable_sendprop_t&& data, std::shared_ptr<DataTable> data_table)
+    : Property(std::move(data))
+    , data_table(std::move(data_table))
+{
+}
+
 Property::Kind::T DataTableProperty::kind() const
 {
     return Kind::DATA_TABLE;

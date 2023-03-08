@@ -3,6 +3,11 @@
 namespace object
 {
 
+std::string ValueType::represent() const
+{
+    return std::string(this->info().name());
+}
+
 void ValueType::emit(code::Cursor<code::Declaration>& cursor) const
 {
     cursor.target.type = this->info().name();
@@ -185,6 +190,11 @@ size_t ArrayType::alignment() const
     return this->element_type->alignment();
 }
 
+std::string ArrayType::represent() const
+{
+    return this->element_type->represent() + "[" + std::to_string(this->length) + "]";
+}
+
 void ArrayType::construct(char* address) const
 {
     for (size_t i = 0; i < this->length; ++i)
@@ -227,12 +237,12 @@ size_t ArrayType::at(size_t element_index) const
     return element_index * this->element_size;
 }
 
-void ArrayType::represent(const char* address, std::ostream& out) const
+void ArrayType::format(const char* address, std::ostream& out) const
 {
     out << "[";
     for (size_t i = 0; i + 1 < this->length; ++i)  // Skip last, don't underflow by subtracting one
     {
-        this->element_type->represent(address + this->at(i), out);
+        this->element_type->format(address + this->at(i), out);
         out << ", ";
     }
     out << "]";
@@ -331,6 +341,11 @@ size_t ObjectType::alignment() const
     return this->members.empty() ? 0 : this->members.front().type->alignment();
 }
 
+std::string ObjectType::represent() const
+{
+    return this->name;
+}
+
 void ObjectType::construct(char* address) const
 {
     std::for_each(
@@ -420,14 +435,14 @@ const ObjectType::Member& ObjectType::at(const std::string& member_name) const
     return this->members.end();
 }
 
-void ObjectType::represent(const char* address, std::ostream& out) const
+void ObjectType::format(const char* address, std::ostream& out) const
 {
     out << "{";
     for (size_t i = 0; i < this->members.size(); ++i)
     {
         const Member& member = this->members.at(i);
         out << "\"" << member.name << "\"" << ": ";
-        member.type->represent(address + member.offset, out);
+        member.type->format(address + member.offset, out);
         if (i + 1 != this->members_size)
         {
             out << ", ";
@@ -438,13 +453,13 @@ void ObjectType::represent(const char* address, std::ostream& out) const
 
 std::ostream& operator<<(std::ostream& out, const Reference& reference)
 {
-    reference.type->represent(reference.address(), out);
+    reference.type->format(reference.address(), out);
     return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const ConstReference& reference)
 {
-    reference.type->represent(reference.address(), out);
+    reference.type->format(reference.address(), out);
     return out;
 }
 
