@@ -88,6 +88,26 @@ struct EntityDatum
 // TODO: It would be nice to make these a single allocation
 using ExcludeView = std::pair<std::string_view, std::string_view>;
 
+struct EntityAccessor : public Accessor
+{
+    std::shared_ptr<const DataProperty> property;
+    std::shared_ptr<const PropertyNode> parent;
+
+    EntityAccessor() = default;
+    EntityAccessor(
+        std::shared_ptr<const Type> origin,
+        std::shared_ptr<const Type> type,
+        size_t offset,
+        std::shared_ptr<const DataProperty> property,
+        std::shared_ptr<const PropertyNode> parent
+    )
+        : Accessor(std::move(origin), std::move(type), offset)
+        , property(std::move(property))
+        , parent(std::move(parent))
+    {
+    }
+};
+
 struct EntityType final : public ObjectType
 {
     /// Flattened, reordered members used for updates

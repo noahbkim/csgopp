@@ -29,7 +29,7 @@ add_library(csgopp STATIC
         demo.cpp
         demo.h
         error.h
-)
+        client/server_class.cpp)
 
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(csgopp PRIVATE cxx_std_20)

@@ -19,7 +19,8 @@ using namespace nanobind::literals;
 
 using csgopp::client::Client;
 using csgopp::client::DataTable;
-using csgopp::client::entity::EntityConstReference;
+using csgopp::client::entity::EntityAccessor;
+using csgopp::client::entity::EntityDatum;
 using csgopp::client::entity::EntityConstReference;
 using csgopp::client::entity::EntityType;
 using csgopp::client::Entity;
@@ -76,13 +77,7 @@ struct ServerClassAdapter : public Adapter<const ServerClass>
         return this->self->name;
     }
 
-    static nanobind::class_<ServerClassAdapter> bind(nanobind::module_& module)
-    {
-        return nanobind::class_<ServerClassAdapter>(module, "ServerClass")
-            .def_prop_ro("index", &ServerClassAdapter::index)
-            .def_prop_ro("name", &ServerClassAdapter::name)
-        ;
-    }
+    static nanobind::class_<ServerClassAdapter> bind(nanobind::module_& module);
 };
 
 struct StringTableAdapter : public Adapter<const StringTable>
@@ -153,20 +148,64 @@ struct UserAdapter : public Adapter<const User>
     }
 };
 
-struct EntityTypeAdapter : public Adapter<const EntityType>
-{
-    using Adapter::Adapter;
-
-    static nanobind::class_<EntityTypeAdapter> bind(nanobind::module_& module)
-    {
-        return nanobind::class_<EntityTypeAdapter>(module, "EntityType");
-    }
-};
-
 struct AccessorAdapter
 {
     static nanobind::class_<Accessor> bind(nanobind::module_& module, nanobind::class_<Lens>& base);
 };
+
+struct EntityAccessorAdapter
+{
+    static nanobind::class_<EntityAccessor> bind(nanobind::module_& module, nanobind::class_<Accessor>& base)
+    {
+        return nanobind::class_<EntityAccessor>(module, "EntityAccessor", base)
+        ;
+    }
+};
+
+struct EntityTypeAdapter : public Adapter<const EntityType>
+{
+    using Adapter::Adapter;
+
+    [[nodiscard]] EntityAccessor property(size_t index) const
+    {
+        const EntityDatum& datum = this->self->prioritized.at(index);
+        return EntityAccessor(
+            this->self,
+            datum.type,
+            datum.offset,
+            datum.property,
+            datum.parent
+        );
+    }
+
+    [[nodiscard]] Accessor at_name(const std::string& name) const
+    {
+        return Accessor(this->self)[name];
+    }
+
+    [[nodiscard]] Accessor at_index(size_t index) const
+    {
+        return Accessor(this->self)[index];
+    }
+
+    static nanobind::class_<EntityTypeAdapter> bind(nanobind::module_& module)
+    {
+        return nanobind::class_<EntityTypeAdapter>(module, "EntityType")
+            .def("property", &EntityTypeAdapter::property)
+            .def("__getitem__", &EntityTypeAdapter::at_name)
+            .def("__getitem__", &EntityTypeAdapter::at_index)
+        ;
+    }
+};
+
+nanobind::class_<ServerClassAdapter> ServerClassAdapter::bind(nanobind::module_& module)
+{
+    return nanobind::class_<ServerClassAdapter>(module, "ServerClass")
+        .def("index", &ServerClassAdapter::index)
+        .def("name", &ServerClassAdapter::name)
+        .def("type", [](const ServerClassAdapter* adapter) { return EntityTypeAdapter(adapter->self->type()); })
+        ;
+}
 
 template<typename T = Type>
 struct TypeAdapter : public Adapter<const T>
@@ -302,7 +341,7 @@ struct EntityAdapter : public Adapter<const Entity>
         return this->self->server_class->index;
     }
 
-    [[nodiscard]] EntityConstReference prioritized(size_t index) const
+    [[nodiscard]] EntityConstReference property(size_t index) const
     {
         return this->self->at(index);
     }
@@ -314,7 +353,7 @@ struct EntityAdapter : public Adapter<const Entity>
             .def("id", &EntityAdapter::id)
             .def("server_class", &EntityAdapter::server_class)
             .def("server_class_index", &EntityAdapter::server_class_index)
-            .def("prioritized", &EntityAdapter::prioritized)
+            .def("property", &EntityAdapter::property)
         ;
     }
 };
@@ -369,18 +408,6 @@ struct ClientAdapter : public Client
         while (Client::advance(coded_input_stream));
     }
 };
-
-static inline std::vector<EntityConstReference> bind_indices(
-    const std::shared_ptr<const Entity>& entity,
-    const std::vector<uint16_t>& indices)
-{
-    std::vector<EntityConstReference> fields(indices.size());
-    for (uint16_t index : indices)
-    {
-        fields.emplace_back(entity->at(index));
-    }
-    return fields;
-}
 
 struct ClientAdapterTrampoline final : public ClientAdapter
 {
@@ -531,8 +558,10 @@ NB_MODULE(csgopy, module) {
     GameEventTypeAdapter::bind(module);
     GameEventAdapter::bind(module);
     UserAdapter::bind(module);
-    TypeAdapter<Type>::bind(module, "Type");
     auto lens_class = LensAdapter::bind(module);
+    auto accessor_class = AccessorAdapter::bind(module, lens_class);
+    EntityAccessorAdapter::bind(module, accessor_class);
+    TypeAdapter<Type>::bind(module, "Type");
     auto const_reference_class = ConstReferenceAdapter::bind(module, lens_class);
     EntityConstReferenceAdapter::bind(module, const_reference_class);
     EntityTypeAdapter::bind(module);
