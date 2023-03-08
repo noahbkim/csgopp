@@ -29,63 +29,63 @@ struct BoolType final : public DefaultValueType<bool>, public DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct UnsignedInt32Type final : public DefaultValueType<uint32_t>, public DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct SignedInt32Type final : public DefaultValueType<int32_t>, public DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct FloatType final : public DefaultValueType<float>, public virtual DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct Vector3Type final : public DefaultValueType<Vector3>, public virtual DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct Vector2Type final : public DefaultValueType<Vector2>, public virtual DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct StringType final : public DefaultValueType<std::string>, public virtual DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct UnsignedInt64Type final : public DefaultValueType<uint64_t>, public virtual DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct SignedInt64Type final : public DefaultValueType<int64_t>, public virtual DataType
 {
     void emit(Cursor<Declaration>& cursor) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct DataArrayType final : public ArrayType, public virtual DataType

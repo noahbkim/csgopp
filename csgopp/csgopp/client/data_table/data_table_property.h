@@ -24,10 +24,10 @@ using object::Type;
 
 /// \brief Represents the object described by another data table.
 ///
-/// `DataTable` properties are used to represent nested structs in the entity
+/// `DataTable` properties are used to format nested structs in the entity
 /// data structure. Most of the time, data tables correspond to allocated
 /// `ServerClass` instances, but they can also contain arbitrary nested data
-/// as well as represent separately serialized arrays. These cases have to be
+/// as well as format separately serialized arrays. These cases have to be
 /// accounted for in `DataTableProperty::build()`.
 ///
 /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_send.cpp#L691

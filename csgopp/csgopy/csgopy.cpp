@@ -2,12 +2,14 @@
 #include <utility>
 #include <iostream>
 #include <fstream>
+#include <typeindex>
+#include <absl/container/flat_hash_map.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/trampoline.h>
+#include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
-#include <nanobind/stl/shared_ptr.h>
 
 #include <google/protobuf/io/coded_stream.h>
 
@@ -16,19 +18,29 @@
 using namespace nanobind::literals;
 
 using csgopp::client::Client;
+using csgopp::client::DataTable;
+using csgopp::client::entity::EntityConstReference;
 using csgopp::client::entity::EntityConstReference;
 using csgopp::client::entity::EntityType;
 using csgopp::client::Entity;
-using csgopp::client::ServerClass;
-using csgopp::client::DataTable;
-using csgopp::client::GameEventType;
 using csgopp::client::GameEvent;
+using csgopp::client::GameEventType;
+using csgopp::client::ServerClass;
 using csgopp::client::StringTable;
 using csgopp::client::User;
+using csgopp::common::vector::Vector2;
+using csgopp::common::vector::Vector3;
 using csgopp::demo::Header;
 using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::IstreamInputStream;
+using object::ConstReference;
+using object::Lens;
+using object::IndexError;
+using object::Instance;
+using object::MemberError;
 using object::Type;
+using object::TypeError;
+using object::ValueType;
 
 template<typename T>
 struct Adapter
@@ -36,16 +48,16 @@ struct Adapter
     std::shared_ptr<T> self;
 
     Adapter() = default;
-    explicit Adapter(auto&& self) : self(std::move(self)) {}
+    explicit Adapter(std::shared_ptr<T> self) : self(std::move(self)) {}
 };
 
 struct DataTableAdapter : public Adapter<const DataTable>
 {
     using Adapter::Adapter;
 
-    static void bind(nanobind::module_& module)
+    static nanobind::class_<DataTableAdapter> bind(nanobind::module_& module)
     {
-        nanobind::class_<DataTableAdapter>(module, "DataTable");
+        return nanobind::class_<DataTableAdapter>(module, "DataTable");
     }
 };
 
@@ -53,15 +65,22 @@ struct ServerClassAdapter : public Adapter<const ServerClass>
 {
     using Adapter::Adapter;
 
-    [[nodiscard]] const std::string& name() const
+    [[nodiscard]] const ServerClass::Index index() const
     {
-        return self->name;
+        return this->self->index;
     }
 
-    static void bind(nanobind::module_& module)
+    [[nodiscard]] const std::string& name() const
     {
-        nanobind::class_<ServerClassAdapter>(module, "ServerClass")
-            .def_prop_ro("name", &ServerClassAdapter::name);
+        return this->self->name;
+    }
+
+    static nanobind::class_<ServerClassAdapter> bind(nanobind::module_& module)
+    {
+        return nanobind::class_<ServerClassAdapter>(module, "ServerClass")
+            .def_prop_ro("index", &ServerClassAdapter::index)
+            .def_prop_ro("name", &ServerClassAdapter::name)
+        ;
     }
 };
 
@@ -69,9 +88,9 @@ struct StringTableAdapter : public Adapter<const StringTable>
 {
     using Adapter::Adapter;
 
-    static void bind(nanobind::module_& module)
+    static nanobind::class_<StringTableAdapter> bind(nanobind::module_& module)
     {
-        nanobind::class_<StringTableAdapter>(module, "StringTable");
+        return nanobind::class_<StringTableAdapter>(module, "StringTable");
     }
 };
 
@@ -80,17 +99,17 @@ struct GameEventTypeAdapter : public Adapter<const GameEventType>
 {
     using Adapter::Adapter;
 
-    static void bind(nanobind::module_& module)
+    static nanobind::class_<GameEventTypeAdapter> bind(nanobind::module_& module)
     {
-        nanobind::class_<GameEventTypeAdapter>(module, "GameEventType");
+        return nanobind::class_<GameEventTypeAdapter>(module, "GameEventType");
     }
 };
 
 struct GameEventAdapter
 {
-    static void bind(nanobind::module_& module)
+    static nanobind::class_<GameEvent> bind(nanobind::module_& module)
     {
-        nanobind::class_<GameEvent>(module, "GameEvent");
+        return nanobind::class_<GameEvent>(module, "GameEvent");
     }
 };
 
@@ -114,9 +133,9 @@ struct UserAdapter : public Adapter<const User>
     }
     [[nodiscard]] bool files_downloaded() const { return self->files_downloaded; }
 
-    static void bind(nanobind::module_& module)
+    static nanobind::class_<UserAdapter> bind(nanobind::module_& module)
     {
-        nanobind::class_<UserAdapter>(module, "User")
+        return nanobind::class_<UserAdapter>(module, "User")
             .def_prop_ro("index", &UserAdapter::index)
             .def_prop_ro("version", &UserAdapter::version)
             .def_prop_ro("xuid", &UserAdapter::xuid)
@@ -137,9 +156,115 @@ struct EntityTypeAdapter : public Adapter<const EntityType>
 {
     using Adapter::Adapter;
 
-    static void bind(nanobind::module_& module)
+    static nanobind::class_<EntityTypeAdapter> bind(nanobind::module_& module)
     {
-        nanobind::class_<EntityTypeAdapter>(module, "EntityType");
+        return nanobind::class_<EntityTypeAdapter>(module, "EntityType");
+    }
+};
+
+template<typename T = Type>
+struct TypeAdapter : public Adapter<const T>
+{
+    using Adapter<const T>::Adapter;
+
+    static nanobind::class_<TypeAdapter<T>> bind(nanobind::module_& module, const char* name)
+    {
+        return nanobind::class_<TypeAdapter<T>>(module, name)
+            .def("__repr__", [name](const TypeAdapter<T>* adapter)
+            {
+                return std::string(name) + "<" + adapter->self->represent() + ">";
+            })
+        ;
+    }
+};
+
+struct LensAdapter
+{
+    static nanobind::class_<Lens> bind(nanobind::module_& module)
+    {
+        return nanobind::class_<Lens>(module, "Lens")
+            .def("type", [](const Lens* self) { return TypeAdapter<Type>(self->type); })
+            .def("offset", [](const Lens* self) { return self->offset; })
+            .def("is_equal", &Lens::is_equal)
+            .def("is_subset_of", &Lens::is_subset_of)
+            .def("is_strict_subset_of", &Lens::is_strict_subset_of)
+            .def("is_superset_of", &Lens::is_superset_of)
+            .def("is_strict_superset_of", &Lens::is_strict_superset_of)
+        ;
+    }
+};
+
+template<typename T>
+nanobind::object cast(const char* address)
+{
+    return nanobind::cast(*reinterpret_cast<const T*>(address));
+}
+
+struct ConstReferenceAdapter
+{
+    using Caster = nanobind::object (*)(const char*);
+    using CasterMap = absl::flat_hash_map<const std::type_info*, Caster>;
+    static CasterMap casters;
+
+    static nanobind::class_<ConstReference> bind(nanobind::module_& module, nanobind::class_<Lens>& base)
+    {
+        return nanobind::class_<ConstReference>(module, "ConstReference", base)
+            .def("__getitem__", [](const ConstReference* self, const std::string& name) { return self->operator[](name); })
+            .def("__getitem__", [](const ConstReference* self, size_t index) { return self->operator[](index); })
+            .def("type", [](const ConstReference* self) { return TypeAdapter<Type>(self->type); })
+            .def("value", [](const ConstReference* self)
+            {
+                auto* value_type = dynamic_cast<const ValueType*>(self->type.get());
+                if (value_type != nullptr)
+                {
+                    Caster caster = ConstReferenceAdapter::casters[&value_type->info()];
+                    return caster(self->address());
+                }
+                else
+                {
+                    throw TypeError("cast is only available for values!");
+                }
+            })
+        ;
+    }
+};
+
+ConstReferenceAdapter::CasterMap ConstReferenceAdapter::casters{
+    {&typeid(bool), &cast<bool>},
+    {&typeid(uint32_t), &cast<uint32_t>},
+    {&typeid(int32_t), &cast<int32_t>},
+    {&typeid(float), &cast<float>},
+    {&typeid(Vector2), &cast<Vector2>},
+    {&typeid(Vector3), &cast<Vector3>},
+    {&typeid(std::string), &cast<std::string>},
+    {&typeid(uint64_t), &cast<uint64_t>},
+    {&typeid(int64_t), &cast<int64_t>},
+};
+
+struct EntityConstReferenceAdapter
+{
+    static nanobind::class_<EntityConstReference> bind(nanobind::module_& module, nanobind::class_<ConstReference>& base)
+    {
+        return nanobind::class_<EntityConstReference>(module, "EntityConstReference", base);
+    }
+};
+
+template<typename T>
+struct InstanceAdapter : public Adapter<const Instance<const T>>
+{
+    using Adapter<const Instance<const T>>::Adapter;
+
+    [[nodiscard]] TypeAdapter<const T> type() const { return TypeAdapter<const T>(this->self->type); }
+    [[nodiscard]] ConstReference get_name(const std::string& name) const { return this->self->operator[](name); }
+    [[nodiscard]] ConstReference get_index(size_t index) const { return this->self->operator[](index); }
+
+    static nanobind::class_<InstanceAdapter<T>> bind(nanobind::module_& module, const char* name)
+    {
+        return nanobind::class_<InstanceAdapter<T>>(module, name)
+            .def("type", &InstanceAdapter::type)
+            .def("__getitem__", &InstanceAdapter::get_name)
+            .def("__getitem__", &InstanceAdapter::get_index)
+        ;
     }
 };
 
@@ -152,13 +277,30 @@ struct EntityAdapter : public Adapter<const Entity>
         return this->self->id;
     }
 
-    static void bind(nanobind::module_& module)
+    [[nodiscard]] ServerClassAdapter server_class() const
     {
-        nanobind::class_<EntityAdapter>(module, "Entity")
-            .def_prop_ro("id", &EntityAdapter::id)
-//        .def_prop_ro("server_class", [](const Entity* entity) { return entity->server_class; })
-            .def_prop_ro("server_class_index", [](const Entity* entity) { return entity->server_class->index; })
-            ;
+        return ServerClassAdapter(this->self->server_class);
+    }
+
+    [[nodiscard]] ServerClass::Index server_class_index() const
+    {
+        return this->self->server_class->index;
+    }
+
+    [[nodiscard]] EntityConstReference prioritized(size_t index) const
+    {
+        return this->self->at(index);
+    }
+
+    static nanobind::class_<EntityAdapter> bind(nanobind::module_& module)
+    {
+        auto base = InstanceAdapter<EntityType>::bind(module, "EntityTypeInstance");
+        return nanobind::class_<EntityAdapter>(module, "Entity", base)
+            .def("id", &EntityAdapter::id)
+            .def("server_class", &EntityAdapter::server_class)
+            .def("server_class_index", &EntityAdapter::server_class_index)
+            .def("prioritized", &EntityAdapter::prioritized)
+        ;
     }
 };
 
@@ -193,8 +335,8 @@ struct ClientAdapter : public Client
     [[maybe_unused]] void on_string_table_update(const StringTableAdapter&) {}
     [[maybe_unused]] void before_entity_creation(Entity::Id, const ServerClassAdapter&) {}
     [[maybe_unused]] void on_entity_creation(const UserAdapter&) {}
-    [[maybe_unused]] void before_entity_update(const EntityAdapter&, const std::vector<uint16_t>&) {}
-    [[maybe_unused]] void on_entity_update(const EntityAdapter&, const std::vector<uint16_t>&) {}
+    [[maybe_unused]] void before_entity_update(const EntityAdapter&, const std::vector<EntityConstReference>&) {}
+    [[maybe_unused]] void on_entity_update(const EntityAdapter&, const std::vector<EntityConstReference>&) {}
     [[maybe_unused]] void before_entity_deletion(const EntityAdapter&) {}
     [[maybe_unused]] void on_entity_deletion(const EntityAdapter&) {}
     [[maybe_unused]] void before_user_update(const UserAdapter&) {}
@@ -212,6 +354,18 @@ struct ClientAdapter : public Client
         while (Client::advance(coded_input_stream));
     }
 };
+
+static inline std::vector<EntityConstReference> bind_indices(
+    const std::shared_ptr<const Entity>& entity,
+    const std::vector<uint16_t>& indices)
+{
+    std::vector<EntityConstReference> fields(indices.size());
+    for (uint16_t index : indices)
+    {
+        fields.emplace_back(entity->at(index));
+    }
+    return fields;
+}
 
 struct ClientAdapterTrampoline final : public ClientAdapter
 {
@@ -289,12 +443,12 @@ struct ClientAdapterTrampoline final : public ClientAdapter
 
     void before_entity_update(const std::shared_ptr<const Entity>& entity, const std::vector<uint16_t>& indices) override
     {
-        NB_OVERRIDE_PURE_ONLY_VOID(before_entity_update, EntityAdapter(entity), indices);
+        NB_OVERRIDE_PURE_ONLY_VOID(before_entity_update, EntityAdapter(entity), bind_indices(entity, indices));
     }
 
     void on_entity_update(const std::shared_ptr<const Entity>& entity, const std::vector<uint16_t>& indices) override
     {
-        NB_OVERRIDE_PURE_ONLY_VOID(on_entity_update, EntityAdapter(entity), indices);
+        NB_OVERRIDE_PURE_ONLY_VOID(on_entity_update, EntityAdapter(entity), bind_indices(entity, indices));
     }
 
     void before_entity_deletion(const std::shared_ptr<const Entity>& entity) override
@@ -350,14 +504,35 @@ struct ClientAdapterTrampoline final : public ClientAdapter
 
 NB_MODULE(csgopy, module) {
     nanobind::exception<csgopp::client::GameError>(module, "GameError");
+
+    auto object_error = nanobind::exception<object::Error>(module, "ObjectError");
+    nanobind::exception<object::MemberError>(module, "ObjectMemberError", object_error);
+    nanobind::exception<object::IndexError>(module, "ObjectIndexError", object_error);
+    nanobind::exception<object::TypeError>(module, "ObjectTypeError", object_error);
+
     DataTableAdapter::bind(module);
     ServerClassAdapter::bind(module);
     StringTableAdapter::bind(module);
     GameEventTypeAdapter::bind(module);
     GameEventAdapter::bind(module);
     UserAdapter::bind(module);
+    TypeAdapter<Type>::bind(module, "Type");
+    auto lens_class = LensAdapter::bind(module);
+    auto const_reference_class = ConstReferenceAdapter::bind(module, lens_class);
+    EntityConstReferenceAdapter::bind(module, const_reference_class);
     EntityTypeAdapter::bind(module);
     EntityAdapter::bind(module);
+
+    nanobind::class_<Vector2>(module, "Vector2")
+        .def_prop_ro("x", [](const Vector2* self) { return self->x; })
+        .def_prop_ro("y", [](const Vector2* self) { return self->y; })
+    ;
+
+    nanobind::class_<Vector3>(module, "Vector3")
+        .def_prop_ro("x", [](const Vector3* self) { return self->x; })
+        .def_prop_ro("y", [](const Vector3* self) { return self->y; })
+        .def_prop_ro("z", [](const Vector3* self) { return self->z; })
+    ;
 
     nanobind::class_<Header>(module, "Header")
         .def_prop_ro("magic", [](const Header* self) { return self->magic; })
@@ -374,7 +549,7 @@ NB_MODULE(csgopy, module) {
     ;
 
     // We need to do this for ClientAdapter base class rather than add template argument because it gets confused
-    auto client = nanobind::class_<Client>(module, "_Client")
+    auto client = nanobind::class_<Client>(module, "BaseClient")
         .def_prop_ro("header", &ClientAdapter::header)
         .def("cursor", &ClientAdapter::cursor)
         .def("tick", &ClientAdapter::tick)

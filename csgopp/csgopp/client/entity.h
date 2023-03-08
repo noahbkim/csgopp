@@ -101,6 +101,7 @@ struct EntityConstReference : public ConstReference
     std::shared_ptr<const DataProperty> property;
     std::shared_ptr<const PropertyNode> parent;
 
+    EntityConstReference() = default;
     EntityConstReference(
         std::shared_ptr<const char[]> origin,
         std::shared_ptr<const Type> type,

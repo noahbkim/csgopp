@@ -51,7 +51,7 @@ using Exclude = std::pair<std::string, std::string>;
 ///
 /// Data tables are a core part of the source engine's data low-latency data
 /// synchronization framework. Specifically, data tables flexibly and
-/// efficiently represent C-like data structures; they are used to statically
+/// efficiently format C-like data structures; they are used to statically
 /// specify the properties of `Entity` objects used over the course of a game
 /// or demo.
 ///
@@ -62,7 +62,7 @@ using Exclude = std::pair<std::string, std::string>;
 ///   - Data table properties describe a member of the represented structure:
 ///     each property has its own name, a type (int, string, array of
 ///     properties, etc.) and some metadata regarding values and serialization.
-///     Since different properties have fairly unique behavior, we represent
+///     Since different properties have fairly unique behavior, we format
 ///     them with the different subclasses of the abstract `Property` class.
 ///   - Excludes mark data table properties that are unused by a given server
 ///     class/entity. Entities may wish to nested properties, so excludes are

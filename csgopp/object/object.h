@@ -135,6 +135,7 @@ struct Type
 
     [[nodiscard]] virtual size_t size() const = 0;
     [[nodiscard]] virtual size_t alignment() const = 0;
+    [[nodiscard]] virtual std::string represent() const = 0;
 
     virtual void construct(char* address) const = 0;
     virtual void destroy(char* address) const = 0;
@@ -142,7 +143,7 @@ struct Type
     // TODO: these should just be NotImplemented if there's no reasonable default
     virtual void emit(code::Cursor<code::Declaration>& cursor) const = 0;
     virtual void emit(layout::Cursor& cursor) const = 0;
-    virtual void represent(const char* address, std::ostream& out) const = 0;
+    virtual void format(const char* address, std::ostream& out) const = 0;
 };
 
 template<typename T>
@@ -198,6 +199,7 @@ struct ConstReference : public Lens
 {
     std::shared_ptr<const char[]> origin;
 
+    ConstReference() = default;
     ConstReference(
         std::shared_ptr<const char[]> origin,
         std::shared_ptr<const Type> type,
@@ -232,6 +234,9 @@ struct ConstReference : public Lens
 struct ValueType : public virtual Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
+
+    [[nodiscard]] std::string represent() const override;
+
     void emit(code::Cursor<code::Declaration>&) const override;
     void emit(layout::Cursor&) const override;
 };
@@ -258,6 +263,7 @@ struct ArrayType : public virtual Type
     ArrayType(std::shared_ptr<const Type> element_type, size_t length);
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
+    [[nodiscard]] std::string represent() const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
@@ -267,7 +273,7 @@ struct ArrayType : public virtual Type
 
     [[nodiscard]] size_t at(size_t element_index) const;
 
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 struct ObjectType : public virtual Type
@@ -323,6 +329,7 @@ struct ObjectType : public virtual Type
     explicit ObjectType(Builder&& builder);
     [[nodiscard]] size_t size() const override;
     [[nodiscard]] size_t alignment() const override;
+    [[nodiscard]] std::string represent() const override;
 
     void construct(char* address) const override;
     void destroy(char* address) const override;
@@ -337,7 +344,7 @@ struct ObjectType : public virtual Type
     [[nodiscard]] Members::const_iterator begin_self() const;
     [[nodiscard]] Members::const_iterator end() const;
 
-    void represent(const char* address, std::ostream& out) const override;
+    void format(const char* address, std::ostream& out) const override;
 };
 
 template<typename T>
@@ -397,14 +404,14 @@ using Value = Instance<ValueType>;
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>* instance)
 {
-    instance->type->represent(instance->address, out);
+    instance->type->format(instance->address, out);
     return out;
 }
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Instance<T>& instance)
 {
-    instance.type->represent(instance.address, out);
+    instance.type->format(instance.address, out);
     return out;
 }
 
