@@ -13,7 +13,7 @@ set(NB_SHARED OFF CACHE INTERNAL "")
 add_subdirectory(libraries/nanobind)
 
 # Main subdirectories
-add_subdirectory(csgopp/object)
+add_subdirectory(object)
 add_subdirectory(csgopp/messages/)
 add_subdirectory(csgopp/csgopp/)
 add_subdirectory(csgopp/csgopy)
@@ -23,4 +23,3 @@ add_subdirectory(csgopp/docs)
 # Test subdirectories
 add_subdirectory(tests/csgopp/)
 add_subdirectory(tests/object/)
-
