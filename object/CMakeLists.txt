@@ -9,3 +9,5 @@ target_compile_features(object PRIVATE cxx_std_20)
 
 target_include_directories(object PUBLIC include)
 target_link_libraries(object PUBLIC CONAN_PKG::abseil)
+
+add_subdirectory(tests)
