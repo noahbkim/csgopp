@@ -112,6 +112,12 @@ struct ObjectType : public Type
             return this->_size;
         }
 
+        template<typename T = ObjectType>
+        std::shared_ptr<T> build()
+        {
+            return std::make_shared<T>(std::move(*this));
+        }
+
     private:
         size_t _size{0};
     };
@@ -123,6 +129,7 @@ struct ObjectType : public Type
 
     ObjectType() = default;
     explicit ObjectType(Builder&& builder);
+    explicit ObjectType(const Builder& base);
 
     [[nodiscard]] size_t size() const override
     {

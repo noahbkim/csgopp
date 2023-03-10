@@ -136,6 +136,15 @@ ObjectType::ObjectType(Builder&& builder)
 {
 }
 
+ObjectType::ObjectType(const Builder& builder)
+    : name(builder.name)
+    , lookup(builder.lookup)
+    , members(builder.members)
+    , base(builder.base)
+    , _size(builder.size())
+{
+}
+
 void ObjectType::construct(char* address) const
 {
     for (const Member& member : this->members)

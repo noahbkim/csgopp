@@ -2,6 +2,7 @@
 
 #include <memory>
 #include "type.h"
+#include "lens.h"
 #include "magic.h"
 
 namespace object
@@ -12,11 +13,20 @@ struct Handle
 {
     std::shared_ptr<T> self;
 
-    // Forward pointer accessors
-    T& operator*() { return this->self->operator*(); }
-    const T& operator*() const { return this->self->operator*(); }
-    T* operator->() { return this->self->operator->(); }
-    const T* operator->() const { return this->self->operator->(); }
+    Handle() = default;
+    Handle(auto& self) : self(self) {}
+    Handle(auto&& self) : self(std::move(self)) {}
+
+    // Forward pointer accessors, is this unintuitive?
+    std::shared_ptr<T>& operator*() { return this->self; }
+    const std::shared_ptr<T>& operator*() const { return this->self; }
+    T* operator->() { return this->self.operator->(); }
+    const T* operator->() const { return this->self.operator->(); }
+
+    // Allow conversion into shared_ptr
+    operator std::shared_ptr<T>() const { return this->self; }
+    operator std::shared_ptr<T>&() { return this->self; }
+    operator const std::shared_ptr<T>&() const { return this->self; }
 
     // Type handle
     auto operator[](auto argument) const

@@ -3,6 +3,7 @@
 #include <codecvt>
 
 #include <object/object.h>
+#include <object/lens.h>
 
 using namespace object;
 
@@ -24,7 +25,7 @@ TEST(Object, integration)
     entity_builder.member("id", UINT32);
     entity_builder.member("name", STRING);
     entity_builder.member("position", VECTOR);
-    std::shared_ptr<ObjectType> entity_T = std::make_shared<ObjectType>(std::move(entity_builder));
+    Handle<const ObjectType> entity_type(entity_builder.build());
 
     struct Entity
     {
@@ -33,27 +34,27 @@ TEST(Object, integration)
         Vector3 position;
     };
 
-    EXPECT_EQ(entity_T->at("id").offset, offsetof(Entity, id));
-    EXPECT_EQ(entity_T->at("name").offset, offsetof(Entity, name));
-    EXPECT_EQ(entity_T->at("position").offset, offsetof(Entity, position));
-    EXPECT_EQ(entity_T->size(), sizeof(Entity));
+    EXPECT_EQ(entity_type->at("id").offset, offsetof(Entity, id));
+    EXPECT_EQ(entity_type->at("name").offset, offsetof(Entity, name));
+    EXPECT_EQ(entity_type->at("position").offset, offsetof(Entity, position));
+    EXPECT_EQ(entity_type->size(), sizeof(Entity));
 
-    auto entity_array_T = std::make_shared<ArrayType>(entity_T, 2);
-    EXPECT_EQ(entity_array_T->size(), sizeof(Entity) * 2);
+    Handle<const ArrayType> entity_array_type(std::make_shared<ArrayType>(*entity_type, 2));
+    EXPECT_EQ(entity_array_type->size(), sizeof(Entity) * 2);
 
     ObjectType::Builder engine_builder;
     engine_builder.member("alive", BOOL);
     engine_builder.member("flags", UINT32);
-    engine_builder.member("entities", entity_array_T);
-    auto engine_T = std::make_shared<ObjectType>(std::move(engine_builder));
+    engine_builder.member("entities", *entity_array_type);
+    Handle<const ObjectType> engine_type(engine_builder.build());
 
-    EXPECT_TRUE(Accessor(engine_T).is_equal(Accessor(engine_T)));
-    EXPECT_TRUE(Accessor(engine_T).is_subset_of(Accessor(engine_T)));
-    EXPECT_TRUE(Accessor(engine_T).is_superset_of(Accessor(engine_T)));
-    EXPECT_TRUE(Accessor(engine_T)["alive"].is_subset_of(Accessor(engine_T)));
-    EXPECT_TRUE(Accessor(engine_T)["alive"].is_strict_subset_of(Accessor(engine_T)));
-    EXPECT_TRUE(Accessor(engine_T).is_superset_of(Accessor(engine_T)["alive"]));
-    EXPECT_TRUE(Accessor(engine_T).is_strict_superset_of(Accessor(engine_T)["alive"]));
+    EXPECT_TRUE(Accessor(*engine_type) == (Accessor(*engine_type)));
+    EXPECT_TRUE(Accessor(*engine_type) <= (Accessor(*engine_type)));
+    EXPECT_TRUE(Accessor(*engine_type) >= (Accessor(*engine_type)));
+    EXPECT_TRUE(Accessor(*engine_type)["alive"] <= (Accessor(*engine_type)));
+    EXPECT_TRUE(Accessor(*engine_type)["alive"] > (Accessor(*engine_type)));
+    EXPECT_TRUE(Accessor(*engine_type) >= (Accessor(*engine_type)["alive"]));
+    EXPECT_TRUE(Accessor(*engine_type) > (Accessor(*engine_type)["alive"]));
 
     struct Engine
     {
@@ -62,7 +63,7 @@ TEST(Object, integration)
         Entity entities[2];
     };
 
-    Object e(engine_T);
+    Object e(engine_type);
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
     e["entities"][0]["id"].is<uint32_t>() = 1;
@@ -79,14 +80,14 @@ TEST(Object, integration)
     EXPECT_THROW(e["hello"], MemberError);
     EXPECT_THROW(e["entities"][2], IndexError);
 
-    Is<bool> alive = Accessor(engine_T)["alive"].is<bool>();
+    Is<bool> alive = Accessor(engine_type)["alive"].is<bool>();
     EXPECT_EQ(alive(e), true);
     EXPECT_EQ(e[alive], true);
-    Is<std::string> entities_1_name = Accessor(engine_T)["entities"][1]["name"].is<std::string>();
+    Is<std::string> entities_1_name = Accessor(engine_type)["entities"][1]["name"].is<std::string>();
     EXPECT_EQ(entities_1_name(e), "dylan");
     EXPECT_EQ(e[entities_1_name], "dylan");
-    EXPECT_THROW(Accessor a = Accessor(engine_T)["hello"], MemberError);
-    EXPECT_THROW(Accessor b = Accessor(engine_T)["entities"][2], IndexError);
+    EXPECT_THROW(Accessor a = Accessor(engine_type)["hello"], MemberError);
+    EXPECT_THROW(Accessor b = Accessor(engine_type)["entities"][2], IndexError);
 
     std::shared_ptr<const Type> entities_array_T = e["entities"].type;
     As<Entity> first_entity = Accessor(entities_array_T)[0].as<Entity>();
@@ -152,7 +153,7 @@ TEST(Object, type_lifetime)
     std::weak_ptr<ValueType> value_T_check;
     EXPECT_EQ(value_T_check.use_count(), 0);
     {
-        auto value_T = std::make_shared<TestDefaultValueType<uint32_t>>();
+        auto value_T = std::make_shared<TrivialValueType<uint32_t>>();
         EXPECT_EQ(value_T.use_count(), 1);
         value_T_check = value_T;
         EXPECT_EQ(value_T.use_count(), 1);
@@ -166,7 +167,7 @@ TEST(Object, instance_lifetime)
     std::weak_ptr<ValueType> value_T_check;
     EXPECT_EQ(value_T_check.use_count(), 0);
     {
-        auto value_T = std::make_shared<TestDefaultValueType<uint32_t>>();
+        auto value_T = std::make_shared<TrivialValueType<uint32_t>>();
         EXPECT_EQ(value_T.use_count(), 1);  // value_T | value_T.self
         value_T_check = value_T;
         EXPECT_EQ(value_T.use_count(), 1);  // value_T | value_T.self, value_T_check
@@ -193,7 +194,7 @@ TEST(Object, reference_lifetime)
         Reference reference;
         {
             // Has to be anonymous
-            std::shared_ptr<ValueType> value_T = std::make_shared<TestDefaultValueType<uint32_t>>();
+            std::shared_ptr<ValueType> value_T = std::make_shared<TrivialValueType<uint32_t>>();
             value_type_check = value_T;
             EXPECT_EQ(value_T.use_count(), 1);
             EXPECT_EQ(value_type_check.use_count(), 1);
@@ -228,9 +229,9 @@ template<typename T, typename U, typename V>
 void test_alignment()
 {
     ObjectType::Builder builder;
-    builder.member("first", std::make_shared<TestDefaultValueType<T>>());
-    builder.member("second", std::make_shared<TestDefaultValueType<U>>());
-    builder.member("third", std::make_shared<TestDefaultValueType<V>>());
+    builder.member("first", std::make_shared<TrivialValueType<T>>());
+    builder.member("second", std::make_shared<TrivialValueType<U>>());
+    builder.member("third", std::make_shared<TrivialValueType<V>>());
     ObjectType tripe_T(std::move(builder));
     using Actual = Triple<T, U, V>;
     ASSERT_EQ(tripe_T.at("first").offset, offsetof(Actual, first));
