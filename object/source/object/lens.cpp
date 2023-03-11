@@ -4,31 +4,27 @@
 namespace object
 {
 
-View View::operator[](const std::string& name) const
+View at(const Type* type, const std::string& name, size_t offset)
 {
-    auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
-    if (object_type != nullptr)
+    auto* object_type = dynamic_cast<const ObjectType*>(type);
+    if (object_type == nullptr)
     {
-        const ObjectType::Member& member = object_type->at(name);
-        return View(member.type, this->offset + member.offset);
+        throw TypeError("Can only access attributes on objects, not " + type->represent());
     }
-    else
-    {
-        throw TypeError("Can only access attributes on objects, not " + this->type->represent());
-    }
+
+    const ObjectType::Member& member = object_type->at(name);
+    return View(member.type, offset + member.offset);
 }
 
-View View::operator[](size_t index) const
+View at(const Type* type, size_t index, size_t offset)
 {
-    auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
-    if (array_type != nullptr)
+    auto* array_type = dynamic_cast<const ArrayType*>(type);
+    if (array_type == nullptr)
     {
-        return View(array_type->element, this->offset + array_type->at(index));
+        throw TypeError("Can only index arrays, not " + type->represent());
     }
-    else
-    {
-        throw TypeError("Can only index arrays, not " + this->type->represent());
-    }
+
+    return View(array_type->element, offset + array_type->at(index));
 }
 
 }

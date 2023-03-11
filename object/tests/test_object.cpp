@@ -64,6 +64,10 @@ TEST(Object, integration)
     EXPECT_EQ(engine_type->size(), sizeof(Engine));
 
     Object e(engine_type);
+    EXPECT_EQ(e["alive"].offset, 0);
+    EXPECT_EQ(e["flags"].offset, 4);
+    EXPECT_EQ(&e["alive"].is<bool>(), (bool*)e.data.get());
+    EXPECT_EQ(&e["flags"].is<uint32_t>(), (uint32_t*)(e.data.get() + 4));
     e["alive"].is<bool>() = true;
     e["flags"].is<uint32_t>() = 0xFF00FF00;
     e["entities"][0]["id"].is<uint32_t>() = 1;
@@ -93,7 +97,7 @@ TEST(Object, integration)
 //    As<Entity> first_entity = Accessor(entities_array_T)[0].as<Entity>();
 //    ASSERT_EQ(e["entities"][first_entity]->name, "noah");
 
-    Engine* c = Reference(e).as<Engine>();
+    Engine* c = e.as<Engine>();
     EXPECT_EQ(c->alive, true);
     EXPECT_EQ(c->flags, 0xFF00FF00);
     EXPECT_EQ(c->entities[0].id, 1);
@@ -150,39 +154,39 @@ TEST(Object, inherit_simple)
 
 TEST(Object, type_lifetime)
 {
-    std::weak_ptr<ValueType> value_T_check;
-    EXPECT_EQ(value_T_check.use_count(), 0);
+    std::weak_ptr<ValueType> value_type_check;
+    EXPECT_EQ(value_type_check.use_count(), 0);
     {
-        auto value_T = std::make_shared<TrivialValueType<uint32_t>>();
-        EXPECT_EQ(value_T.use_count(), 1);
-        value_T_check = value_T;
-        EXPECT_EQ(value_T.use_count(), 1);
-        EXPECT_EQ(value_T_check.use_count(), 1);
+        auto value_type = std::make_shared<TrivialValueType<uint32_t>>();
+        EXPECT_EQ(value_type.use_count(), 1);
+        value_type_check = value_type;
+        EXPECT_EQ(value_type.use_count(), 1);
+        EXPECT_EQ(value_type_check.use_count(), 1);
     }
-    EXPECT_TRUE(value_T_check.expired());
+    EXPECT_TRUE(value_type_check.expired());
 }
 
 TEST(Object, instance_lifetime)
 {
-    std::weak_ptr<ValueType> value_T_check;
-    EXPECT_EQ(value_T_check.use_count(), 0);
+    std::weak_ptr<ValueType> value_type_check;
+    EXPECT_EQ(value_type_check.use_count(), 0);
     {
-        auto value_T = std::make_shared<TrivialValueType<uint32_t>>();
-        EXPECT_EQ(value_T.use_count(), 1);  // value_T | value_T.self
-        value_T_check = value_T;
-        EXPECT_EQ(value_T.use_count(), 1);  // value_T | value_T.self, value_T_check
-        EXPECT_EQ(value_T_check.use_count(), 1);
+        auto value_type = std::make_shared<TrivialValueType<uint32_t>>();
+        EXPECT_EQ(value_type.use_count(), 1);  // value_T | value_T.self
+        value_type_check = value_type;
+        EXPECT_EQ(value_type.use_count(), 1);  // value_T | value_T.self, value_T_check
+        EXPECT_EQ(value_type_check.use_count(), 1);
 
         {
-            Value value(value_T);
-            EXPECT_EQ(value_T.use_count(), 2);  // value_T, value.type | value_T.self, value_T_check
-            EXPECT_EQ(value_T_check.use_count(), 2);
+            Value value(value_type);
+            EXPECT_EQ(value_type.use_count(), 2);  // value_T, value.type | value_T.self, value_T_check
+            EXPECT_EQ(value_type_check.use_count(), 2);
         }
 
-        EXPECT_EQ(value_T.use_count(), 1);  // value_T  // <-
-        EXPECT_EQ(value_T_check.use_count(), 1);  // <-
+        EXPECT_EQ(value_type.use_count(), 1);  // value_T  // <-
+        EXPECT_EQ(value_type_check.use_count(), 1);  // <-
     }
-    EXPECT_TRUE(value_T_check.expired());  // <-
+    EXPECT_TRUE(value_type_check.expired());  // <-
 }
 
 TEST(Object, reference_lifetime)
@@ -203,8 +207,8 @@ TEST(Object, reference_lifetime)
             EXPECT_EQ(value_type.use_count(), 2);
             EXPECT_EQ(value_type_check.use_count(), 2);
 
-            Reference(value).is<uint32_t>() = 69;
-            reference = Reference(value);
+            value.is<uint32_t>() = 69;
+            reference = value.view();
             ASSERT_EQ(reference.is<uint32_t>(), 69);
         }
 
@@ -232,11 +236,11 @@ void test_alignment()
     builder.member("first", std::make_shared<TrivialValueType<T>>());
     builder.member("second", std::make_shared<TrivialValueType<U>>());
     builder.member("third", std::make_shared<TrivialValueType<V>>());
-    ObjectType tripe_T(std::move(builder));
+    ObjectType tripe_type(std::move(builder));
     using Actual = Triple<T, U, V>;
-    ASSERT_EQ(tripe_T.at("first").offset, offsetof(Actual, first));
-    ASSERT_EQ(tripe_T.at("second").offset, offsetof(Actual, second));
-    ASSERT_EQ(tripe_T.at("third").offset, offsetof(Actual, third));
+    ASSERT_EQ(tripe_type.at("first").offset, offsetof(Actual, first));
+    ASSERT_EQ(tripe_type.at("second").offset, offsetof(Actual, second));
+    ASSERT_EQ(tripe_type.at("third").offset, offsetof(Actual, third));
 }
 
 #define TRIPLE(T, U, V) Triple<T, U, V>

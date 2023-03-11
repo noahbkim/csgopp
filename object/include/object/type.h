@@ -143,11 +143,7 @@ struct ObjectType : public Type
     explicit ObjectType(Builder&& builder);
     explicit ObjectType(const Builder& base);
 
-    [[nodiscard]] size_t size() const override
-    {
-        return this->_size;
-    }
-
+    [[nodiscard]] size_t size() const override { return this->_size; }
     [[nodiscard]] size_t alignment() const override
     {
         return this->members.empty() ? 0 : this->members.front().type->alignment();
@@ -156,10 +152,7 @@ struct ObjectType : public Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    [[nodiscard]] std::string represent() const override
-    {
-        return this->name;
-    }
+    [[nodiscard]] std::string represent() const override { return this->name; }
 
     [[nodiscard]] const Member& at(const std::string& name) const;
 
