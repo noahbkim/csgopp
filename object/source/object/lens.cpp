@@ -1,30 +1,39 @@
-#include "object/lens.h"
 #include "object/error.h"
+#include "object/lens.h"
+#include "object/reference.h"
+#include "object/instance.h"
 
 namespace object
 {
 
-View at(const Type* type, const std::string& name, size_t offset)
+template<typename T>
+static void validate(const Instance<T>* instance, const Type* origin)
 {
-    auto* object_type = dynamic_cast<const ObjectType*>(type);
-    if (object_type == nullptr)
+    if (instance->type != origin)
     {
-        throw TypeError("Can only access attributes on objects, not " + type->represent());
+        throw TypeError(
+            concatenate(
+                "Cannot use lens with origin ",
+                origin->represent(),
+                " on instance of type ",
+                instance->type->represent()
+            )
+        );
     }
-
-    const ObjectType::Member& member = object_type->at(name);
-    return View(member.type, offset + member.offset);
 }
 
-View at(const Type* type, size_t index, size_t offset)
+template<typename T>
+Reference Lens::operator()(std::shared_ptr<Instance<T>> instance)
 {
-    auto* array_type = dynamic_cast<const ArrayType*>(type);
-    if (array_type == nullptr)
-    {
-        throw TypeError("Can only index arrays, not " + type->represent());
-    }
+    validate(instance.get(), this->type.get());
+    return Reference(this->origin, instance->data, this->type, this->offset);
+}
 
-    return View(array_type->element, offset + array_type->at(index));
+template<typename T>
+ConstantReference Lens::operator()(std::shared_ptr<const Instance<T>> instance)
+{
+    validate(instance.get(), this->type.get());
+    return ConstantReference(this->origin, instance->data, this->type, this->offset);
 }
 
 }

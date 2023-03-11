@@ -1,6 +1,7 @@
 add_library(object STATIC
         source/object/type.cpp
         source/object/lens.cpp
+        source/object/view.cpp
         )
 
 set_target_properties(object PROPERTIES POSITION_INDEPENDENT_CODE ON)
