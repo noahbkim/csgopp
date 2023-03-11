@@ -3,7 +3,7 @@
 #include <memory>
 #include <string_view>
 #include "type.h"
-#include "instance.h"
+#include "magic.h"
 
 namespace object
 {
@@ -22,78 +22,124 @@ struct View
     [[nodiscard]] size_t size() const { return this->type->size(); }
     [[nodiscard]] size_t bound() const { return this->offset + this->type->size(); }
 
-    bool operator==(const View& other) const { return this->type == other.type && this->offset == other.offset; }
-    bool operator!=(const View& other) const { return !(*this == other); }
-    bool operator>(const View& other) const { return this->offset <= other.offset && other.bound() < this->bound(); }
-    bool operator>=(const View& other) const { return *this == other || (*this) > other; }
-    bool operator<(const View& other) const { return other.offset <= this->offset && this->bound() < other.bound(); }
-    bool operator<=(const View& other) const { return *this == other || (*this) < other; }
+    View operator[](const std::string& name) const;
+    View operator[](size_t index) const;
+
+    inline bool operator==(const View& v) const { return this->type == v.type && this->offset == v.offset; }
+    inline bool operator!=(const View& v) const { return !(*this == v); }
+    inline bool operator>(const View& v) const { return this->offset <= v.offset && v.bound() < this->bound(); }
+    inline bool operator>=(const View& v) const { return *this == v || (*this) > v; }
+    inline bool operator<(const View& v) const { return v.offset <= this->offset && this->bound() < v.bound(); }
+    inline bool operator<=(const View& v) const { return *this == v || (*this) < v; }
 };
 
-namespace lens
-{
-
-template<typename T>
-inline bool compatible(const T* t, const T* u) { return t == u; }
-
-template<typename T, typename U>
-inline bool compatible(const T* t, const U* u) { static_assert(dependent_false<T>::value); }
-
-template<>
-inline bool compatible<Type, Instance>(const Type* t, const Instance* u) { return t == u->type().get(); }
-
-template<>
-inline bool compatible<Instance, Type>(const Instance* t, const Type* u) { return compatible(u, t); }
-
-}
-
-template<typename T>
 struct Lens : public View
 {
-    std::shared_ptr<T> origin;
+    std::shared_ptr<const Type> origin;
 
     Lens() = default;
-    Lens(std::shared_ptr<T> origin, std::shared_ptr<const Type> type, size_t offset)
+    Lens(std::shared_ptr<const Type> origin)
+        : View(origin)
+        , origin(std::move(origin))
+    {}
+    Lens(std::shared_ptr<const Type> origin, View&& view)
+        : View(std::move(view))
+        , origin(origin)
+    {}
+    Lens(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset = 0)
         : View(std::move(type), offset)
         , origin(std::move(origin))
     {}
 
-    Lens operator[](std::string_view name) const;
-    Lens operator[](size_t index) const;
+    Lens operator[](const std::string& name) const
+    {
+        return Lens(this->origin, std::move(View::operator[](name)));
+    }
 
-    template<typename U>
-    bool compatible(const Lens<U>& other) const { return lens::compatible(this->origin.get(), other.origin.get()); }
+    Lens operator[](size_t index) const
+    {
+        return Lens(this->origin, std::move(View::operator[](index)));
+    }
 
-    template<typename U>
-    bool operator==(const Lens<U>& other) const { return this->compatible(other) && View::operator==(other); }
-    template<typename U>
-    bool operator!=(const Lens<U>& other) const { return this->compatible(other) && View::operator!=(other); }
-    template<typename U>
-    bool operator>(const Lens<U>& other) const { return this->compatible(other) && View::operator>(other); }
-    template<typename U>
-    bool operator>=(const Lens<U>& other) const { return this->compatible(other) && View::operator>=(other); }
-    template<typename U>
-    bool operator<(const Lens<U>& other) const { return this->compatible(other) && View::operator<(other); }
-    template<typename U>
-    bool operator<=(const Lens<U>& other) const { return this->compatible(other) && View::operator<=(other); }
+    inline bool operator==(const Lens& l) const { return this->origin == l.origin && View::operator==(l); }
+    inline bool operator!=(const Lens& l) const { return this->origin == l.origin && View::operator!=(l); }
+    inline bool operator>(const Lens& l) const { return this->origin == l.origin && View::operator>(l); }
+    inline bool operator>=(const Lens& l) const { return this->origin == l.origin && View::operator>=(l); }
+    inline bool operator<(const Lens& l) const { return this->origin == l.origin && View::operator<(l); }
+    inline bool operator<=(const Lens& l) const { return this->origin == l.origin && View::operator<=(l); }
 };
 
-struct Accessor : public Lens<const Type>
+template<typename T>
+struct Instance;
+
+template<typename T>
+struct BaseReference : public Lens
 {
-    using Lens::Lens;
-    explicit Accessor(const std::shared_ptr<const Type>& origin) : Lens(origin, origin, 0) {}
+    std::shared_ptr<T> data;
+
+    BaseReference() = default;
+    BaseReference(std::shared_ptr<const Type> origin, std::shared_ptr<T> data)
+        : Lens(std::move(origin))
+        , data(std::move(data))
+    {}
+    BaseReference(std::shared_ptr<T> data, Lens&& lens)
+        : Lens(std::move(lens))
+        , data(std::move(data))
+    {}
+    BaseReference(
+        std::shared_ptr<const Type> origin,
+        std::shared_ptr<T> data,
+        std::shared_ptr<const Type> type,
+        size_t offset = 0
+    )
+        : Lens(std::move(origin), std::move(type), offset)
+        , data(std::move(data))
+    {}
+
+    template<typename U>
+    explicit BaseReference(const Instance<U>& instance)
+        : Lens(instance.type)
+        , data(instance.data)
+    {}
+
+    [[nodiscard]] char* get() { return this->data.get() + this->offset; }
+    [[nodiscard]] const char* get() const { return this->data.get() + this->offset; }
+
+    BaseReference operator[](const std::string& name) const
+    {
+        return BaseReference(this->data, std::move(Lens::operator[](name)));
+    }
+
+    BaseReference operator[](size_t index) const
+    {
+        return BaseReference(this->data, std::move(Lens::operator[](index)));
+    }
+
+    template<typename U>
+    inline bool operator==(const BaseReference<U>& r) const { return this->data == r.data && View::operator==(r); }
+    template<typename U>
+    inline bool operator!=(const BaseReference<U>& r) const { return this->data == r.data && View::operator!=(r); }
+    template<typename U>
+    inline bool operator>(const BaseReference<U>& r) const { return this->data == r.data && View::operator>(r); }
+    template<typename U>
+    inline bool operator>=(const BaseReference<U>& r) const { return this->data == r.data && View::operator>=(r); }
+    template<typename U>
+    inline bool operator<(const BaseReference<U>& r) const { return this->data == r.data && View::operator<(r); }
+    template<typename U>
+    inline bool operator<=(const BaseReference<U>& r) const { return this->data == r.data && View::operator<=(r); }
+
+    template<typename U>
+    U& is() { return *reinterpret_cast<U*>(this->get()); }
+    template<typename U>
+    const U& is() const { return *reinterpret_cast<const U*>(this->get()); }
+
+    template<typename U>
+    U* as() { return reinterpret_cast<U*>(this->get()); }
+    template<typename U>
+    const U* as() const { return reinterpret_cast<const U*>(this->get()); }
 };
 
-struct Reference : public Lens<Instance>
-{
-    using Lens::Lens;
-    explicit Reference(const std::shared_ptr<Instance>& origin) : Lens(origin, origin->type(), 0) {}
-};
-
-struct ConstantReference : public Lens<const Instance>
-{
-    using Lens::Lens;
-    explicit ConstantReference(const std::shared_ptr<const Instance>& origin) : Lens(origin, origin->type(), 0) {}
-};
+using Reference = BaseReference<char[]>;
+using ConstantReference = BaseReference<const char[]>;
 
 }

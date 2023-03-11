@@ -1,17 +1,16 @@
 #include "object/lens.h"
-#include "object/exception.h"
+#include "object/error.h"
 
 namespace object
 {
 
-template<typename T>
-Lens<T> Lens<T>::operator[](std::string_view name) const
+View View::operator[](const std::string& name) const
 {
     auto* object_type = dynamic_cast<const ObjectType*>(this->type.get());
     if (object_type != nullptr)
     {
         const ObjectType::Member& member = object_type->at(name);
-        return Accessor(this->origin, member.type, this->offset + member.offset);
+        return View(member.type, this->offset + member.offset);
     }
     else
     {
@@ -19,13 +18,12 @@ Lens<T> Lens<T>::operator[](std::string_view name) const
     }
 }
 
-template<typename T>
-Lens<T> Lens<T>::operator[](size_t index) const
+View View::operator[](size_t index) const
 {
     auto* array_type = dynamic_cast<const ArrayType*>(this->type.get());
     if (array_type != nullptr)
     {
-        return Lens(this->origin, array_type->element, array_type->at(index));
+        return View(array_type->element, this->offset + array_type->at(index));
     }
     else
     {

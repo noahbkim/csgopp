@@ -12,7 +12,6 @@ struct Type;
 struct ValueType;
 struct ArrayType;
 struct ObjectType;
-struct Instance;
 
 static constexpr size_t align(size_t offset, size_t alignment)
 {
@@ -52,14 +51,14 @@ struct TrivialValueType : public ValueType
 
     using Value = T;
 
-    [[nodiscard]] size_t size() const override;
-    [[nodiscard]] size_t alignment() const override;
+    [[nodiscard]] size_t size() const override { return sizeof(T); }
+    [[nodiscard]] size_t alignment() const override { return std::alignment_of<T>(); }
 
-    void construct(char* address) const override;
-    void destroy(char* address) const override;
+    void construct(char* address) const override { new(address) T; }
+    void destroy(char* address) const override { reinterpret_cast<T*>(address)->~T(); }
 
-    [[nodiscard]] const std::type_info& info() const override;
-    [[nodiscard]] virtual std::string represent() const override;
+    [[nodiscard]] const std::type_info& info() const override { return typeid(T); }
+    [[nodiscard]] virtual std::string represent() const override { return typeid(T).name(); }
 };
 
 struct ArrayType : public Type
@@ -79,6 +78,9 @@ struct ArrayType : public Type
     [[nodiscard]] std::string represent() const override;
 
     [[nodiscard]] size_t at(size_t index) const;
+
+private:
+    size_t _size{0};
 };
 
 struct ObjectType : public Type
@@ -88,10 +90,16 @@ struct ObjectType : public Type
         std::string name;
         std::shared_ptr<const Type> type;
         size_t offset;
+
+        Member(const std::string& name, std::shared_ptr<const Type> type, size_t offset)
+            : name(name)
+            , type(std::move(type))
+            , offset(offset)
+        {}
     };
 
     using Members = std::vector<Member>;
-    using MemberLookup = absl::flat_hash_map<std::string_view, size_t>;
+    using MemberLookup = absl::flat_hash_map<std::string, size_t>;
 
     struct Builder
     {
@@ -101,11 +109,15 @@ struct ObjectType : public Type
         MemberLookup lookup;
 
         Builder() = default;
-        explicit Builder(auto&& base);
+        explicit Builder(std::shared_ptr<ObjectType> base)
+            : members(base->members)
+            , lookup(base->lookup)
+            , _size(base->_size)
+        {}
 
         size_t embed(const ObjectType& type);
         size_t member(const Member& member);
-        size_t member(std::string name, std::shared_ptr<const Type> type);
+        size_t member(const std::string& name, std::shared_ptr<const Type> type);
 
         size_t size() const
         {
@@ -144,12 +156,12 @@ struct ObjectType : public Type
     void construct(char* address) const override;
     void destroy(char* address) const override;
 
-    std::string represent() const override
+    [[nodiscard]] std::string represent() const override
     {
         return this->name;
     }
 
-    [[nodiscard]] const Member& at(std::string_view name) const;
+    [[nodiscard]] const Member& at(const std::string& name) const;
 
 private:
     size_t _size{0};

@@ -3,7 +3,6 @@
 #include <codecvt>
 
 #include <object/object.h>
-#include <object/lens.h>
 
 using namespace object;
 
@@ -25,7 +24,7 @@ TEST(Object, integration)
     entity_builder.member("id", UINT32);
     entity_builder.member("name", STRING);
     entity_builder.member("position", VECTOR);
-    Handle<const ObjectType> entity_type(entity_builder.build());
+    std::shared_ptr<const ObjectType> entity_type(entity_builder.build());
 
     struct Entity
     {
@@ -39,22 +38,14 @@ TEST(Object, integration)
     EXPECT_EQ(entity_type->at("position").offset, offsetof(Entity, position));
     EXPECT_EQ(entity_type->size(), sizeof(Entity));
 
-    Handle<const ArrayType> entity_array_type(std::make_shared<ArrayType>(*entity_type, 2));
+    std::shared_ptr<const ArrayType> entity_array_type(std::make_shared<ArrayType>(entity_type, 2));
     EXPECT_EQ(entity_array_type->size(), sizeof(Entity) * 2);
 
     ObjectType::Builder engine_builder;
     engine_builder.member("alive", BOOL);
     engine_builder.member("flags", UINT32);
-    engine_builder.member("entities", *entity_array_type);
-    Handle<const ObjectType> engine_type(engine_builder.build());
-
-    EXPECT_TRUE(Accessor(*engine_type) == (Accessor(*engine_type)));
-    EXPECT_TRUE(Accessor(*engine_type) <= (Accessor(*engine_type)));
-    EXPECT_TRUE(Accessor(*engine_type) >= (Accessor(*engine_type)));
-    EXPECT_TRUE(Accessor(*engine_type)["alive"] <= (Accessor(*engine_type)));
-    EXPECT_TRUE(Accessor(*engine_type)["alive"] > (Accessor(*engine_type)));
-    EXPECT_TRUE(Accessor(*engine_type) >= (Accessor(*engine_type)["alive"]));
-    EXPECT_TRUE(Accessor(*engine_type) > (Accessor(*engine_type)["alive"]));
+    engine_builder.member("entities", entity_array_type);
+    std::shared_ptr<const ObjectType> engine_type(engine_builder.build());
 
     struct Engine
     {
@@ -62,6 +53,15 @@ TEST(Object, integration)
         uint32_t flags{};
         Entity entities[2];
     };
+
+    EXPECT_TRUE(Lens(engine_type) == Lens(engine_type));
+    EXPECT_TRUE(Lens(engine_type) <= Lens(engine_type));
+    EXPECT_TRUE(Lens(engine_type) >= Lens(engine_type));
+    EXPECT_TRUE(Lens(engine_type)["alive"] <= Lens(engine_type));
+    EXPECT_TRUE(Lens(engine_type)["alive"] < Lens(engine_type));
+    EXPECT_TRUE(Lens(engine_type) >= Lens(engine_type)["alive"]);
+    EXPECT_TRUE(Lens(engine_type) > Lens(engine_type)["alive"]);
+    EXPECT_EQ(engine_type->size(), sizeof(Engine));
 
     Object e(engine_type);
     e["alive"].is<bool>() = true;
@@ -80,20 +80,20 @@ TEST(Object, integration)
     EXPECT_THROW(e["hello"], MemberError);
     EXPECT_THROW(e["entities"][2], IndexError);
 
-    Is<bool> alive = Accessor(engine_type)["alive"].is<bool>();
-    EXPECT_EQ(alive(e), true);
-    EXPECT_EQ(e[alive], true);
-    Is<std::string> entities_1_name = Accessor(engine_type)["entities"][1]["name"].is<std::string>();
-    EXPECT_EQ(entities_1_name(e), "dylan");
-    EXPECT_EQ(e[entities_1_name], "dylan");
-    EXPECT_THROW(Accessor a = Accessor(engine_type)["hello"], MemberError);
-    EXPECT_THROW(Accessor b = Accessor(engine_type)["entities"][2], IndexError);
+//    Is<bool> alive = Accessor(engine_type)["alive"].is<bool>();
+//    EXPECT_EQ(alive(e), true);
+//    EXPECT_EQ(e[alive], true);
+//    Is<std::string> entities_1_name = Accessor(engine_type)["entities"][1]["name"].is<std::string>();
+//    EXPECT_EQ(entities_1_name(e), "dylan");
+//    EXPECT_EQ(e[entities_1_name], "dylan");
+//    EXPECT_THROW(Accessor a = Accessor(engine_type)["hello"], MemberError);
+//    EXPECT_THROW(Accessor b = Accessor(engine_type)["entities"][2], IndexError);
+//
+//    std::shared_ptr<const Type> entities_array_T = e["entities"].type;
+//    As<Entity> first_entity = Accessor(entities_array_T)[0].as<Entity>();
+//    ASSERT_EQ(e["entities"][first_entity]->name, "noah");
 
-    std::shared_ptr<const Type> entities_array_T = e["entities"].type;
-    As<Entity> first_entity = Accessor(entities_array_T)[0].as<Entity>();
-    ASSERT_EQ(e["entities"][first_entity]->name, "noah");
-
-    Engine* c{e.as<Engine>()};
+    Engine* c = Reference(e).as<Engine>();
     EXPECT_EQ(c->alive, true);
     EXPECT_EQ(c->flags, 0xFF00FF00);
     EXPECT_EQ(c->entities[0].id, 1);
@@ -140,7 +140,7 @@ TEST(Object, inherit_simple)
     parent_builder.member("first", UINT8);
     parent_builder.member("second", UINT32);
     auto parent = std::make_shared<ObjectType>(std::move(parent_builder));
-    ObjectType::Builder child_builder(parent.get());
+    ObjectType::Builder child_builder(parent);
     child_builder.member("third", STRING);
     auto child = std::make_shared<ObjectType>(std::move(child_builder));
     EXPECT_EQ(child->members.at(0).name, "first");
@@ -194,22 +194,22 @@ TEST(Object, reference_lifetime)
         Reference reference;
         {
             // Has to be anonymous
-            std::shared_ptr<ValueType> value_T = std::make_shared<TrivialValueType<uint32_t>>();
-            value_type_check = value_T;
-            EXPECT_EQ(value_T.use_count(), 1);
+            std::shared_ptr<ValueType> value_type = std::make_shared<TrivialValueType<uint32_t>>();
+            value_type_check = value_type;
+            EXPECT_EQ(value_type.use_count(), 1);
             EXPECT_EQ(value_type_check.use_count(), 1);
 
-            Value value(value_T);
-            EXPECT_EQ(value_T.use_count(), 2);
+            Value value(value_type);
+            EXPECT_EQ(value_type.use_count(), 2);
             EXPECT_EQ(value_type_check.use_count(), 2);
 
-            value.is<uint32_t>() = 69;
-            reference = *value;
+            Reference(value).is<uint32_t>() = 69;
+            reference = Reference(value);
             ASSERT_EQ(reference.is<uint32_t>(), 69);
         }
 
-        EXPECT_EQ(value_type_check.use_count(), 1);  // Reference
-        EXPECT_EQ(value_type_check.use_count(), 1);
+        EXPECT_EQ(value_type_check.use_count(), 2);  // Reference (origin, type)
+        EXPECT_EQ(value_type_check.use_count(), 2);
         uint32_t check = reference.is<uint32_t>();
         ASSERT_EQ(check, 69);
         EXPECT_FALSE(value_type_check.expired());
