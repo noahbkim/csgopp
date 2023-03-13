@@ -1,9 +1,14 @@
 #include "object/view.h"
+#include "object/type/object.h"
+#include "object/type/array.h"
 
 namespace object
 {
 
-View at(const Type* type, const std::string& name, size_t offset)
+using object::type::ObjectType;
+using object::type::ArrayType;
+
+View View::at(const Type* type, const std::string& name, size_t offset)
 {
     auto* object_type = dynamic_cast<const ObjectType*>(type);
     if (object_type == nullptr)
@@ -15,7 +20,7 @@ View at(const Type* type, const std::string& name, size_t offset)
     return View(member.type, offset + member.offset);
 }
 
-View at(const Type* type, size_t index, size_t offset)
+View View::at(const Type* type, size_t index, size_t offset)
 {
     auto* array_type = dynamic_cast<const ArrayType*>(type);
     if (array_type == nullptr)

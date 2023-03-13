@@ -84,15 +84,15 @@ TEST(Object, integration)
     EXPECT_THROW(e["hello"], MemberError);
     EXPECT_THROW(e["entities"][2], IndexError);
 
-//    Is<bool> alive = Accessor(engine_type)["alive"].is<bool>();
-//    EXPECT_EQ(alive(e), true);
+    Handle<Type> engine_handle(engine_type);
+    EXPECT_EQ(engine_handle["alive"](e).is<bool>(), true);
 //    EXPECT_EQ(e[alive], true);
 //    Is<std::string> entities_1_name = Accessor(engine_type)["entities"][1]["name"].is<std::string>();
 //    EXPECT_EQ(entities_1_name(e), "dylan");
 //    EXPECT_EQ(e[entities_1_name], "dylan");
 //    EXPECT_THROW(Accessor a = Accessor(engine_type)["hello"], MemberError);
 //    EXPECT_THROW(Accessor b = Accessor(engine_type)["entities"][2], IndexError);
-//
+
 //    std::shared_ptr<const Type> entities_array_T = e["entities"].type;
 //    As<Entity> first_entity = Accessor(entities_array_T)[0].as<Entity>();
 //    ASSERT_EQ(e["entities"][first_entity]->name, "noah");
@@ -208,7 +208,7 @@ TEST(Object, reference_lifetime)
             EXPECT_EQ(value_type_check.use_count(), 2);
 
             value.is<uint32_t>() = 69;
-            reference = value.view();
+            reference = Reference(value);
             ASSERT_EQ(reference.is<uint32_t>(), 69);
         }
 

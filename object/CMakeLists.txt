@@ -1,6 +1,6 @@
 add_library(object STATIC
-        source/object/type.cpp
-        source/object/lens.cpp
+        source/object/type/array.cpp
+        source/object/type/object.cpp
         source/object/view.cpp
         )
 

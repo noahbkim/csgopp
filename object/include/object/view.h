@@ -5,20 +5,15 @@
 #include "error.h"
 #include "magic.h"
 #include "type.h"
+#include "type/value.h"
 
 namespace object
 {
 
-struct View;
-
-View at(const Type* type, const std::string& name, size_t offset = 0);
-
-View at(const Type* type, size_t index, size_t offset = 0);
-
 template<typename T>
 T& is(const Type* type, char* data)
 {
-    auto* value_type = dynamic_cast<const ValueType*>(type);
+    auto* value_type = dynamic_cast<const type::ValueType*>(type);
     if (value_type == nullptr)
     {
         throw TypeError("Can only cast value types, not " + type->represent());
@@ -50,13 +45,16 @@ struct View
     std::shared_ptr<const Type> type;
 
     View() = default;
-    View(std::shared_ptr<const Type> type, size_t offset = 0)
+    explicit View(std::shared_ptr<const Type> type, size_t offset = 0)
         : type(std::move(type))
         , offset(offset)
     {}
 
     [[nodiscard]] size_t size() const { return this->type->size(); }
     [[nodiscard]] size_t bound() const { return this->offset + this->type->size(); }
+
+    static View at(const Type* type, const std::string& name, size_t offset = 0);
+    static View at(const Type* type, size_t index, size_t offset = 0);
 
     View operator[](const std::string& name) const { return at(this->type.get(), name, this->offset); }
     View operator[](size_t index) const { return at(this->type.get(), index, this->offset); }
