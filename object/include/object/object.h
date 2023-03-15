@@ -28,11 +28,23 @@ struct Handle
     std::shared_ptr<const T> type;
 
     Handle() = default;
-    explicit Handle(auto&& type) : type(std::move(type)) {}
-    explicit Handle(const auto& type) : type(type) {}
+    explicit Handle(std::shared_ptr<const T>&& type) : type(std::move(type)) {}
+    explicit Handle(const std::shared_ptr<const T>& type) : type(type) {}
 
+    template<typename... Args>
+    static Handle make(Args&&... args)
+    {
+        auto type = std::make_shared<const T>(std::forward<Args>(args)...);
+        return Handle(std::move(type));
+    }
+
+    Lens view() const;
     Lens operator[](const std::string& name) const;
     Lens operator[](size_t index) const;
+
+    std::shared_ptr<const T> get() const { return this->type; }
+    auto operator->() { return this->type.operator->(); }
+    auto operator->() const { return this->type.operator->(); }
 };
 
 template<typename T>
@@ -40,13 +52,6 @@ struct Instance
 {
     std::shared_ptr<char[]> data;
     std::shared_ptr<const T> type;
-
-    explicit Instance(std::shared_ptr<const T> type)
-        : data(std::make_shared<char[]>(type->size()))
-        , type(std::move(type))
-    {
-        this->type->construct(this->data.get());
-    }
 
     Instance(std::shared_ptr<const T> type, std::shared_ptr<char[]> data)
         : data(std::move(data))
@@ -60,6 +65,18 @@ struct Instance
         this->type->destroy(this->data.get());
     }
 
+    static Instance<T> make(const std::shared_ptr<const T>& type)
+    {
+        return Instance<T>(type, std::make_shared<char[]>(type->size()));
+    }
+
+    static Instance<T> make(const Handle<T>& type)
+    {
+        return Instance<T>(type.get(), std::make_shared<char[]>(type->size()));
+    }
+
+    Reference view();
+    ConstantReference view() const;
     Reference operator[](const std::string& name);
     ConstantReference operator[](const std::string& name) const;
     Reference operator[](size_t index);
@@ -74,6 +91,9 @@ struct Instance
     U* as() { return object::as<U>(this->type.get(), this->data.get()); }
     template<typename U>
     const U* as() const { return object::as<U>(this->type.get(), this->data.get()); }
+
+    std::shared_ptr<char[]> get() { return this->data; }
+    std::shared_ptr<const char[]> get() const { return this->data; }
 };
 
 using Value = Instance<ValueType>;
@@ -206,6 +226,12 @@ struct ConstantReference : public ReferenceBase<const char[]>
 };
 
 template<typename T>
+Lens Handle<T>::view() const
+{
+    return Lens(this->type);
+}
+
+template<typename T>
 Lens Handle<T>::operator[](const std::string& name) const
 {
     return Lens(this->type, std::move(View::at(this->type.get(), name)));
@@ -215,6 +241,18 @@ template<typename T>
 Lens Handle<T>::operator[](size_t index) const
 {
     return Lens(this->type, std::move(View::at(this->type.get(), index)));
+}
+
+template<typename T>
+Reference Instance<T>::view()
+{
+    return Reference(*this);
+}
+
+template<typename T>
+ConstantReference Instance<T>::view() const
+{
+    return ConstantReference(*this);
 }
 
 template<typename T>

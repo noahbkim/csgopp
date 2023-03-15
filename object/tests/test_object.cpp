@@ -24,7 +24,7 @@ TEST(Object, integration)
     entity_builder.member("id", UINT32);
     entity_builder.member("name", STRING);
     entity_builder.member("position", VECTOR);
-    std::shared_ptr<const ObjectType> entity_type(entity_builder.build());
+    auto entity_type = Handle<ObjectType>::make(std::move(entity_builder));
 
     struct Entity
     {
@@ -38,14 +38,14 @@ TEST(Object, integration)
     EXPECT_EQ(entity_type->at("position").offset, offsetof(Entity, position));
     EXPECT_EQ(entity_type->size(), sizeof(Entity));
 
-    std::shared_ptr<const ArrayType> entity_array_type(std::make_shared<ArrayType>(entity_type, 2));
+    auto entity_array_type = Handle<ArrayType>::make(entity_type.get(), 2);
     EXPECT_EQ(entity_array_type->size(), sizeof(Entity) * 2);
 
     ObjectType::Builder engine_builder;
     engine_builder.member("alive", BOOL);
     engine_builder.member("flags", UINT32);
-    engine_builder.member("entities", entity_array_type);
-    std::shared_ptr<const ObjectType> engine_type(engine_builder.build());
+    engine_builder.member("entities", entity_array_type.get());
+    auto engine_type = Handle<ObjectType>::make(engine_builder);
 
     struct Engine
     {
@@ -54,16 +54,16 @@ TEST(Object, integration)
         Entity entities[2];
     };
 
-    EXPECT_TRUE(Lens(engine_type) == Lens(engine_type));
-    EXPECT_TRUE(Lens(engine_type) <= Lens(engine_type));
-    EXPECT_TRUE(Lens(engine_type) >= Lens(engine_type));
-    EXPECT_TRUE(Lens(engine_type)["alive"] <= Lens(engine_type));
-    EXPECT_TRUE(Lens(engine_type)["alive"] < Lens(engine_type));
-    EXPECT_TRUE(Lens(engine_type) >= Lens(engine_type)["alive"]);
-    EXPECT_TRUE(Lens(engine_type) > Lens(engine_type)["alive"]);
+    EXPECT_TRUE(engine_type.view() == engine_type.view());
+    EXPECT_TRUE(engine_type.view() <= engine_type.view());
+    EXPECT_TRUE(engine_type.view() >= engine_type.view());
+    EXPECT_TRUE(engine_type["alive"] <= engine_type.view());
+    EXPECT_TRUE(engine_type["alive"] < engine_type.view());
+    EXPECT_TRUE(engine_type.view() >= engine_type["alive"]);
+    EXPECT_TRUE(engine_type.view() > engine_type["alive"]);
     EXPECT_EQ(engine_type->size(), sizeof(Engine));
 
-    Object e(engine_type);
+    auto e = Object::make(engine_type);
     EXPECT_EQ(e["alive"].offset, 0);
     EXPECT_EQ(e["flags"].offset, 4);
     EXPECT_EQ(&e["alive"].is<bool>(), (bool*)e.data.get());
@@ -84,8 +84,7 @@ TEST(Object, integration)
     EXPECT_THROW(e["hello"], MemberError);
     EXPECT_THROW(e["entities"][2], IndexError);
 
-    Handle<Type> engine_handle(engine_type);
-    EXPECT_EQ(engine_handle["alive"](e).is<bool>(), true);
+    EXPECT_EQ(engine_type["alive"](e).is<bool>(), true);
 //    EXPECT_EQ(e[alive], true);
 //    Is<std::string> entities_1_name = Accessor(engine_type)["entities"][1]["name"].is<std::string>();
 //    EXPECT_EQ(entities_1_name(e), "dylan");
@@ -111,7 +110,7 @@ TEST(Object, null)
     ObjectType::Builder builder;
     auto type = std::make_shared<ObjectType>(std::move(builder));
     EXPECT_EQ(type->size(), 0);
-    Object object(type);
+    auto object = Object::make(type);
     EXPECT_EQ(object.type, type);
 }
 
@@ -121,7 +120,7 @@ TEST(Object, one_field_primitive)
     builder.member("value", UINT32);
     auto type = std::make_shared<ObjectType>(std::move(builder));
     EXPECT_EQ(type->size(), sizeof(uint32_t));
-    Object object(type);
+    auto object = Object::make(type);
     object["value"].is<uint32_t>() = 69;
     EXPECT_EQ(object["value"].is<uint32_t>(), 69);
 }
@@ -132,7 +131,7 @@ TEST(Object, one_field_allocating)
     builder.member("value", STRING);
     auto type = std::make_shared<ObjectType>(std::move(builder));
     EXPECT_EQ(type->size(), sizeof(std::string));
-    Object object(type);
+    auto object = Object::make(type);
     EXPECT_EQ(object["value"].is<std::string>(), "");
     object["value"].is<std::string>() = "hello, world!";
     EXPECT_EQ(object["value"].is<std::string>(), "hello, world!");
@@ -178,7 +177,7 @@ TEST(Object, instance_lifetime)
         EXPECT_EQ(value_type_check.use_count(), 1);
 
         {
-            Value value(value_type);
+            auto value = Value::make(value_type);
             EXPECT_EQ(value_type.use_count(), 2);  // value_T, value.type | value_T.self, value_T_check
             EXPECT_EQ(value_type_check.use_count(), 2);
         }
@@ -203,7 +202,7 @@ TEST(Object, reference_lifetime)
             EXPECT_EQ(value_type.use_count(), 1);
             EXPECT_EQ(value_type_check.use_count(), 1);
 
-            Value value(value_type);
+            auto value = Value::make(value_type);
             EXPECT_EQ(value_type.use_count(), 2);
             EXPECT_EQ(value_type_check.use_count(), 2);
 
