@@ -14,11 +14,7 @@ add_subdirectory(libraries/nanobind)
 
 # Main subdirectories
 add_subdirectory(object/)
-add_subdirectory(csgopp/messages/)
-add_subdirectory(csgopp/csgopp/)
-add_subdirectory(csgopp/csgopy)
-add_subdirectory(csgopp/cli/)
-add_subdirectory(csgopp/docs)
-
-# Test subdirectories
-add_subdirectory(tests/csgopp/)
+add_subdirectory(csgopp/)
+add_subdirectory(csgopy)
+add_subdirectory(csgod/)
+#add_subdirectory(csgopp/docs)
