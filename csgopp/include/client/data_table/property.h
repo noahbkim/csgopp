@@ -12,7 +12,7 @@ using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::common::bits::BitStream;
 using object::code::Context;
 using object::code::Cursor;
-using object::code::Declaration;
+using object::code::MemberDeclaration;
 using object::ObjectType;
 using object::Type;
 
@@ -86,7 +86,7 @@ struct PropertyFlags
 ///     declare it in other files/not clutter the `DataTable` definition.
 ///
 /// \sa https://developer.valvesoftware.com/wiki/Networking_Entities#Network_Data_Tables
-struct Property : Context<Declaration>
+struct Property : Context<MemberDeclaration>
 {
     /// \brief The type of property as reported by the serialized data.
     /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h
@@ -191,7 +191,7 @@ struct Property : Context<Declaration>
     /// This override is currently just a proof of concept that's helped iron
     /// out the rather circular relationship between the `DataTable` structures
     /// and the `Type` ones.
-    void apply(Cursor<Declaration> declaration) const override
+    void apply(Cursor<MemberDeclaration> declaration) const override
     {
     }
 

@@ -43,6 +43,15 @@ size_t ObjectType::Builder::member(const std::string& name, std::shared_ptr<cons
     return offset;
 }
 
+void ObjectType::Member::emit(code::Declaration& declaration, code::Declaration::Member& member) const
+{
+    this->type->emit(declaration, member);
+    if (!this->metadata.expired())
+    {
+        this->metadata.lock()->attach(declaration, member);
+    }
+}
+
 ObjectType::ObjectType(Builder&& builder)
     : name(std::move(builder.name))
     , lookup(std::move(builder.lookup))
@@ -77,7 +86,39 @@ void ObjectType::destroy(char* address) const
     }
 }
 
-[[nodiscard]] const ObjectType::Member& ObjectType::at(const std::string& name) const
+void ObjectType::emit(code::Declaration& declaration) const
+{
+    declaration.name = this->name;
+
+    if (this->base != nullptr)
+    {
+        declaration.base_name.emplace(this->base->name);
+        declaration.dependencies.emplace(this->base->name);
+    }
+
+    for (auto iterator = this->begin_self(); iterator != this->end(); ++iterator)
+    {
+        iterator->emit(declaration, declaration.append(iterator->name));
+    }
+
+    if (!this->metadata.expired())
+    {
+        this->metadata.lock()->attach(declaration);
+    }
+}
+
+void ObjectType::emit(code::Declaration& declaration, code::Declaration::Member& member) const
+{
+    member.type = this->name;
+    declaration.dependencies.emplace(this->name);
+}
+
+void ObjectType::emit(layout::Cursor& cursor) const
+{
+
+}
+
+const ObjectType::Member& ObjectType::at(const std::string& name) const
 {
     MemberLookup::const_iterator find = this->lookup.find(name);
     if (find != this->lookup.end())
@@ -89,6 +130,27 @@ void ObjectType::destroy(char* address) const
     {
         throw MemberError(concatenate("No such member ", name));
     }
+}
+
+
+ObjectType::Members::const_iterator ObjectType::begin() const
+{
+    return this->members.begin();
+}
+
+ObjectType::Members::const_iterator ObjectType::begin_self() const
+{
+    auto iterator = this->members.begin();
+    if (this->base != nullptr)
+    {
+        std::advance(iterator, this->base->members.size());
+    }
+    return iterator;
+}
+
+ObjectType::Members::const_iterator ObjectType::end() const
+{
+    return this->members.end();
 }
 
 }

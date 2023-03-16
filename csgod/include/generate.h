@@ -18,7 +18,7 @@
 using argparse::ArgumentParser;
 using object::code::Generator;
 using object::code::Cursor;
-using object::code::Definition;
+using object::code::Declaration;
 using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
@@ -41,7 +41,7 @@ struct GenerateClient final : public Client
         this->data_table_count += 1;
         if (data_table->type())
         {
-            Cursor<Definition> cursor(class_type_generator.append(data_table->name));
+            Cursor<Declaration> cursor(class_type_generator.append(data_table->name));
             data_table->type()->emit(cursor);
             this->entity_type_count += 1;
         }
@@ -54,7 +54,7 @@ struct GenerateClient final : public Client
 
     void on_game_event_type_creation(const std::shared_ptr<const GameEventType>& game_event_type) override
     {
-        Cursor<Definition> cursor(game_event_type_generator.append(game_event_type->name));
+        Cursor<Declaration> cursor(game_event_type_generator.append(game_event_type->name));
         game_event_type->emit(cursor);
         this->game_event_type_count += 1;
     }

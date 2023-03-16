@@ -15,12 +15,15 @@ struct ObjectType : public Type
         std::string name;
         std::shared_ptr<const Type> type;
         size_t offset;
+        std::weak_ptr<code::Metadata<code::Declaration&, code::Declaration::Member&>> metadata;
 
         Member(const std::string& name, std::shared_ptr<const Type> type, size_t offset)
             : name(name)
             , type(std::move(type))
             , offset(offset)
         {}
+
+        void emit(code::Declaration& context, code::Declaration::Member& declaration) const;
     };
 
     using Members = std::vector<Member>;
@@ -34,12 +37,18 @@ struct ObjectType : public Type
         MemberLookup lookup;
 
         Builder() = default;
+        explicit Builder(std::string name) : name(name) {}
         explicit Builder(std::shared_ptr<ObjectType> base)
             : base(base)
             , members(base->members)
             , lookup(base->lookup)
             , _size(base->_size)
         {}
+        explicit Builder(const std::string& name, std::shared_ptr<ObjectType> base)
+            : Builder(std::move(base))
+        {
+            this->name = name;
+        }
 
         size_t embed(const ObjectType& type);
         size_t member(const Member& member);
@@ -58,6 +67,7 @@ struct ObjectType : public Type
     MemberLookup lookup;
     Members members;
     std::shared_ptr<ObjectType> base;
+    std::weak_ptr<code::Metadata<code::Declaration&>> metadata;
 
     ObjectType() = default;
     explicit ObjectType(Builder&& builder);
@@ -74,7 +84,15 @@ struct ObjectType : public Type
 
     [[nodiscard]] std::string represent() const override { return this->name; }
 
+    virtual void emit(code::Declaration& declaration) const;
+    void emit(code::Declaration& declaration, code::Declaration::Member& member) const override;
+    void emit(layout::Cursor& cursor) const override;
+
     [[nodiscard]] const Member& at(const std::string& name) const;
+
+    [[nodiscard]] Members::const_iterator begin() const;
+    [[nodiscard]] Members::const_iterator begin_self() const;
+    [[nodiscard]] Members::const_iterator end() const;
 
 private:
     size_t _size{0};

@@ -11,6 +11,9 @@ namespace object::type
 struct ValueType : public Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
+
+    void emit(code::Declaration& declaration, code::Declaration::Member& member) const override;
+    void emit(layout::Cursor& cursor) const override;
 };
 
 template<typename T>

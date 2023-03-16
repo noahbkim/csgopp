@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include "code.h"
+#include "layout.h"
 
 namespace object
 {
@@ -28,6 +30,9 @@ struct Type
     virtual void destroy(char* address) const = 0;
 
     [[nodiscard]] virtual std::string represent() const = 0;
+
+    virtual void emit(code::Declaration& declaration, code::Declaration::Member& member) const = 0;
+    virtual void emit(layout::Cursor& context) const = 0;
 };
 
 }

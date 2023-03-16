@@ -44,6 +44,24 @@ void ArrayType::destroy(char* address) const
     }
 }
 
+void ArrayType::emit(code::Declaration& declaration, code::Declaration::Member& member) const
+{
+    this->element->emit(declaration, member);
+    member.array_sizes.push_back(this->length);
+}
+
+void ArrayType::emit(layout::Cursor& cursor) const
+{
+    size_t element_size = this->element->size();
+    for (size_t i = 0; i < this->length; ++i)
+    {
+        size_t relative = element_size * i;
+        cursor.write(std::to_string(i), relative);
+        layout::Cursor indented(cursor.indent(relative));
+        this->element->emit(cursor);
+    }
+}
+
 size_t ArrayType::at(size_t index) const
 {
     if (index >= this->length)

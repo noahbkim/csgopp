@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "object/error.h"
 #include "object/type.h"
 #include "object/type/value.h"
@@ -38,13 +40,13 @@ struct Handle
         return Handle(std::move(type));
     }
 
-    Lens view() const;
-    Lens operator[](const std::string& name) const;
-    Lens operator[](size_t index) const;
+    [[nodiscard]] Lens view() const;
+    [[nodiscard]] Lens operator[](const std::string& name) const;
+    [[nodiscard]] Lens operator[](size_t index) const;
 
-    std::shared_ptr<const T> get() const { return this->type; }
-    auto operator->() { return this->type.operator->(); }
-    auto operator->() const { return this->type.operator->(); }
+    [[nodiscard]] std::shared_ptr<const T> get() const { return this->type; }
+    [[nodiscard]] auto operator->() { return this->type.operator->(); }
+    [[nodiscard]] auto operator->() const { return this->type.operator->(); }
 };
 
 template<typename T>
@@ -65,35 +67,35 @@ struct Instance
         this->type->destroy(this->data.get());
     }
 
-    static Instance<T> make(const std::shared_ptr<const T>& type)
+    [[nodiscard]] static Instance<T> make(const std::shared_ptr<const T>& type)
     {
         return Instance<T>(type, std::make_shared<char[]>(type->size()));
     }
 
-    static Instance<T> make(const Handle<T>& type)
+    [[nodiscard]] static Instance<T> make(const Handle<T>& type)
     {
         return Instance<T>(type.get(), std::make_shared<char[]>(type->size()));
     }
 
-    Reference view();
-    ConstantReference view() const;
-    Reference operator[](const std::string& name);
-    ConstantReference operator[](const std::string& name) const;
-    Reference operator[](size_t index);
-    ConstantReference operator[](size_t index) const;
+    [[nodiscard]] Reference view();
+    [[nodiscard]] ConstantReference view() const;
+    [[nodiscard]] Reference operator[](const std::string& name);
+    [[nodiscard]] ConstantReference operator[](const std::string& name) const;
+    [[nodiscard]] Reference operator[](size_t index);
+    [[nodiscard]] ConstantReference operator[](size_t index) const;
 
     template<typename U>
-    U& is() { return object::is<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] U& is() { return object::is<U>(this->type.get(), this->data.get()); }
     template<typename U>
-    const U& is() const { object::is<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] const U& is() const { object::is<U>(this->type.get(), this->data.get()); }
 
     template<typename U>
-    U* as() { return object::as<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] U* as() { return object::as<U>(this->type.get(), this->data.get()); }
     template<typename U>
-    const U* as() const { return object::as<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] const U* as() const { return object::as<U>(this->type.get(), this->data.get()); }
 
-    std::shared_ptr<char[]> get() { return this->data; }
-    std::shared_ptr<const char[]> get() const { return this->data; }
+    [[nodiscard]] std::shared_ptr<char[]> get() { return this->data; }
+    [[nodiscard]] std::shared_ptr<const char[]> get() const { return this->data; }
 };
 
 using Value = Instance<ValueType>;
@@ -106,38 +108,38 @@ struct Lens : public View
 
     Lens() = default;
     explicit Lens(std::shared_ptr<const Type> origin) : View(origin), origin(std::move(origin)) {}
-    Lens(std::shared_ptr<const Type> origin, View&& view) : View(std::move(view)), origin(origin) {}
+    Lens(std::shared_ptr<const Type> origin, View&& view) : View(std::move(view)), origin(std::move(origin)) {}
     Lens(std::shared_ptr<const Type> origin, std::shared_ptr<const Type> type, size_t offset = 0)
         : View(std::move(type), offset)
         , origin(std::move(origin))
     {}
 
-    Lens operator[](const std::string& name) const
+    [[nodiscard]] Lens operator[](const std::string& name) const
     {
         return Lens(this->origin, std::move(View::operator[](name)));
     }
 
-    Lens operator[](size_t index) const
+    [[nodiscard]] Lens operator[](size_t index) const
     {
         return Lens(this->origin, std::move(View::operator[](index)));
     }
 
     template<typename T>
-    Reference operator()(Instance<T>& instance);
+    [[nodiscard]] Reference operator()(Instance<T>& instance);
     template<typename T>
-    Reference operator()(std::shared_ptr<Instance<T>> instance);
+    [[nodiscard]] Reference operator()(std::shared_ptr<Instance<T>> instance);
 
     template<typename T>
-    ConstantReference operator()(const Instance<T>& instance);
+    [[nodiscard]] ConstantReference operator()(const Instance<T>& instance);
     template<typename T>
-    ConstantReference operator()(std::shared_ptr<const Instance<T>> instance);
+    [[nodiscard]] ConstantReference operator()(std::shared_ptr<const Instance<T>> instance);
 
-    bool operator==(const Lens& l) const { return this->origin == l.origin && View::operator==(l); }
-    bool operator!=(const Lens& l) const { return this->origin == l.origin && View::operator!=(l); }
-    bool operator>(const Lens& l) const { return this->origin == l.origin && View::operator>(l); }
-    bool operator>=(const Lens& l) const { return this->origin == l.origin && View::operator>=(l); }
-    bool operator<(const Lens& l) const { return this->origin == l.origin && View::operator<(l); }
-    bool operator<=(const Lens& l) const { return this->origin == l.origin && View::operator<=(l); }
+    [[nodiscard]] bool operator==(const Lens& l) const { return this->origin == l.origin && View::operator==(l); }
+    [[nodiscard]] bool operator!=(const Lens& l) const { return this->origin == l.origin && View::operator!=(l); }
+    [[nodiscard]] bool operator>(const Lens& l) const { return this->origin == l.origin && View::operator>(l); }
+    [[nodiscard]] bool operator>=(const Lens& l) const { return this->origin == l.origin && View::operator>=(l); }
+    [[nodiscard]] bool operator<(const Lens& l) const { return this->origin == l.origin && View::operator<(l); }
+    [[nodiscard]] bool operator<=(const Lens& l) const { return this->origin == l.origin && View::operator<=(l); }
 };
 
 template<typename T>
@@ -171,38 +173,38 @@ struct ReferenceBase : public Lens
     [[nodiscard]] char* get() { return this->data.get() + this->offset; }
     [[nodiscard]] const char* get() const { return this->data.get() + this->offset; }
 
-    ReferenceBase operator[](const std::string& name) const
+    [[nodiscard]] ReferenceBase operator[](const std::string& name) const
     {
         return ReferenceBase(this->data, std::move(Lens::operator[](name)));
     }
 
-    ReferenceBase operator[](size_t index) const
+    [[nodiscard]] ReferenceBase operator[](size_t index) const
     {
         return ReferenceBase(this->data, std::move(Lens::operator[](index)));
     }
 
     template<typename U>
-    bool operator==(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator==(r); }
+    [[nodiscard]] bool operator==(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator==(r); }
     template<typename U>
-    bool operator!=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator!=(r); }
+    [[nodiscard]] bool operator!=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator!=(r); }
     template<typename U>
-    bool operator>(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator>(r); }
+    [[nodiscard]] bool operator>(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator>(r); }
     template<typename U>
-    bool operator>=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator>=(r); }
+    [[nodiscard]] bool operator>=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator>=(r); }
     template<typename U>
-    bool operator<(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator<(r); }
+    [[nodiscard]] bool operator<(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator<(r); }
     template<typename U>
-    bool operator<=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator<=(r); }
+    [[nodiscard]] bool operator<=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator<=(r); }
 
     template<typename U>
-    U& is() { return object::is<U>(this->type.get(), this->get()); }
+    [[nodiscard]] U& is() { return object::is<U>(this->type.get(), this->get()); }
     template<typename U>
-    const U& is() const { object::is<U>(this->type.get(), this->get()); }
+    [[nodiscard]] const U& is() const { object::is<U>(this->type.get(), this->get()); }
 
     template<typename U>
-    U* as() { return object::as<U>(this->type.get(), this->get()); }
+    [[nodiscard]] U* as() { return object::as<U>(this->type.get(), this->get()); }
     template<typename U>
-    const U* as() const { return object::as<U>(this->type.get(), this->get()); }
+    [[nodiscard]] const U* as() const { return object::as<U>(this->type.get(), this->get()); }
 };
 
 struct Reference : public ReferenceBase<char[]>
@@ -210,17 +212,17 @@ struct Reference : public ReferenceBase<char[]>
     using ReferenceBase::ReferenceBase;
 
     template<typename U>
-    Reference(Instance<U>& instance) : ReferenceBase(instance.type, instance.data) {}
+    explicit Reference(Instance<U>& instance) : ReferenceBase(instance.type, instance.data) {}
     template<typename U>
-    Reference(const std::shared_ptr<Instance<U>>& instance) : ReferenceBase(instance.type, instance.data) {}
+    explicit Reference(const std::shared_ptr<Instance<U>>& instance) : ReferenceBase(instance.type, instance.data) {}
 };
 
 struct ConstantReference : public ReferenceBase<const char[]>
 {
     template<typename U>
-    ConstantReference(const Instance<U>& instance) : ReferenceBase(instance.type, instance.data) {}
+    explicit ConstantReference(const Instance<U>& instance) : ReferenceBase(instance.type, instance.data) {}
     template<typename U>
-    ConstantReference(const std::shared_ptr<const Instance<U>>& instance)
+    explicit ConstantReference(const std::shared_ptr<const Instance<U>>& instance)
         : ReferenceBase(instance.type, instance.data)
     {}
 };

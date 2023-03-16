@@ -20,7 +20,7 @@ struct Vector3
 
 TEST(Object, integration)
 {
-    ObjectType::Builder entity_builder;
+    ObjectType::Builder entity_builder("Entity");
     entity_builder.member("id", UINT32);
     entity_builder.member("name", STRING);
     entity_builder.member("position", VECTOR);
@@ -41,7 +41,7 @@ TEST(Object, integration)
     auto entity_array_type = Handle<ArrayType>::make(entity_type.get(), 2);
     EXPECT_EQ(entity_array_type->size(), sizeof(Entity) * 2);
 
-    ObjectType::Builder engine_builder;
+    ObjectType::Builder engine_builder("Engine");
     engine_builder.member("alive", BOOL);
     engine_builder.member("flags", UINT32);
     engine_builder.member("entities", entity_array_type.get());
@@ -53,6 +53,17 @@ TEST(Object, integration)
         uint32_t flags{};
         Entity entities[2];
     };
+
+    code::Generator generator;
+    engine_type->emit(generator.append());
+    std::stringstream out;
+    generator.write(out);
+    EXPECT_EQ(out.str(), "struct Engine\n"
+                         "{\n"
+                         "    bool alive;\n"
+                         "    unsigned int flags;\n"
+                         "    Entity entities[2];\n"
+                         "};\n\n");
 
     EXPECT_TRUE(engine_type.view() == engine_type.view());
     EXPECT_TRUE(engine_type.view() <= engine_type.view());
@@ -81,8 +92,8 @@ TEST(Object, integration)
     EXPECT_EQ(e["entities"][0]["name"].is<std::string>(), "noah");
     EXPECT_EQ(e["entities"][1]["id"].is<uint32_t>(), 2);
     EXPECT_EQ(e["entities"][1]["name"].is<std::string>(), "dylan");
-    EXPECT_THROW(e["hello"], MemberError);
-    EXPECT_THROW(e["entities"][2], IndexError);
+    EXPECT_THROW(auto l = e["hello"], MemberError);
+    EXPECT_THROW(auto l = e["entities"][2], IndexError);
 
     EXPECT_EQ(engine_type["alive"](e).is<bool>(), true);
 //    EXPECT_EQ(e[alive], true);

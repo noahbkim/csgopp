@@ -23,6 +23,9 @@ struct ArrayType : public Type
 
     [[nodiscard]] std::string represent() const override;
 
+    void emit(code::Declaration& declaration, code::Declaration::Member& member) const override;
+    void emit(layout::Cursor& cursor) const override;
+
     [[nodiscard]] size_t at(size_t index) const;
 
 private:

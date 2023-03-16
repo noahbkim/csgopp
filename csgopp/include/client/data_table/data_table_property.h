@@ -18,7 +18,7 @@ namespace csgopp::client::data_table::data_table_property
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::client::data_table::property::Property;
 using object::code::Cursor;
-using object::code::Declaration;
+using object::code::MemberDeclaration;
 using object::ObjectType;
 using object::Type;
 
@@ -60,7 +60,7 @@ struct DataTableProperty final : public Property
 
     [[nodiscard]] bool equals(const Property* other) const override;
 
-    void apply(Cursor<Declaration> declaration) const override;
+    void apply(Cursor<MemberDeclaration> declaration) const override;
 
 private:
     std::shared_ptr<const Type> _type;
