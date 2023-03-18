@@ -8,7 +8,7 @@
 namespace object::type
 {
 
-struct ValueType : public Type
+struct ValueType : public virtual Type
 {
     [[nodiscard]] virtual const std::type_info& info() const = 0;
 
@@ -17,7 +17,7 @@ struct ValueType : public Type
 };
 
 template<typename T>
-struct TrivialValueType : public ValueType
+struct TrivialValueType : public virtual ValueType
 {
     static_assert(std::is_constructible<T>::value);
     static_assert(std::is_destructible<T>::value);

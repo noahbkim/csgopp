@@ -18,9 +18,9 @@ using csgopp::client::User;
 using csgopp::client::GameEvent;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::EntityDatum;
-using csgopp::client::entity::EntityConstReference;
-using object::Accessor;
-using object::ConstReference;
+using csgopp::client::entity::EntityConstantReference;
+using object::Lens;
+using object::ConstantReference;
 
 const char* describe_game_phase(uint32_t phase)
 {
@@ -131,7 +131,7 @@ struct SummaryClient final : public Client
     using Client::Client;
 
     std::shared_ptr<const ServerClass> player_server_class;
-    Accessor weapon_purchases_accessor;
+    Lens weapon_purchases_accessor;
 
     void on_server_class_creation(const std::shared_ptr<const ServerClass>& server_class) override
     {
@@ -139,7 +139,7 @@ struct SummaryClient final : public Client
         {
             this->player_server_class = server_class;
             auto type = server_class->data_table->type();
-            this->weapon_purchases_accessor = Accessor(type)["cslocaldata"]["m_iWeaponPurchasesThisRound"];
+            this->weapon_purchases_accessor = Lens(type)["cslocaldata"]["m_iWeaponPurchasesThisRound"];
         }
     }
 
@@ -152,8 +152,8 @@ struct SummaryClient final : public Client
         {
             for (uint16_t index : indices)
             {
-                EntityConstReference ref = entity->at(index);
-                if (this->weapon_purchases_accessor.is_strict_superset_of(ref))
+                EntityConstantReference ref = entity->at(index);
+                if (this->weapon_purchases_accessor > ref)
                 {
                     const std::shared_ptr<const User>& user = this->users().at_index(entity->id);
                     OK(user != nullptr);

@@ -13,7 +13,7 @@ using csgopp::client::entity::PropertyNode;
 using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::common::control::concatenate;
 using csgopp::error::GameError;
-using object::shared;
+using object::make_shared_static;
 using object::Type;
 
 DataTable::DataTable(const CSVCMsg_SendTable& data)
@@ -141,16 +141,17 @@ std::shared_ptr<const EntityType> DataTable::construct_type()
 {
     if (this->_type == nullptr)
     {
-        const EntityType* base{nullptr};
+        std::shared_ptr<const EntityType> base;
+        EntityType::Builder builder;
         if (this->server_class.lock() && this->server_class.lock()->base_class != nullptr)
         {
             // TODO make this better
-            base = this->server_class.lock()->base_class->data_table->construct_type().get();
+            base = this->server_class.lock()->base_class->data_table->construct_type();
+            builder = EntityType::Builder(base);
         }
 
-        EntityType::Builder builder(base);
         builder.name = this->name;
-        builder.context = this;
+        builder.metadata = this;
         for (const std::shared_ptr<DataTable::Property>& property : this->properties)
         {
             property->build(builder);

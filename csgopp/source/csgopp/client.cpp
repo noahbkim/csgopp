@@ -821,7 +821,7 @@ void Client::advance_packet_game_event(CodedInputStream& stream)
     data.ParseFromCodedStream(&stream);
 
     const std::shared_ptr<GameEventType>& game_event_type = this->_game_event_types.at_id(data.eventid());
-    GameEvent game_event = GameEvent<GameEvent>::make(game_event_type);
+    GameEvent game_event(game_event_type);
     game_event.id = data.eventid();
 
     for (size_t i = 0; i < data.keys_size(); ++i)
@@ -830,7 +830,7 @@ void Client::advance_packet_game_event(CodedInputStream& stream)
         csgo::message::net::CSVCMsg_GameEvent_key_t& key = *data.mutable_keys(i);
         auto* game_event_value_type = dynamic_cast<const game_event::GameEventValueType*>(member.type.get());
         VERIFY(game_event_value_type != nullptr);
-        game_event_value_type->update(game_event.address.get() + member.offset, std::move(key));
+        game_event_value_type->update(game_event.data.get() + member.offset, std::move(key));
     }
 
     this->on_game_event(std::move(game_event));
@@ -948,7 +948,7 @@ void Client::_update_entity(Entity& entity, BitStream& stream)
     {
         // Actually update the field
         const EntityDatum& datum = entity.type->prioritized[i];
-        datum.type->update(entity.address.get() + datum.offset, stream, datum.property.get());
+        datum.type->update(entity.data.get() + datum.offset, stream, datum.property.get());
     }
 }
 

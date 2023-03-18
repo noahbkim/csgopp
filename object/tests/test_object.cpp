@@ -20,7 +20,8 @@ struct Vector3
 
 TEST(Object, integration)
 {
-    ObjectType::Builder entity_builder("Entity");
+    ObjectType::Builder entity_builder;
+    entity_builder.name = "Entity";
     entity_builder.member("id", UINT32);
     entity_builder.member("name", STRING);
     entity_builder.member("position", VECTOR);
@@ -41,7 +42,8 @@ TEST(Object, integration)
     auto entity_array_type = Handle<ArrayType>::make(entity_type.get(), 2);
     EXPECT_EQ(entity_array_type->size(), sizeof(Entity) * 2);
 
-    ObjectType::Builder engine_builder("Engine");
+    ObjectType::Builder engine_builder;
+    engine_builder.name = "Engine";
     engine_builder.member("alive", BOOL);
     engine_builder.member("flags", UINT32);
     engine_builder.member("entities", entity_array_type.get());

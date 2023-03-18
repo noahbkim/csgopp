@@ -8,7 +8,7 @@ namespace csgopp::client::game_event
 
 using object::Type;
 using csgopp::error::GameError;
-using object::make_static_shared;
+using object::make_shared_static;
 
 void StringType::emit(Declaration& declaration, Declaration::Member& member) const
 {
@@ -140,14 +140,14 @@ std::shared_ptr<Type> lookup_type(int32_t type)
 {
     switch (type)
     {
-    case 1: return make_static_shared<StringType>();
-    case 2: return make_static_shared<FloatType>();
-    case 3: return make_static_shared<LongType>();
-    case 4: return make_static_shared<ShortType>();
-    case 5: return make_static_shared<ByteType>();
-    case 6: return make_static_shared<BoolType>();
-    case 7: return make_static_shared<UnsignedInt64Type>();
-    case 8: return make_static_shared<WideStringType>();
+    case 1: return make_shared_static<StringType>();
+    case 2: return make_shared_static<FloatType>();
+    case 3: return make_shared_static<LongType>();
+    case 4: return make_shared_static<ShortType>();
+    case 5: return make_shared_static<ByteType>();
+    case 6: return make_shared_static<BoolType>();
+    case 7: return make_shared_static<UnsignedInt64Type>();
+    case 8: return make_shared_static<WideStringType>();
     default: throw GameError("invalid game event value type " + std::to_string(type));
     }
 }

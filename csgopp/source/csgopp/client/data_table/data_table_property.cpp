@@ -66,7 +66,7 @@ void DataTableProperty::build(ObjectType::Builder& builder)
     else if (this->collapsible())
     {
         // TODO: investigate whether this is correct, DT_OverlayVars is only non-baseclass example
-        this->offset = builder.embed(this->data_table->construct_type().get());
+        this->offset = builder.embed(*this->data_table->construct_type());
     }
     else
     {

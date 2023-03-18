@@ -18,7 +18,7 @@ using csgopp::client::data_table::data_type::UnsignedInt32Type;
 using csgopp::client::data_table::data_type::UnsignedInt64Type;
 using csgopp::client::data_table::data_type::Vector2Type;
 using csgopp::client::data_table::data_type::Vector3Type;
-using object::shared;
+using object::make_shared_static;
 
 Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
     : bits(data.num_bits())
@@ -40,15 +40,15 @@ std::shared_ptr<const DataType> Int32Property::type() const
 {
     if (this->bits == 1)
     {
-        return shared<BoolType>();
+        return make_shared_static<BoolType>();
     }
     else if (this->flags & Flags::UNSIGNED)
     {
-        return shared<UnsignedInt32Type>();
+        return make_shared_static<UnsignedInt32Type>();
     }
     else
     {
-        return shared<SignedInt32Type>();
+        return make_shared_static<SignedInt32Type>();
     }
 }
 
@@ -79,7 +79,7 @@ std::shared_ptr<const Type> FloatProperty::construct_type()
 
 std::shared_ptr<const DataType> FloatProperty::type() const
 {
-    return shared<FloatType>();
+    return make_shared_static<FloatType>();
 }
 
 bool FloatProperty::equals(const Property* other) const
@@ -109,7 +109,7 @@ std::shared_ptr<const Type> Vector3Property::construct_type()
 
 std::shared_ptr<const DataType> Vector3Property::type() const
 {
-    return shared<Vector3Type>();
+    return make_shared_static<Vector3Type>();
 }
 
 bool Vector3Property::equals(const Property* other) const
@@ -139,7 +139,7 @@ std::shared_ptr<const Type> Vector2Property::construct_type()
 
 std::shared_ptr<const DataType> Vector2Property::type() const
 {
-    return shared<Vector2Type>();
+    return make_shared_static<Vector2Type>();
 }
 
 bool Vector2Property::equals(const Property* other) const
@@ -161,7 +161,7 @@ std::shared_ptr<const Type> StringProperty::construct_type()
 
 std::shared_ptr<const DataType> StringProperty::type() const
 {
-    return shared<StringType>();
+    return make_shared_static<StringType>();
 }
 
 bool StringProperty::equals(const Property* other) const
@@ -221,11 +221,11 @@ std::shared_ptr<const DataType> Int64Property::type() const
 {
     if (this->flags & Flags::UNSIGNED)
     {
-        return shared<UnsignedInt64Type>();
+        return make_shared_static<UnsignedInt64Type>();
     }
     else
     {
-        return shared<SignedInt64Type>();
+        return make_shared_static<SignedInt64Type>();
     }
 }
 

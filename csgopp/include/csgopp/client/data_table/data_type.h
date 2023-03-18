@@ -24,21 +24,21 @@ struct DataType : public virtual Type
     virtual void update(char* address, BitStream& stream, const Property* property) const = 0;
 };
 
-struct BoolType final : public TrivialValueType<bool>, public DataType
+struct BoolType final : public TrivialValueType<bool>, public virtual DataType
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct UnsignedInt32Type final : public TrivialValueType<uint32_t>, public DataType
+struct UnsignedInt32Type final : public TrivialValueType<uint32_t>, public virtual DataType
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct SignedInt32Type final : public TrivialValueType<int32_t>, public DataType
+struct SignedInt32Type final : public TrivialValueType<int32_t>, public virtual DataType
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, BitStream& stream, const Property* property) const override;

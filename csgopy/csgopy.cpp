@@ -34,12 +34,12 @@ using csgopp::common::vector::Vector3;
 using csgopp::demo::Header;
 using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::IstreamInputStream;
-using object::ConstReference;
+using object::ConstantReference;
+using object::View;
 using object::Lens;
 using object::IndexError;
 using object::Instance;
 using object::MemberError;
-using object::Accessor;
 using object::Type;
 using object::TypeError;
 using object::ValueType;
@@ -148,14 +148,14 @@ struct UserAdapter : public Adapter<const User>
     }
 };
 
-struct AccessorAdapter
+struct ViewAdapter
 {
-    static nanobind::class_<Accessor> bind(nanobind::module_& module, nanobind::class_<Lens>& base);
+    static nanobind::class_<View> bind(nanobind::module_& module, nanobind::class_<View>& base);
 };
 
 struct EntityAccessorAdapter
 {
-    static nanobind::class_<EntityLens> bind(nanobind::module_& module, nanobind::class_<Accessor>& base)
+    static nanobind::class_<EntityLens> bind(nanobind::module_& module, nanobind::class_<Lens>& base)
     {
         return nanobind::class_<EntityLens>(module, "EntityAccessor", base)
         ;
@@ -178,14 +178,14 @@ struct EntityTypeAdapter : public Adapter<const EntityType>
         );
     }
 
-    [[nodiscard]] Accessor at_name(const std::string& name) const
+    [[nodiscard]] Lens at_name(const std::string& name) const
     {
-        return Accessor(this->self)[name];
+        return Lens(this->self)[name];
     }
 
-    [[nodiscard]] Accessor at_index(size_t index) const
+    [[nodiscard]] Lens at_index(size_t index) const
     {
-        return Accessor(this->self)[index];
+        return Lens(this->self)[index];
     }
 
     static nanobind::class_<EntityTypeAdapter> bind(nanobind::module_& module)

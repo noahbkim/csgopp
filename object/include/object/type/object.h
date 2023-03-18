@@ -39,23 +39,18 @@ struct ObjectType : public Type
     struct Builder
     {
         std::string name;
-        std::shared_ptr<ObjectType> base;
+        std::shared_ptr<const ObjectType> base;
         Members members;
         MemberLookup lookup;
+        code::Metadata<code::Declaration&>* metadata;
 
         Builder() = default;
-        explicit Builder(std::string name) : name(name) {}
-        explicit Builder(std::shared_ptr<ObjectType> base)
+        explicit Builder(const std::shared_ptr<const ObjectType>& base)
             : base(base)
             , members(base->members)
             , lookup(base->lookup)
             , _size(base->_size)
         {}
-        explicit Builder(const std::string& name, std::shared_ptr<ObjectType> base)
-            : Builder(std::move(base))
-        {
-            this->name = name;
-        }
 
         size_t embed(const ObjectType& type);
         size_t member(const Member& member);
@@ -77,8 +72,8 @@ struct ObjectType : public Type
     std::string name;
     MemberLookup lookup;
     Members members;
-    std::shared_ptr<ObjectType> base;
-    std::weak_ptr<code::Metadata<code::Declaration&>> metadata;
+    std::shared_ptr<const ObjectType> base;
+    code::Metadata<code::Declaration&>* metadata;
 
     ObjectType() = default;
     explicit ObjectType(Builder&& builder);

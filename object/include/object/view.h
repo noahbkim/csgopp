@@ -10,8 +10,8 @@
 namespace object
 {
 
-template<typename T>
-T& is(const Type* type, char* data)
+template<typename T, typename C>
+T& is(const Type* type, C* data)
 {
     auto* value_type = dynamic_cast<const type::ValueType*>(type);
     if (value_type == nullptr)
@@ -33,8 +33,8 @@ T& is(const Type* type, char* data)
     return *reinterpret_cast<T*>(data);
 }
 
-template<typename T>
-T* as(const Type* type, char* data)
+template<typename T, typename C>
+T* as(const Type* type, C* data)
 {
     return reinterpret_cast<T*>(data);
 }

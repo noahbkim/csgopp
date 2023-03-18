@@ -162,19 +162,6 @@ struct ReferenceBase : public Lens
         , data(std::move(data))
     {}
 
-    [[nodiscard]] char* get() { return this->data.get() + this->offset; }
-    [[nodiscard]] const char* get() const { return this->data.get() + this->offset; }
-
-    [[nodiscard]] ReferenceBase operator[](const std::string& name) const
-    {
-        return ReferenceBase(this->data, std::move(Lens::operator[](name)));
-    }
-
-    [[nodiscard]] ReferenceBase operator[](size_t index) const
-    {
-        return ReferenceBase(this->data, std::move(Lens::operator[](index)));
-    }
-
     template<typename U>
     [[nodiscard]] bool operator==(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator==(r); }
     template<typename U>
@@ -187,16 +174,6 @@ struct ReferenceBase : public Lens
     [[nodiscard]] bool operator<(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator<(r); }
     template<typename U>
     [[nodiscard]] bool operator<=(const ReferenceBase<U>& r) const { return this->data == r.data && View::operator<=(r); }
-
-    template<typename U>
-    [[nodiscard]] U& is() { return object::is<U>(this->type.get(), this->get()); }
-    template<typename U>
-    [[nodiscard]] const U& is() const { object::is<U>(this->type.get(), this->get()); }
-
-    template<typename U>
-    [[nodiscard]] U* as() { return object::as<U>(this->type.get(), this->get()); }
-    template<typename U>
-    [[nodiscard]] const U* as() const { return object::as<U>(this->type.get(), this->get()); }
 };
 
 struct Reference : public ReferenceBase<char[]>
@@ -207,6 +184,24 @@ struct Reference : public ReferenceBase<char[]>
     explicit Reference(Instance<U>& instance) : ReferenceBase(instance.type, instance.data) {}
     template<typename U>
     explicit Reference(const std::shared_ptr<Instance<U>>& instance) : ReferenceBase(instance.type, instance.data) {}
+
+    [[nodiscard]] char* get() { return this->data.get() + this->offset; }
+    [[nodiscard]] const char* get() const { return this->data.get() + this->offset; }
+
+    [[nodiscard]] Reference operator[](const std::string& name) const
+    {
+        return Reference(this->data, std::move(Lens::operator[](name)));
+    }
+
+    [[nodiscard]] Reference operator[](size_t index) const
+    {
+        return Reference(this->data, std::move(Lens::operator[](index)));
+    }
+
+    template<typename U>
+    [[nodiscard]] U& is() { return object::is<U, char>(this->type.get(), this->get()); }
+    template<typename U>
+    [[nodiscard]] U* as() { return object::as<U, char>(this->type.get(), this->get()); }
 };
 
 struct ConstantReference : public ReferenceBase<const char[]>
@@ -219,6 +214,23 @@ struct ConstantReference : public ReferenceBase<const char[]>
     explicit ConstantReference(const std::shared_ptr<const Instance<U>>& instance)
         : ReferenceBase(instance.type, instance.data)
     {}
+
+    [[nodiscard]] const char* get() const { return this->data.get() + this->offset; }
+
+    [[nodiscard]] ConstantReference operator[](const std::string& name) const
+    {
+        return ConstantReference(this->data, std::move(Lens::operator[](name)));
+    }
+
+    [[nodiscard]] ConstantReference operator[](size_t index) const
+    {
+        return ConstantReference(this->data, std::move(Lens::operator[](index)));
+    }
+
+    template<typename U>
+    [[nodiscard]] const U& is() const { return object::is<const U, const char>(this->type.get(), this->get()); }
+    template<typename U>
+    [[nodiscard]] const U* as() const { return object::as<const U, const char>(this->type.get(), this->get()); }
 };
 
 
@@ -228,7 +240,7 @@ void leak(T*)
 }
 
 template<typename T>
-static std::shared_ptr<T> make_static_shared()
+static std::shared_ptr<T> make_shared_static()
 {
     static T type;
     static std::shared_ptr<T> pointer(&type, &leak<T>);

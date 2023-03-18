@@ -61,6 +61,7 @@ ObjectType::ObjectType(Builder&& builder)
     , lookup(std::move(builder.lookup))
     , members(std::move(builder.members))
     , base(std::move(builder.base))
+    , metadata(builder.metadata)
     , _size(builder.size())
 {
 }
@@ -70,6 +71,7 @@ ObjectType::ObjectType(const Builder& builder)
     , lookup(builder.lookup)
     , members(builder.members)
     , base(builder.base)
+    , metadata(builder.metadata)
     , _size(builder.size())
 {
 }
@@ -105,9 +107,9 @@ void ObjectType::emit(code::Declaration& declaration) const
         iterator->emit(declaration, declaration.append(iterator->name));
     }
 
-    if (!this->metadata.expired())
+    if (this->metadata != nullptr)
     {
-        this->metadata.lock()->attach(declaration);
+        this->metadata->attach(declaration);
     }
 }
 
