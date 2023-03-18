@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <utility>
 #include <absl/container/flat_hash_map.h>
 #include "../type.h"
 
@@ -15,12 +16,18 @@ struct ObjectType : public Type
         std::string name;
         std::shared_ptr<const Type> type;
         size_t offset;
-        std::weak_ptr<code::Metadata<code::Declaration&, code::Declaration::Member&>> metadata;
+        code::Metadata<code::Declaration&, code::Declaration::Member&>* metadata;
 
-        Member(const std::string& name, std::shared_ptr<const Type> type, size_t offset)
-            : name(name)
+        Member(
+            std::string name,
+            std::shared_ptr<const Type> type,
+            size_t offset,
+            code::Metadata<code::Declaration&, code::Declaration::Member&>* metadata = nullptr
+        )
+            : name(std::move(name))
             , type(std::move(type))
             , offset(offset)
+            , metadata(metadata)
         {}
 
         void emit(code::Declaration& context, code::Declaration::Member& declaration) const;
@@ -52,9 +59,13 @@ struct ObjectType : public Type
 
         size_t embed(const ObjectType& type);
         size_t member(const Member& member);
-        size_t member(const std::string& name, std::shared_ptr<const Type> type);
+        size_t member(
+            const std::string& name,
+            std::shared_ptr<const Type> type,
+            code::Metadata<code::Declaration&, code::Declaration::Member&>* metadata = nullptr
+        );
 
-        size_t size() const
+        [[nodiscard]] size_t size() const
         {
             return this->_size;
         }

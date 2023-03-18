@@ -1,7 +1,7 @@
 #pragma once
 
 #include <object/code.h>
-#include <object/object.h>
+#include <object.h>
 #include "../../common/bits.h"
 #include "netmessages.pb.h"
 
@@ -10,9 +10,8 @@ namespace csgopp::client::data_table::property
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::common::bits::BitStream;
-using object::code::Context;
-using object::code::Cursor;
-using object::code::MemberDeclaration;
+using object::code::Metadata;
+using object::code::Declaration;
 using object::ObjectType;
 using object::Type;
 
@@ -86,7 +85,7 @@ struct PropertyFlags
 ///     declare it in other files/not clutter the `DataTable` definition.
 ///
 /// \sa https://developer.valvesoftware.com/wiki/Networking_Entities#Network_Data_Tables
-struct Property : Context<MemberDeclaration>
+struct Property : public Metadata<Declaration&, Declaration::Member&>
 {
     /// \brief The type of property as reported by the serialized data.
     /// \sa https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/dt_common.h
@@ -187,11 +186,12 @@ struct Property : Context<MemberDeclaration>
     /// \brief Annotate declarations generated from this property's type.
     ///
     /// \param declaration the declaration we want to modify.
+    /// \param member the member of the declaration.
     ///
     /// This override is currently just a proof of concept that's helped iron
     /// out the rather circular relationship between the `DataTable` structures
     /// and the `Type` ones.
-    void apply(Cursor<MemberDeclaration> declaration) const override
+    void attach(Declaration& declaration, Declaration::Member& member) override
     {
     }
 

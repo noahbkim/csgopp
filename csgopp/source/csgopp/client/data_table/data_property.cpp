@@ -1,5 +1,5 @@
-#include "data_property.h"
-#include "data_type.h"
+#include "csgopp/client/data_table/data_property.h"
+#include "csgopp/client/data_table/data_type.h"
 
 #define GUARD(CONDITION) if (!(CONDITION)) { return false; }
 #define CAST(OTHER, TYPE, VALUE) auto* (OTHER) = dynamic_cast<const TYPE*>(VALUE); GUARD((OTHER) != nullptr);

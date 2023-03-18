@@ -1,9 +1,7 @@
-#include "data_table.h"
-
-#include "../common/control.h"
-#include "entity.h"
-#include "server_class.h"
-#include "entity.h"
+#include "csgopp/client/data_table.h"
+#include "csgopp/client/entity.h"
+#include "csgopp/client/server_class.h"
+#include "csgopp/common/control.h"
 
 namespace csgopp::client::data_table
 {
@@ -199,11 +197,11 @@ std::shared_ptr<const ArrayType> DataTable::construct_array_type()
 }
 
 
-void DataTable::apply(Cursor<Definition> cursor) const
+void DataTable::attach(Declaration& declaration)
 {
     if (this->server_class.lock())
     {
-        cursor.target.aliases.emplace_back(this->server_class.lock()->name);
+        declaration.aliases.emplace_back(this->server_class.lock()->name);
     }
 }
 

@@ -1,6 +1,6 @@
-#include "data_type.h"
-#include "data_property.h"
-#include "../data_table.h"
+#include "csgopp/client/data_table/data_type.h"
+#include "csgopp/client/data_table/data_property.h"
+#include "csgopp/client/data_table.h"
 
 namespace csgopp::client::data_table::data_type
 {

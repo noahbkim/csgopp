@@ -1,4 +1,4 @@
-#include "control.h"
+#include "csgopp/common/control.h"
 
 namespace csgopp::common::control
 {

@@ -1,4 +1,4 @@
-#include "demo.h"
+#include "csgopp/demo.h"
 #include "netmessages.pb.h"
 
 namespace csgopp::demo

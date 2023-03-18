@@ -1,4 +1,5 @@
-#include "client.h"
+#include "csgopp/client.h"
+#include <object.h>
 
 namespace csgopp::client
 {
@@ -820,7 +821,7 @@ void Client::advance_packet_game_event(CodedInputStream& stream)
     data.ParseFromCodedStream(&stream);
 
     const std::shared_ptr<GameEventType>& game_event_type = this->_game_event_types.at_id(data.eventid());
-    GameEvent game_event(game_event_type);
+    GameEvent game_event = GameEvent<GameEvent>::make(game_event_type);
     game_event.id = data.eventid();
 
     for (size_t i = 0; i < data.keys_size(); ++i)

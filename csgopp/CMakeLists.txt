@@ -1,14 +1,14 @@
 add_library(csgopp STATIC
-        source/client.cpp
-        source/client/data_table.cpp
-        source/client/data_table/data_property.cpp
-        source/client/data_table/data_table_property.cpp
-        source/client/data_table/data_type.cpp
-        source/client/entity.cpp
-        source/client/game_event.cpp
-        source/client/server_class.cpp
-        source/common/control.cpp
-        source/demo.cpp
+        source/csgopp/client.cpp
+        source/csgopp/client/data_table.cpp
+        source/csgopp/client/data_table/data_property.cpp
+        source/csgopp/client/data_table/data_table_property.cpp
+        source/csgopp/client/data_table/data_type.cpp
+        source/csgopp/client/entity.cpp
+        source/csgopp/client/game_event.cpp
+        source/csgopp/client/server_class.cpp
+        source/csgopp/common/control.cpp
+        source/csgopp/demo.cpp
         )
 
 add_subdirectory(docs)

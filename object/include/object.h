@@ -62,19 +62,11 @@ struct Instance
         this->type->construct(this->data.get());
     }
 
+    explicit Instance(std::shared_ptr<const T> type) : Instance(type, std::make_shared<char[]>(type->size())) {}
+
     virtual ~Instance()
     {
         this->type->destroy(this->data.get());
-    }
-
-    [[nodiscard]] static Instance<T> make(const std::shared_ptr<const T>& type)
-    {
-        return Instance<T>(type, std::make_shared<char[]>(type->size()));
-    }
-
-    [[nodiscard]] static Instance<T> make(const Handle<T>& type)
-    {
-        return Instance<T>(type.get(), std::make_shared<char[]>(type->size()));
     }
 
     [[nodiscard]] Reference view();
@@ -219,6 +211,8 @@ struct Reference : public ReferenceBase<char[]>
 
 struct ConstantReference : public ReferenceBase<const char[]>
 {
+    using ReferenceBase::ReferenceBase;
+
     template<typename U>
     explicit ConstantReference(const Instance<U>& instance) : ReferenceBase(instance.type, instance.data) {}
     template<typename U>
@@ -226,6 +220,20 @@ struct ConstantReference : public ReferenceBase<const char[]>
         : ReferenceBase(instance.type, instance.data)
     {}
 };
+
+
+template<typename T>
+void leak(T*)
+{
+}
+
+template<typename T>
+static std::shared_ptr<T> make_static_shared()
+{
+    static T type;
+    static std::shared_ptr<T> pointer(&type, &leak<T>);
+    return pointer;
+}
 
 template<typename T>
 Lens Handle<T>::view() const

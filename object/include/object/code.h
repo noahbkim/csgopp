@@ -3,6 +3,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <optional>
 #include <ostream>
@@ -22,7 +23,7 @@ struct Declaration
         std::vector<std::string> annotations;
 
         Member() = default;
-        explicit Member(const std::string& name) : name(name) {}
+        explicit Member(std::string name) : name(std::move(name)) {}
     };
 
     std::string name;

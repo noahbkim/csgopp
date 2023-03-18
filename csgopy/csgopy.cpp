@@ -19,9 +19,9 @@ using namespace nanobind::literals;
 
 using csgopp::client::Client;
 using csgopp::client::DataTable;
-using csgopp::client::entity::EntityAccessor;
+using csgopp::client::entity::EntityLens;
 using csgopp::client::entity::EntityDatum;
-using csgopp::client::entity::EntityConstReference;
+using csgopp::client::entity::EntityConstantReference;
 using csgopp::client::entity::EntityType;
 using csgopp::client::Entity;
 using csgopp::client::GameEvent;
@@ -155,9 +155,9 @@ struct AccessorAdapter
 
 struct EntityAccessorAdapter
 {
-    static nanobind::class_<EntityAccessor> bind(nanobind::module_& module, nanobind::class_<Accessor>& base)
+    static nanobind::class_<EntityLens> bind(nanobind::module_& module, nanobind::class_<Accessor>& base)
     {
-        return nanobind::class_<EntityAccessor>(module, "EntityAccessor", base)
+        return nanobind::class_<EntityLens>(module, "EntityAccessor", base)
         ;
     }
 };
@@ -166,10 +166,10 @@ struct EntityTypeAdapter : public Adapter<const EntityType>
 {
     using Adapter::Adapter;
 
-    [[nodiscard]] EntityAccessor property(size_t index) const
+    [[nodiscard]] EntityLens property(size_t index) const
     {
         const EntityDatum& datum = this->self->prioritized.at(index);
-        return EntityAccessor(
+        return EntityLens(
             this->self,
             datum.type,
             datum.offset,
@@ -297,9 +297,9 @@ ConstReferenceAdapter::CasterMap ConstReferenceAdapter::casters{
 
 struct EntityConstReferenceAdapter
 {
-    static nanobind::class_<EntityConstReference> bind(nanobind::module_& module, nanobind::class_<ConstReference>& base)
+    static nanobind::class_<EntityConstantReference> bind(nanobind::module_& module, nanobind::class_<ConstReference>& base)
     {
-        return nanobind::class_<EntityConstReference>(module, "EntityConstReference", base);
+        return nanobind::class_<EntityConstantReference>(module, "EntityConstReference", base);
     }
 };
 
@@ -341,7 +341,7 @@ struct EntityAdapter : public Adapter<const Entity>
         return this->self->server_class->index;
     }
 
-    [[nodiscard]] EntityConstReference property(size_t index) const
+    [[nodiscard]] EntityConstantReference property(size_t index) const
     {
         return this->self->at(index);
     }

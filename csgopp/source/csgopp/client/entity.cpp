@@ -1,5 +1,5 @@
-#include "entity.h"
-#include "data_table.h"
+#include "csgopp/client/entity.h"
+#include "csgopp/client/data_table.h"
 
 namespace csgopp::client::entity
 {

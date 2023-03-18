@@ -3,7 +3,7 @@
 #include "netmessages.pb.h"
 #include "property.h"
 #include <object/code.h>
-#include <object/object.h>
+#include <object.h>
 
 namespace csgopp::client::data_table
 {
@@ -17,8 +17,7 @@ namespace csgopp::client::data_table::data_table_property
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::client::data_table::property::Property;
-using object::code::Cursor;
-using object::code::MemberDeclaration;
+using object::code::Declaration;
 using object::ObjectType;
 using object::Type;
 
@@ -60,7 +59,7 @@ struct DataTableProperty final : public Property
 
     [[nodiscard]] bool equals(const Property* other) const override;
 
-    void apply(Cursor<MemberDeclaration> declaration) const override;
+    void attach(Declaration& declaration, Declaration::Member& member) override;
 
 private:
     std::shared_ptr<const Type> _type;

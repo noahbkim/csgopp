@@ -2,7 +2,7 @@
 #include <locale>
 #include <codecvt>
 
-#include <object/object.h>
+#include <object.h>
 
 using namespace object;
 
@@ -74,7 +74,7 @@ TEST(Object, integration)
     EXPECT_TRUE(engine_type.view() > engine_type["alive"]);
     EXPECT_EQ(engine_type->size(), sizeof(Engine));
 
-    auto e = Object::make(engine_type);
+    auto e = Object(engine_type.get());
     EXPECT_EQ(e["alive"].offset, 0);
     EXPECT_EQ(e["flags"].offset, 4);
     EXPECT_EQ(&e["alive"].is<bool>(), (bool*)e.data.get());
@@ -121,7 +121,7 @@ TEST(Object, null)
     ObjectType::Builder builder;
     auto type = std::make_shared<ObjectType>(std::move(builder));
     EXPECT_EQ(type->size(), 0);
-    auto object = Object::make(type);
+    auto object = Object(type);
     EXPECT_EQ(object.type, type);
 }
 
@@ -131,7 +131,7 @@ TEST(Object, one_field_primitive)
     builder.member("value", UINT32);
     auto type = std::make_shared<ObjectType>(std::move(builder));
     EXPECT_EQ(type->size(), sizeof(uint32_t));
-    auto object = Object::make(type);
+    auto object = Object(type);
     object["value"].is<uint32_t>() = 69;
     EXPECT_EQ(object["value"].is<uint32_t>(), 69);
 }
@@ -142,7 +142,7 @@ TEST(Object, one_field_allocating)
     builder.member("value", STRING);
     auto type = std::make_shared<ObjectType>(std::move(builder));
     EXPECT_EQ(type->size(), sizeof(std::string));
-    auto object = Object::make(type);
+    auto object = Object(type);
     EXPECT_EQ(object["value"].is<std::string>(), "");
     object["value"].is<std::string>() = "hello, world!";
     EXPECT_EQ(object["value"].is<std::string>(), "hello, world!");
@@ -188,7 +188,7 @@ TEST(Object, instance_lifetime)
         EXPECT_EQ(value_type_check.use_count(), 1);
 
         {
-            auto value = Value::make(value_type);
+            auto value = Value(value_type);
             EXPECT_EQ(value_type.use_count(), 2);  // value_T, value.type | value_T.self, value_T_check
             EXPECT_EQ(value_type_check.use_count(), 2);
         }
@@ -213,7 +213,7 @@ TEST(Object, reference_lifetime)
             EXPECT_EQ(value_type.use_count(), 1);
             EXPECT_EQ(value_type_check.use_count(), 1);
 
-            auto value = Value::make(value_type);
+            auto value = Value(value_type);
             EXPECT_EQ(value_type.use_count(), 2);
             EXPECT_EQ(value_type_check.use_count(), 2);
 

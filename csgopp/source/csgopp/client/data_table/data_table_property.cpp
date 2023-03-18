@@ -1,6 +1,6 @@
-#include "data_table_property.h"
-#include "../data_table.h"
-#include "../entity.h"
+#include "csgopp/client/data_table/data_table_property.h"
+#include "csgopp/client/data_table.h"
+#include "csgopp/client/entity.h"
 
 #define GUARD(CONDITION) if (!(CONDITION)) { return false; }
 #define CAST(OTHER, TYPE, VALUE) auto* (OTHER) = dynamic_cast<const TYPE*>(VALUE); GUARD((OTHER) != nullptr);
@@ -11,11 +11,11 @@ namespace csgopp::client::data_table::data_table_property
 
 using object::ObjectType;
 
-void DataTableProperty::apply(Cursor<Declaration> declaration) const
+void DataTableProperty::attach(Declaration& declaration, Declaration::Member& member)
 {
     if (this->data_table->is_array)
     {
-        declaration.target.annotations.emplace_back("is array");
+        member.annotations.emplace_back("is array");
     }
 }
 

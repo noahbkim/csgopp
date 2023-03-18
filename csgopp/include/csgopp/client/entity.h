@@ -13,7 +13,7 @@
 #include "data_table/data_property.h"
 #include "data_table/data_table_property.h"
 #include <object/code.h>
-#include <object/object.h>
+#include <object.h>
 
 namespace csgopp::client::entity
 {
@@ -25,8 +25,8 @@ using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::property::Property;
 using csgopp::client::server_class::ServerClass;
 using csgopp::common::database::Database;
-using object::Accessor;
-using object::ConstReference;
+using object::Lens;
+using object::ConstantReference;
 using object::Instance;
 using object::ObjectType;
 using object::Type;
@@ -88,20 +88,20 @@ struct EntityDatum
 // TODO: It would be nice to make these a single allocation
 using ExcludeView = std::pair<std::string_view, std::string_view>;
 
-struct EntityAccessor : public Accessor
+struct EntityLens : public Lens
 {
     std::shared_ptr<const DataProperty> property;
     std::shared_ptr<const PropertyNode> parent;
 
-    EntityAccessor() = default;
-    EntityAccessor(
+    EntityLens() = default;
+    EntityLens(
         std::shared_ptr<const Type> origin,
         std::shared_ptr<const Type> type,
         size_t offset,
         std::shared_ptr<const DataProperty> property,
         std::shared_ptr<const PropertyNode> parent
     )
-        : Accessor(std::move(origin), std::move(type), offset)
+        : Lens(std::move(origin), std::move(type), offset)
         , property(std::move(property))
         , parent(std::move(parent))
     {
@@ -116,20 +116,21 @@ struct EntityType final : public ObjectType
     using ObjectType::ObjectType;
 };
 
-struct EntityConstReference : public ConstReference
+struct EntityConstantReference : public ConstantReference
 {
     std::shared_ptr<const DataProperty> property;
     std::shared_ptr<const PropertyNode> parent;
 
-    EntityConstReference() = default;
-    EntityConstReference(
-        std::shared_ptr<const char[]> origin,
+    EntityConstantReference() = default;
+    EntityConstantReference(
+        std::shared_ptr<const EntityType> origin,
+        std::shared_ptr<const char[]> data,
         std::shared_ptr<const Type> type,
         size_t offset,
         std::shared_ptr<const DataProperty> property,
         std::shared_ptr<const PropertyNode> parent
     )
-        : ConstReference(std::move(origin), std::move(type), offset)
+        : ConstantReference(std::move(origin), std::move(data), std::move(type), offset)
         , property(std::move(property))
         , parent(std::move(parent))
     {
@@ -146,11 +147,12 @@ struct Entity final : public Instance<EntityType>
     Entity(std::shared_ptr<const EntityType>&& type, Id id, std::shared_ptr<const ServerClass> server_class);
 
     // TODO: naming?
-    [[nodiscard]] EntityConstReference at(size_t prioritized_index) const
+    [[nodiscard]] EntityConstantReference at(size_t prioritized_index) const
     {
         const EntityDatum& datum = this->type->prioritized[prioritized_index];
-        return EntityConstReference(
-            this->address,
+        return EntityConstantReference(
+            this->type,
+            this->data,
             datum.type,
             datum.offset,
             datum.property,
