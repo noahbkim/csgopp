@@ -17,7 +17,7 @@ void StringType::emit(Declaration& declaration, Declaration::Member& member) con
 
 void StringType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = std::move(*key.mutable_val_string());
+    *reinterpret_cast<std::string*>(address) = std::move(*key.mutable_val_string());
 }
 
 //void StringType::format(const char* address, std::ostream& out) const
@@ -32,7 +32,7 @@ void FloatType::emit(Declaration& declaration, Declaration::Member& member) cons
 
 void FloatType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = key.val_float();
+    *reinterpret_cast<float*>(address) = key.val_float();
 }
 
 //void FloatType::format(const char* address, std::ostream& out) const
@@ -47,7 +47,7 @@ void LongType::emit(Declaration& declaration, Declaration::Member& member) const
 
 void LongType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = key.val_long();
+    *reinterpret_cast<int32_t*>(address) = key.val_long();
 }
 
 //void LongType::format(const char* address, std::ostream& out) const
@@ -64,7 +64,7 @@ void ShortType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_
 {
     // According to documentation this should be 16 bits
     // https://github.com/VSES/SourceEngine2007/blob/43a5c90a5ada1e69ca044595383be67f40b33c61/se2007/engine/GameEventManager.cpp#L33
-    *reinterpret_cast<Value*>(address) = static_cast<Value>(key.val_short());
+    *reinterpret_cast<int16_t*>(address) = static_cast<int16_t>(key.val_short());
 }
 
 //void ShortType::format(const char* address, std::ostream& out) const
@@ -79,7 +79,7 @@ void ByteType::emit(Declaration& declaration, Declaration::Member& member) const
 
 void ByteType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = key.val_byte();
+    *reinterpret_cast<uint8_t*>(address) = key.val_byte();
 }
 
 //void ByteType::format(const char* address, std::ostream& out) const
@@ -94,7 +94,7 @@ void BoolType::emit(Declaration& declaration, Declaration::Member& member) const
 
 void BoolType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = key.val_bool();
+    *reinterpret_cast<bool*>(address) = key.val_bool();
 }
 
 //void BoolType::format(const char* address, std::ostream& out) const
@@ -109,7 +109,7 @@ void UnsignedInt64Type::emit(Declaration& declaration, Declaration::Member& memb
 
 void UnsignedInt64Type::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    *reinterpret_cast<Value*>(address) = key.val_uint64();
+    *reinterpret_cast<uint64_t*>(address) = key.val_uint64();
 }
 
 //void UnsignedInt64Type::format(const char* address, std::ostream& out) const
@@ -124,7 +124,7 @@ void WideStringType::emit(Declaration& declaration, Declaration::Member& member)
 
 void WideStringType::update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const
 {
-    auto* value = reinterpret_cast<Value*>(address);
+    auto* value = reinterpret_cast<std::wstring*>(address);
     value->clear();
     value->append(
         reinterpret_cast<const wchar_t*>(key.val_wstring().data()),

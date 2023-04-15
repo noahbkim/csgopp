@@ -150,14 +150,14 @@ struct Entity final : public Instance<EntityType>
     [[nodiscard]] EntityConstantReference at(size_t prioritized_index) const
     {
         const EntityDatum& datum = this->type->prioritized[prioritized_index];
-        return EntityConstantReference(
+        return {
             this->type,
             this->data,
             datum.type,
             datum.offset,
             datum.property,
             datum.parent
-        );
+        };
     }
 };
 

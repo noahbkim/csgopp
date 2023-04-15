@@ -1,6 +1,24 @@
 #include "csgopp/client.h"
 #include <object.h>
 
+#ifdef NDEBUG
+#define DEBUG(STATEMENT)
+#define NOTE(FMT, ...)
+#define VERIFY(CONDITION, ...) OK(CONDITION)
+#else
+#define DEBUG(STATEMENT) STATEMENT;
+#define NOTE(FMT, ...) fprintf(stderr, "  " FMT "\n", __VA_ARGS__);
+#define VERIFY(CONDITION, ...) do \
+{ \
+    if (!(CONDITION)) \
+    { \
+        fprintf(stderr, WHERE() "\n  condition: " #CONDITION "\n  cursor: %d\n  tick: %d\n", this->cursor(), this->tick()); \
+        __VA_ARGS__; \
+        throw csgopp::error::GameError("failed assertion " #CONDITION); \
+    } \
+} while (false)
+#endif
+
 namespace csgopp::client
 {
 
@@ -529,17 +547,17 @@ Database<ServerClass> Client::create_server_classes(
 )
 {
     uint16_t server_class_count;
-    VERIFY(demo::ReadLittleEndian16(stream, &server_class_count));
+    VERIFY(demo::read_little_endian_uint16(stream, &server_class_count));
     Database<ServerClass> new_server_classes(server_class_count);
 
     for (uint16_t i = 0; i < server_class_count; ++i)
     {
         auto server_class = std::make_shared<ServerClass>();
-        VERIFY(csgopp::demo::ReadLittleEndian16(stream, &server_class->index));
-        VERIFY(csgopp::demo::ReadCStyleString(stream, &server_class->name));
+        VERIFY(csgopp::demo::read_little_endian_uint16(stream, &server_class->index));
+        VERIFY(csgopp::demo::read_c_style_string(stream, &server_class->name));
 
         std::string data_table_name;
-        VERIFY(csgopp::demo::ReadCStyleString(stream, &data_table_name));
+        VERIFY(csgopp::demo::read_c_style_string(stream, &data_table_name));
         server_class->data_table = lookup(
             new_data_tables.by_name,
             this->_data_tables.by_name,
@@ -828,7 +846,7 @@ void Client::advance_packet_game_event(CodedInputStream& stream)
     {
         const GameEventType::Member& member = game_event_type->members.at(i);
         csgo::message::net::CSVCMsg_GameEvent_key_t& key = *data.mutable_keys(i);
-        auto* game_event_value_type = dynamic_cast<const game_event::GameEventValueType*>(member.type.get());
+        auto* game_event_value_type = dynamic_cast<const game_event::DataType*>(member.type.get());
         VERIFY(game_event_value_type != nullptr);
         game_event_value_type->update(game_event.data.get() + member.offset, std::move(key));
     }

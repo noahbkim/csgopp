@@ -14,8 +14,8 @@ namespace csgopp::demo
 using google::protobuf::io::CodedInputStream;
 using csgopp::error::GameError;
 
-bool ReadLittleEndian16(CodedInputStream& stream, uint16_t* value);
-bool ReadCStyleString(CodedInputStream& stream, std::string* string);
+bool read_little_endian_uint16(CodedInputStream& stream, uint16_t* value);
+bool read_c_style_string(CodedInputStream& stream, std::string* string);
 
 struct Header
 {

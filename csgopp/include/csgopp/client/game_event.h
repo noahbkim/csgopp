@@ -20,62 +20,63 @@ using object::TrivialValueType;
 using object::Instance;
 using object::ObjectType;
 using object::Type;
+using object::WrapperType;
 
-struct GameEventValueType : public virtual Type
+struct DataType : public Type
 {
     virtual void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const = 0;
 };
 
-struct StringType : public TrivialValueType<std::string>, public GameEventValueType
+struct StringType : public WrapperType<TrivialValueType<std::string>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct FloatType : public TrivialValueType<float>, public GameEventValueType
+struct FloatType : public WrapperType<TrivialValueType<float>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct LongType : public TrivialValueType<int32_t>, public GameEventValueType
+struct LongType : public WrapperType<TrivialValueType<int32_t>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct ShortType : public TrivialValueType<int16_t>, public GameEventValueType
+struct ShortType : public WrapperType<TrivialValueType<int16_t>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct ByteType : public TrivialValueType<uint8_t>, public GameEventValueType
+struct ByteType : public WrapperType<TrivialValueType<uint8_t>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct BoolType : public TrivialValueType<bool>, public GameEventValueType
+struct BoolType : public WrapperType<TrivialValueType<bool>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct UnsignedInt64Type : public TrivialValueType<uint64_t>, public GameEventValueType
+struct UnsignedInt64Type : public WrapperType<TrivialValueType<uint64_t>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct WideStringType : public TrivialValueType<std::wstring>, public GameEventValueType
+struct WideStringType : public WrapperType<TrivialValueType<std::wstring>, DataType>
 {
     void emit(Declaration& declaration, Declaration::Member& member) const override;
     void update(char* address, csgo::message::net::CSVCMsg_GameEvent_key_t&& key) const override;

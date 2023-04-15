@@ -67,7 +67,7 @@ struct ServerClassAdapter : public Adapter<const ServerClass>
 {
     using Adapter::Adapter;
 
-    [[nodiscard]] const ServerClass::Index index() const
+    [[nodiscard]] ServerClass::Index index() const
     {
         return this->self->index;
     }
@@ -254,24 +254,24 @@ nanobind::object cast(const char* address)
     return nanobind::cast(*reinterpret_cast<const T*>(address));
 }
 
-struct ConstReferenceAdapter
+struct ConstantReferenceAdapter
 {
     using Caster = nanobind::object (*)(const char*);
     using CasterMap = absl::flat_hash_map<const std::type_info*, Caster>;
     static CasterMap casters;
 
-    static nanobind::class_<ConstReference> bind(nanobind::module_& module, nanobind::class_<Lens>& base)
+    static nanobind::class_<ConstantReference> bind(nanobind::module_& module, nanobind::class_<Lens>& base)
     {
-        return nanobind::class_<ConstReference>(module, "ConstReference", base)
-            .def("__getitem__", [](const ConstReference* self, const std::string& name) { return self->operator[](name); })
-            .def("__getitem__", [](const ConstReference* self, size_t index) { return self->operator[](index); })
-            .def("type", [](const ConstReference* self) { return TypeAdapter<Type>(self->type); })
-            .def("value", [](const ConstReference* self)
+        return nanobind::class_<ConstantReference>(module, "ConstantReference", base)
+            .def("__getitem__", [](const ConstantReference* self, const std::string& name) { return self->operator[](name); })
+            .def("__getitem__", [](const ConstantReference* self, size_t index) { return self->operator[](index); })
+            .def("type", [](const ConstantReference* self) { return TypeAdapter<Type>(self->type); })
+            .def("value", [](const ConstantReference* self)
             {
                 auto* value_type = dynamic_cast<const ValueType*>(self->type.get());
                 if (value_type != nullptr)
                 {
-                    Caster caster = ConstReferenceAdapter::casters[&value_type->info()];
+                    Caster caster = ConstantReferenceAdapter::casters[&value_type->info()];
                     return caster(self->address());
                 }
                 else
@@ -283,7 +283,7 @@ struct ConstReferenceAdapter
     }
 };
 
-ConstReferenceAdapter::CasterMap ConstReferenceAdapter::casters{
+ConstantReferenceAdapter::CasterMap ConstantReferenceAdapter::casters{
     {&typeid(bool), &cast<bool>},
     {&typeid(uint32_t), &cast<uint32_t>},
     {&typeid(int32_t), &cast<int32_t>},
@@ -295,11 +295,11 @@ ConstReferenceAdapter::CasterMap ConstReferenceAdapter::casters{
     {&typeid(int64_t), &cast<int64_t>},
 };
 
-struct EntityConstReferenceAdapter
+struct EntityConstantReferenceAdapter
 {
-    static nanobind::class_<EntityConstantReference> bind(nanobind::module_& module, nanobind::class_<ConstReference>& base)
+    static nanobind::class_<EntityConstantReference> bind(nanobind::module_& module, nanobind::class_<ConstantReference>& base)
     {
-        return nanobind::class_<EntityConstantReference>(module, "EntityConstReference", base);
+        return nanobind::class_<EntityConstantReference>(module, "EntityConstantReference", base);
     }
 };
 
@@ -309,8 +309,8 @@ struct InstanceAdapter : public Adapter<const Instance<const T>>
     using Adapter<const Instance<const T>>::Adapter;
 
     [[nodiscard]] TypeAdapter<const T> type() const { return TypeAdapter<const T>(this->self->type); }
-    [[nodiscard]] ConstReference get_name(const std::string& name) const { return this->self->operator[](name); }
-    [[nodiscard]] ConstReference get_index(size_t index) const { return this->self->operator[](index); }
+    [[nodiscard]] ConstantReference get_name(const std::string& name) const { return this->self->operator[](name); }
+    [[nodiscard]] ConstantReference get_index(size_t index) const { return this->self->operator[](index); }
 
     static nanobind::class_<InstanceAdapter<T>> bind(nanobind::module_& module, const char* name)
     {
@@ -562,8 +562,8 @@ NB_MODULE(csgopy, module) {
     auto accessor_class = AccessorAdapter::bind(module, lens_class);
     EntityAccessorAdapter::bind(module, accessor_class);
     TypeAdapter<Type>::bind(module, "Type");
-    auto const_reference_class = ConstReferenceAdapter::bind(module, lens_class);
-    EntityConstReferenceAdapter::bind(module, const_reference_class);
+    auto const_reference_class = ConstantReferenceAdapter::bind(module, lens_class);
+    EntityConstantReferenceAdapter::bind(module, const_reference_class);
     EntityTypeAdapter::bind(module);
     EntityAdapter::bind(module);
 

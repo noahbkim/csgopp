@@ -7,6 +7,7 @@
 #include "object/type/value.h"
 #include "object/type/array.h"
 #include "object/type/object.h"
+#include "object/type/wrapper.h"
 #include "object/view.h"
 
 namespace object
@@ -16,6 +17,7 @@ using type::ValueType;
 using type::TrivialValueType;
 using type::ArrayType;
 using type::ObjectType;
+using type::WrapperType;
 
 template<typename T> struct Handle;
 template<typename T> struct Instance;
@@ -108,12 +110,12 @@ struct Lens : public View
 
     [[nodiscard]] Lens operator[](const std::string& name) const
     {
-        return Lens(this->origin, std::move(View::operator[](name)));
+        return {this->origin, std::move(View::operator[](name))};
     }
 
     [[nodiscard]] Lens operator[](size_t index) const
     {
-        return Lens(this->origin, std::move(View::operator[](index)));
+        return {this->origin, std::move(View::operator[](index))};
     }
 
     template<typename T>
@@ -190,12 +192,12 @@ struct Reference : public ReferenceBase<char[]>
 
     [[nodiscard]] Reference operator[](const std::string& name) const
     {
-        return Reference(this->data, std::move(Lens::operator[](name)));
+        return {this->data, std::move(Lens::operator[](name))};
     }
 
     [[nodiscard]] Reference operator[](size_t index) const
     {
-        return Reference(this->data, std::move(Lens::operator[](index)));
+        return {this->data, std::move(Lens::operator[](index))};
     }
 
     template<typename U>
@@ -219,12 +221,12 @@ struct ConstantReference : public ReferenceBase<const char[]>
 
     [[nodiscard]] ConstantReference operator[](const std::string& name) const
     {
-        return ConstantReference(this->data, std::move(Lens::operator[](name)));
+        return {this->data, std::move(Lens::operator[](name))};
     }
 
     [[nodiscard]] ConstantReference operator[](size_t index) const
     {
-        return ConstantReference(this->data, std::move(Lens::operator[](index)));
+        return {this->data, std::move(Lens::operator[](index))};
     }
 
     template<typename U>

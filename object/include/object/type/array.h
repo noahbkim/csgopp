@@ -7,7 +7,7 @@
 namespace object::type
 {
 
-struct ArrayType : public virtual Type
+struct ArrayType : public Type
 {
     std::shared_ptr<const Type> element;
     size_t length{0};

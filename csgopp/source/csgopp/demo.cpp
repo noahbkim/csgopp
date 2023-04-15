@@ -4,7 +4,7 @@
 namespace csgopp::demo
 {
 
-bool ReadLittleEndian16(CodedInputStream& stream, uint16_t* value)
+bool read_little_endian_uint16(CodedInputStream& stream, uint16_t* value)
 {
     uint8_t buffer[2];
     if (!stream.ReadRaw(buffer, 2))
@@ -17,7 +17,7 @@ bool ReadLittleEndian16(CodedInputStream& stream, uint16_t* value)
 }
 
 // When in Rome
-bool ReadCStyleString(CodedInputStream& stream, std::string* string)
+bool read_c_style_string(CodedInputStream& stream, std::string* string)
 {
     do
     {

@@ -21,29 +21,6 @@
 #include "client/user.h"
 #include "netmessages.pb.h"
 
-#define LOCAL(EVENT) _event_##EVENT
-#define BEFORE(OBSERVER, EVENT, ...) typename OBSERVER::EVENT LOCAL(EVENT)(*this, ## __VA_ARGS__);
-#define AFTER(EVENT, ...) LOCAL(EVENT).handle(*this, __VA_ARGS__);
-
-
-#ifdef NDEBUG
-#define DEBUG(STATEMENT)
-#define NOTE(FMT, ...)
-#define VERIFY(CONDITION, ...) OK(CONDITION)
-#else
-#define DEBUG(STATEMENT) STATEMENT;
-#define NOTE(FMT, ...) fprintf(stderr, "  " FMT "\n", __VA_ARGS__);
-#define VERIFY(CONDITION, ...) do \
-{ \
-    if (!(CONDITION)) \
-    { \
-        fprintf(stderr, WHERE() "\n  condition: " #CONDITION "\n  cursor: %d\n  tick: %d\n", this->cursor(), this->tick()); \
-        __VA_ARGS__; \
-        throw csgopp::error::GameError("failed assertion " #CONDITION); \
-    } \
-} while (false)
-#endif
-
 /// Most notably, this namespace defines the `ClientObserverBase` and
 /// `Client`, which together form the basis of csgopp's demo parsing and
 /// game client framework.
