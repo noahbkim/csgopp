@@ -15,19 +15,22 @@ using csgopp::client::server_class::ServerClass;
 using object::ConstantReference;
 using object::Lens;
 
-struct EntityLensAdapter
+struct EntityLensBinding
 {
     static nanobind::class_<EntityLens> bind(nanobind::module_& module_, nanobind::class_<Lens>& base)
     {
-        return nanobind::class_<EntityLens>(module_, "EntityAccessor", base);
+        return {module_, "EntityLens", base};
     }
 };
 
-struct EntityConstantReferenceAdapter
+struct EntityConstantReferenceBinding
 {
-    static nanobind::class_<EntityConstantReference> bind(nanobind::module_& module_, nanobind::class_<ConstantReference>& base)
+    static nanobind::class_<EntityConstantReference> bind(
+        nanobind::module_& module_,
+        nanobind::class_<ConstantReference>& base
+    )
     {
-        return nanobind::class_<EntityConstantReference>(module_, "EntityConstantReference", base);
+        return {module_, "EntityConstantReference", base};
     }
 };
 
@@ -38,13 +41,13 @@ struct EntityTypeAdapter : public Adapter<const EntityType>
     [[nodiscard]] EntityLens property(size_t index) const
     {
         const EntityDatum& datum = this->self->prioritized.at(index);
-        return EntityLens(
+        return {
             this->self,
             datum.type,
             datum.offset,
             datum.property,
             datum.parent
-        );
+        };
     }
 
     [[nodiscard]] Lens at_name(const std::string& name) const
@@ -76,6 +79,11 @@ struct EntityAdapter : public Adapter<const Entity>
         return this->self->id;
     }
 
+    [[nodiscard]] EntityTypeAdapter type() const
+    {
+        return EntityTypeAdapter(this->self->type);
+    }
+
     [[nodiscard]] ServerClassAdapter server_class() const
     {
         return ServerClassAdapter(this->self->server_class);
@@ -96,6 +104,7 @@ struct EntityAdapter : public Adapter<const Entity>
         auto base = InstanceAdapter<EntityType>::bind(module_, "EntityTypeInstance");
         return nanobind::class_<EntityAdapter>(module_, "Entity", base)
             .def("id", &EntityAdapter::id)
+            .def("type", &EntityAdapter::type)
             .def("server_class", &EntityAdapter::server_class)
             .def("server_class_index", &EntityAdapter::server_class_index)
             .def("property", &EntityAdapter::property)

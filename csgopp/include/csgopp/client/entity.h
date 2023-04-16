@@ -129,12 +129,7 @@ struct EntityConstantReference : public ConstantReference
         size_t offset,
         std::shared_ptr<const DataProperty> property,
         std::shared_ptr<const PropertyNode> parent
-    )
-        : ConstantReference(std::move(origin), std::move(data), std::move(type), offset)
-        , property(std::move(property))
-        , parent(std::move(parent))
-    {
-    }
+    );
 };
 
 struct Entity final : public Instance<EntityType>

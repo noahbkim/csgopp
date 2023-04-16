@@ -1,6 +1,6 @@
 #include "object.h"
 
-ConstantReferenceAdapter::CasterMap ConstantReferenceAdapter::casters{
+ConstantReferenceBinding::CasterMap ConstantReferenceBinding::casters{
     {&typeid(bool), &cast<bool>},
     {&typeid(uint32_t), &cast<uint32_t>},
     {&typeid(int32_t), &cast<int32_t>},

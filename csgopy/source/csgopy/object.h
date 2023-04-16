@@ -17,7 +17,7 @@ using object::ValueType;
 using object::View;
 using object::TypeError;
 
-struct ViewAdapter
+struct ViewBinding
 {
     static nanobind::class_<View> bind(nanobind::module_& module, nanobind::class_<View>& base);
 };
@@ -35,13 +35,15 @@ struct TypeAdapter : public Adapter<const T>
     }
 };
 
-struct LensAdapter
+struct LensBinding
 {
     static nanobind::class_<Lens> bind(nanobind::module_& module)
     {
         return nanobind::class_<Lens>(module, "Lens")
             .def("type", [](const Lens* self) { return TypeAdapter<Type>(self->type); })
             .def("offset", [](const Lens* self) { return self->offset; })
+            .def("__getitem__", [](const Lens* self, std::string name) { return (*self)[name]; })
+            .def("__getitem__", [](const Lens* self, size_t index) { return (*self)[index]; })
             .def("__eq__", &Lens::operator==)
             .def("__le__", &Lens::operator<=)
             .def("__lt__", &Lens::operator<)
@@ -57,7 +59,7 @@ nanobind::object cast(const char* address)
     return nanobind::cast(*reinterpret_cast<const T*>(address));
 }
 
-struct ConstantReferenceAdapter
+struct ConstantReferenceBinding
 {
     using Caster = nanobind::object (*)(const char*);
     using CasterMap = absl::flat_hash_map<const std::type_info*, Caster>;
@@ -74,7 +76,7 @@ struct ConstantReferenceAdapter
                 auto* value_type = dynamic_cast<const ValueType*>(self->type.get());
                 if (value_type != nullptr)
                 {
-                    Caster caster = ConstantReferenceAdapter::casters[&value_type->info()];
+                    Caster caster = ConstantReferenceBinding::casters[&value_type->info()];
                     return caster(self->data.get());
                 }
                 else

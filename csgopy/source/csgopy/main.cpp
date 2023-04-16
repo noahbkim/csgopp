@@ -3,6 +3,7 @@
 #include <nanobind/nanobind.h>
 
 #include "client.h"
+#include "common.h"
 #include "data_table.h"
 #include "demo.h"
 #include "entity.h"
@@ -32,23 +33,17 @@ NB_MODULE(csgopy, module_)
     GameEventAdapter::bind(module_);
     UserAdapter::bind(module_);
 
-    auto lens_class = LensAdapter::bind(module_);
-    EntityLensAdapter::bind(module_, lens_class);
+    auto lens_class = LensBinding::bind(module_);
+    EntityLensBinding::bind(module_, lens_class);
     TypeAdapter<Type>::bind(module_, "Type");
-    auto const_reference_class = ConstantReferenceAdapter::bind(module_, lens_class);
-    EntityConstantReferenceAdapter::bind(module_, const_reference_class);
+    auto const_reference_class = ConstantReferenceBinding::bind(module_, lens_class);
+    EntityConstantReferenceBinding::bind(module_, const_reference_class);
     EntityTypeAdapter::bind(module_);
     EntityAdapter::bind(module_);
 
-    nanobind::class_<Vector2>(module_, "Vector2")
-    .def_prop_ro("x", [](const Vector2* self) { return self->x; })
-        .def_prop_ro("y", [](const Vector2* self) { return self->y; });
+    HeaderBinding::bind(module_);
+    Vector2Binding::bind(module_);
+    Vector3Binding::bind(module_);
 
-    nanobind::class_<Vector3>(module_, "Vector3")
-    .def_prop_ro("x", [](const Vector3* self) { return self->x; })
-        .def_prop_ro("y", [](const Vector3* self) { return self->y; })
-        .def_prop_ro("z", [](const Vector3* self) { return self->z; });
-
-    header::bind(module_);
     ClientAdapter::bind(module_);
 }

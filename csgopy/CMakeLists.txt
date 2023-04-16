@@ -6,7 +6,9 @@ endif ()
 
 nanobind_add_module(csgopy NB_STATIC
         source/csgopy/client.cpp
+        source/csgopy/common.cpp
         source/csgopy/data_table.cpp
+        source/csgopy/demo.cpp
         source/csgopy/entity.cpp
         source/csgopy/game_event.cpp
         source/csgopy/object.cpp
