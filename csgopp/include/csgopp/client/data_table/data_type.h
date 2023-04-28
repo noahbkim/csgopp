@@ -1,8 +1,8 @@
 #pragma once
 
-#include <object.h>
-#include <object/code.h>
-#include <object/magic.h>
+#include <objective.h>
+#include <objective/code.h>
+#include <objective/magic.h>
 #include "../../common/bits.h"
 #include "../../common/vector.h"
 #include "property.h"

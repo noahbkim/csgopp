@@ -1,5 +1,5 @@
 #include "csgopp/client.h"
-#include <object.h>
+#include <objective.h>
 
 #ifdef NDEBUG
 #define DEBUG(STATEMENT)

@@ -1,5 +1,5 @@
-#include "object/error.h"
-#include "object/type/array.h"
+#include "objective/error.h"
+#include "objective/type/array.h"
 
 namespace object::type
 {

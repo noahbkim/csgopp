@@ -3,8 +3,8 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <csgopp/common/vector.h>
-#include <object.h>
-#include <object/view.h>
+#include <objective.h>
+#include <objective/view.h>
 #include "adapter.h"
 
 using csgopp::common::vector::Vector2;

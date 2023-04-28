@@ -1,8 +1,4 @@
-if (MSVC)
-    find_package(Python COMPONENTS Interpreter Development Development.Module REQUIRED)
-else ()
-    find_package(Python3 COMPONENTS Interpreter Development Development.Module REQUIRED)
-endif ()
+find_package(Python COMPONENTS Interpreter Development Development.Module REQUIRED)
 
 nanobind_add_module(csgopy NB_STATIC
         source/csgopy/client.cpp

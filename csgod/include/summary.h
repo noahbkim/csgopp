@@ -8,7 +8,7 @@
 #include <argparse/argparse.hpp>
 
 #include <csgopp/client.h>
-#include <object.h>
+#include <objective.h>
 
 #include "common.h"
 

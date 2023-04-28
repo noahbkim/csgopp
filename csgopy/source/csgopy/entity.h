@@ -1,7 +1,7 @@
 #pragma once
 
 #include <csgopp/client/entity.h>
-#include <object.h>
+#include <objective.h>
 #include "adapter.h"
 #include "object.h"
 #include "server_class.h"

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <type_traits>
+#include <string>
+#include <string_view>
 
 namespace object
 {

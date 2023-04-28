@@ -1,6 +1,6 @@
-#include "object/error.h"
-#include "object/magic.h"
-#include "object/type/object.h"
+#include "objective/error.h"
+#include "objective/magic.h"
+#include "objective/type/object.h"
 
 namespace object::type
 {

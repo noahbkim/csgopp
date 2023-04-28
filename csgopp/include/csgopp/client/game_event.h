@@ -7,8 +7,8 @@
 #include "../common/database.h"
 #include "../common/lookup.h"
 #include "netmessages.pb.h"
-#include <object/code.h>
-#include <object.h>
+#include <objective/code.h>
+#include <objective.h>
 
 namespace csgopp::client::game_event
 {

@@ -1,6 +1,6 @@
 add_library(object STATIC
         source/object/type/array.cpp
-        source/object/type/object.cpp
+        source/object/type/objective.cpp
         source/object/type/value.cpp
         source/object/code.cpp
         source/object/view.cpp

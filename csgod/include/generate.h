@@ -7,8 +7,8 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <argparse/argparse.hpp>
 
-#include <object/code.h>
-#include <object/layout.h>
+#include <objective/code.h>
+#include <objective/layout.h>
 #include <csgopp/client/data_table.h>
 #include <csgopp/client/server_class.h>
 #include <csgopp/client.h>

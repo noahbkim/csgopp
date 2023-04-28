@@ -1,6 +1,6 @@
-#include "object/view.h"
-#include "object/type/object.h"
-#include "object/type/array.h"
+#include "objective/view.h"
+#include "objective/type/object.h"
+#include "objective/type/array.h"
 
 namespace object
 {

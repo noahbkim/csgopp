@@ -2,8 +2,8 @@
 
 #include "netmessages.pb.h"
 #include "property.h"
-#include <object/code.h>
-#include <object.h>
+#include <objective/code.h>
+#include <objective.h>
 
 namespace csgopp::client::data_table
 {

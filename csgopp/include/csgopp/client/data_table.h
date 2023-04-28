@@ -12,8 +12,8 @@
 #include "data_table/data_property.h"
 #include "data_table/data_table_property.h"
 #include "netmessages.pb.h"
-#include <object/code.h>
-#include <object.h>
+#include <objective/code.h>
+#include <objective.h>
 
 namespace csgopp::client::server_class
 {

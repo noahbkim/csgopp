@@ -1,4 +1,4 @@
-set(Protobuf_PROTOC_EXECUTABLE ${CONAN_BIN_DIRS_PROTOBUF}/protoc.exe)
+set(Protobuf_PROTOC_EXECUTABLE ${CONAN_BIN_DIRS_PROTOBUF}/protoc)
 
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
@@ -11,7 +11,7 @@ protobuf_generate_cpp(PROTO_SOURCES PROTO_HEADERS
         steammessages.proto
         )
 
-set_property(TARGET protobuf::protoc PROPERTY IMPORTED_LOCATION ${CONAN_BIN_DIRS_PROTOBUF}/protoc.exe)
+set_property(TARGET protobuf::protoc PROPERTY IMPORTED_LOCATION ${CONAN_BIN_DIRS_PROTOBUF}/protoc)
 
 # https://stackoverflow.com/questions/20824194/cmake-with-google-protocol-buffers
 add_library(csgopp.messages STATIC ${PROTO_SOURCES} ${PROTO_HEADERS})

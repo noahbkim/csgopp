@@ -1,7 +1,7 @@
 #pragma once
 
-#include <object/code.h>
-#include <object.h>
+#include <objective/code.h>
+#include <objective.h>
 #include "../../common/bits.h"
 #include "netmessages.pb.h"
 
@@ -140,6 +140,8 @@ struct Property : public Metadata<Declaration&, Declaration::Member&>
         , offset(0)
     {
     }
+
+    virtual ~Property() = default;
 
     /// \brief Materialize the type enumeration of the property.
     ///

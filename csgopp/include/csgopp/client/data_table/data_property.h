@@ -1,6 +1,6 @@
 #pragma once
 
-#include <object.h>
+#include <objective.h>
 #include "netmessages.pb.h"
 #include "property.h"
 #include "data_type.h"
