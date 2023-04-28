@@ -3,6 +3,7 @@
 nanobind::class_<UserAdapter> UserAdapter::bind(nanobind::module_& module_)
 {
     return nanobind::class_<UserAdapter>(module_, "User")
+        .def("__repr__", &UserAdapter::repr)
         .def_prop_ro("index", &UserAdapter::index)
         .def_prop_ro("version", &UserAdapter::version)
         .def_prop_ro("xuid", &UserAdapter::xuid)

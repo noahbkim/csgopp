@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
 #include <csgopp/client/server_class.h>
 #include "adapter.h"
 
@@ -9,6 +11,11 @@ using csgopp::client::server_class::ServerClass;
 struct ServerClassAdapter : public Adapter<const ServerClass>
 {
     using Adapter::Adapter;
+
+    [[nodiscard]] std::string repr() const
+    {
+        return "ServerClass(name=\"" + self->name + "\")";
+    }
 
     [[nodiscard]] ServerClass::Index index() const
     {

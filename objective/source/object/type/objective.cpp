@@ -92,6 +92,22 @@ void ObjectType::destroy(char* address) const
     }
 }
 
+std::vector<std::string> ObjectType::keys() const
+{
+    std::vector<std::string> result(this->members.size());
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        result[i] = this->members[i].name;
+    }
+
+    return result;
+}
+
+size_t ObjectType::count() const
+{
+    throw TypeError("ObjectType has no length!");
+}
+
 void ObjectType::emit(code::Declaration& declaration) const
 {
     declaration.name = this->name;
@@ -137,7 +153,6 @@ const ObjectType::Member& ObjectType::at(const std::string& name) const
         throw MemberError(concatenate("No such member ", name));
     }
 }
-
 
 ObjectType::Members::const_iterator ObjectType::begin() const
 {

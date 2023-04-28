@@ -22,6 +22,8 @@ struct ArrayType : public Type
     void destroy(char* address) const override;
 
     [[nodiscard]] std::string represent() const override;
+    [[nodiscard]] std::vector<std::string> keys() const override;
+    [[nodiscard]] size_t count() const override;
 
     void emit(code::Declaration& declaration, code::Declaration::Member& member) const override;
     void emit(layout::Cursor& cursor) const override;

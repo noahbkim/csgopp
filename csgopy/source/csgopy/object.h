@@ -30,7 +30,6 @@ struct TypeAdapter : public Adapter<const T>
     static nanobind::class_<TypeAdapter<T>> bind(nanobind::module_& module, const char* name)
     {
         return nanobind::class_<TypeAdapter<T>>(module, name)
-            .def("__repr__", [name](const TypeAdapter<T>* adapter) { return std::string(name) + "<" + adapter->self->represent() + ">"; })
             ;
     }
 };
@@ -94,15 +93,17 @@ struct InstanceAdapter : public Adapter<const Instance<const T>>
     using Adapter<const Instance<const T>>::Adapter;
 
     [[nodiscard]] TypeAdapter<const T> type() const { return TypeAdapter<const T>(this->self->type); }
-    [[nodiscard]] ConstantReference get_name(const std::string& name) const { return this->self->operator[](name); }
-    [[nodiscard]] ConstantReference get_index(size_t index) const { return this->self->operator[](index); }
+    [[nodiscard]] ConstantReference getitem_name(const std::string& name) const { return this->self->operator[](name); }
+    [[nodiscard]] ConstantReference getitem_index(size_t index) const { return this->self->operator[](index); }
+//    [[nodiscard]] std::optional<std::vector<std::string>> keys() const {}
+//    [[nodiscard]] std::optional<size_t> length() const {}
 
     static nanobind::class_<InstanceAdapter<T>> bind(nanobind::module_& module, const char* name)
     {
         return nanobind::class_<InstanceAdapter<T>>(module, name)
             .def("type", &InstanceAdapter::type)
-            .def("__getitem__", &InstanceAdapter::get_name)
-            .def("__getitem__", &InstanceAdapter::get_index)
+            .def("__getitem__", &InstanceAdapter::getitem_name)
+            .def("__getitem__", &InstanceAdapter::getitem_index)
             ;
     }
 };

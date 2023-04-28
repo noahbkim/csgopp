@@ -89,6 +89,8 @@ struct ObjectType : public Type
     void destroy(char* address) const override;
 
     [[nodiscard]] std::string represent() const override { return this->name; }
+    [[nodiscard]] std::vector<std::string> keys() const override;
+    [[nodiscard]] size_t count() const override;
 
     virtual void emit(code::Declaration& declaration) const;
     void emit(code::Declaration& declaration, code::Declaration::Member& member) const override;

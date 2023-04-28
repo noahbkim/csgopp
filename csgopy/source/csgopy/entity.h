@@ -103,11 +103,11 @@ struct EntityAdapter : public Adapter<const Entity>
     {
         auto base = InstanceAdapter<EntityType>::bind(module_, "EntityTypeInstance");
         return nanobind::class_<EntityAdapter>(module_, "Entity", base)
-            .def("id", &EntityAdapter::id)
-            .def("type", &EntityAdapter::type)
-            .def("server_class", &EntityAdapter::server_class)
-            .def("server_class_index", &EntityAdapter::server_class_index)
-            .def("property", &EntityAdapter::property)
+            .def_prop_ro("id", &EntityAdapter::id)
+            .def_prop_ro("type", &EntityAdapter::type)
+            .def_prop_ro("server_class", &EntityAdapter::server_class)
+            .def_prop_ro("server_class_index", &EntityAdapter::server_class_index)
+            .def_prop_ro("property", &EntityAdapter::property)
             ;
     }
 };

@@ -13,13 +13,15 @@ struct WrapperType : public Base
     template<typename... Args>
     WrapperType(Args&&... args) : type(std::forward<Args>(args)...) {}
 
-    [[nodiscard]] virtual size_t size() const override { return this->type.size(); };
-    [[nodiscard]] virtual size_t alignment() const override { return this->type.alignment(); };
+    [[nodiscard]] virtual size_t size() const override { return this->type.size(); }
+    [[nodiscard]] virtual size_t alignment() const override { return this->type.alignment(); }
 
-    void construct(char* address) const override { this->type.construct(address); };
-    void destroy(char* address) const override { this->type.destroy(address); };
+    void construct(char* address) const override { this->type.construct(address); }
+    void destroy(char* address) const override { this->type.destroy(address); }
 
-    [[nodiscard]] virtual std::string represent() const override { return this->type.represent(); };
+    [[nodiscard]] virtual std::string represent() const override { return this->type.represent(); }
+    [[nodiscard]] std::vector<std::string> keys() const override { return this->type.keys(); }
+    [[nodiscard]] size_t count() const override { return this->type.count(); }
 
     virtual void emit(code::Declaration& declaration, code::Declaration::Member& member) const override
     {

@@ -44,6 +44,16 @@ void ArrayType::destroy(char* address) const
     }
 }
 
+std::vector<std::string> ArrayType::keys() const
+{
+    throw TypeError("ArrayType has no keys!");
+}
+
+size_t ArrayType::count() const
+{
+    return this->length;
+}
+
 void ArrayType::emit(code::Declaration& declaration, code::Declaration::Member& member) const
 {
     this->element->emit(declaration, member);

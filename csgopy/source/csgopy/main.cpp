@@ -30,7 +30,7 @@ NB_MODULE(csgopy, module_)
     ServerClassAdapter::bind(module_);
     StringTableAdapter::bind(module_);
     GameEventTypeAdapter::bind(module_);
-    GameEventAdapter::bind(module_);
+    GameEventBinding::bind(module_);
     UserAdapter::bind(module_);
 
     auto lens_class = LensBinding::bind(module_);

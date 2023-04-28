@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <typeinfo>
 #include <string>
+#include "../error.h"
 #include "../type.h"
 
 namespace object::type
@@ -52,6 +53,16 @@ struct TrivialValueType : public ValueType
     [[nodiscard]] virtual std::string represent() const override
     {
         return typeid(T).name();
+    }
+
+    [[nodiscard]] std::vector<std::string> keys() const override
+    {
+        throw TypeError("TrivialValueType has no keys!");
+    }
+
+    [[nodiscard]] size_t count() const override
+    {
+        throw TypeError("TrivialValueType has no length!");
     }
 };
 
