@@ -1,4 +1,4 @@
-#include "common.h"
+#include "csgopy/csgopp/common/vector.h"
 
 nanobind::class_<Vector2> Vector2Binding::bind(nanobind::module_& module_)
 {

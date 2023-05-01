@@ -1,6 +1,6 @@
-#include "entity.h"
+#include "csgopy/csgopp/client/entity.h"
 
-#include <nanobind/nanobind.h>
+#include "nanobind/nanobind.h"
 
 static nanobind::class_<EntityTypeAdapter> bind(nanobind::module_& module_)
 {

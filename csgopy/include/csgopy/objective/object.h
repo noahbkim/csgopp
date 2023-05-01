@@ -2,10 +2,12 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
+
 #include <csgopp/common/vector.h>
 #include <objective.h>
 #include <objective/view.h>
-#include "adapter.h"
+
+#include "csgopy/adapter.h"
 
 using csgopp::common::vector::Vector2;
 using csgopp::common::vector::Vector3;

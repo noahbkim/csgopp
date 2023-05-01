@@ -1,8 +1,8 @@
 #pragma once
 
-#include <nanobind/nanobind.h>
-#include <csgopp/client.h>
-#include "adapter.h"
+#include "nanobind/nanobind.h"
+#include "csgopp/client.h"
+#include "csgopy/adapter.h"
 
 using csgopp::client::data_table::DataTable;
 

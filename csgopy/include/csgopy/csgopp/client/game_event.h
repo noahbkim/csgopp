@@ -4,8 +4,9 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 #include <csgopp/client/game_event.h>
-#include "adapter.h"
-#include "object.h"
+
+#include "csgopy/adapter.h"
+#include "csgopy/objective/object.h"
 
 using csgopp::client::game_event::GameEventType;
 using csgopp::client::game_event::GameEvent;

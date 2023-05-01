@@ -1,4 +1,4 @@
-#include "demo.h"
+#include "csgopy/csgopp/demo.h"
 
 nanobind::class_<Header> HeaderBinding::bind(nanobind::module_& module_)
 {

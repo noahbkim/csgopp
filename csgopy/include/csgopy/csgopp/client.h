@@ -3,17 +3,17 @@
 #include <fstream>
 
 #include <google/protobuf/io/coded_stream.h>
-#include <nanobind/nanobind.h>
-#include <nanobind/trampoline.h>
+#include "nanobind/nanobind.h"
+#include "nanobind/trampoline.h"
 
-#include <csgopp/client.h>
+#include "csgopp/client.h"
 
-#include "data_table.h"
-#include "entity.h"
-#include "game_event.h"
-#include "server_class.h"
-#include "string_table.h"
-#include "user.h"
+#include "csgopy/csgopp/client/data_table.h"
+#include "csgopy/csgopp/client/entity.h"
+#include "csgopy/csgopp/client/game_event.h"
+#include "csgopy/csgopp/client/server_class.h"
+#include "csgopy/csgopp/client/string_table.h"
+#include "csgopy/csgopp/client/user.h"
 
 using csgopp::client::Client;
 using csgopp::client::Entity;

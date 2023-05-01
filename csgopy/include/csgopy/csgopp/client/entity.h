@@ -1,9 +1,9 @@
 #pragma once
 
-#include <csgopp/client/entity.h>
-#include <objective.h>
-#include "adapter.h"
-#include "object.h"
+#include "csgopp/client/entity.h"
+#include "objective.h"
+#include "csgopy/adapter.h"
+#include "csgopy/objective/object.h"
 #include "server_class.h"
 
 using csgopp::client::entity::Entity;

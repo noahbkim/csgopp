@@ -1,4 +1,4 @@
-#include "client.h"
+#include "csgopy/csgopp/client.h"
 
 nanobind::class_<ClientAdapter, ClientAdapterTrampoline> ClientAdapter::bind(nanobind::module_& module_)
 {

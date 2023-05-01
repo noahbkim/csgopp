@@ -4,11 +4,11 @@
 #include <vector>
 #include <cstdint>
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/vector.h>
-#include <csgopp/client/user.h>
-#include "adapter.h"
+#include "nanobind/nanobind.h"
+#include "nanobind/stl/string.h"
+#include "nanobind/stl/vector.h"
+#include "csgopp/client/user.h"
+#include "csgopy/adapter.h"
 
 using csgopp::client::user::User;
 

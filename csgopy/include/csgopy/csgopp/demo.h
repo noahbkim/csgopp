@@ -1,7 +1,7 @@
 #pragma once
 
-#include <nanobind/nanobind.h>
-#include <csgopp/demo.h>
+#include "nanobind/nanobind.h"
+#include "csgopp/demo.h"
 
 using csgopp::demo::Header;
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <nanobind/nanobind.h>
-#include <csgopp/client/string_table.h>
-#include "adapter.h"
+#include "nanobind/nanobind.h"
+#include "csgopp/client/string_table.h"
+#include "csgopy/adapter.h"
 
 using csgopp::client::string_table::StringTable;
 

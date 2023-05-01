@@ -1,4 +1,4 @@
-#include "user.h"
+#include "csgopy/csgopp/client/user.h"
 
 nanobind::class_<UserAdapter> UserAdapter::bind(nanobind::module_& module_)
 {

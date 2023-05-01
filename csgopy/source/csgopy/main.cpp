@@ -2,16 +2,16 @@
 
 #include <nanobind/nanobind.h>
 
-#include "client.h"
-#include "common.h"
-#include "data_table.h"
-#include "demo.h"
-#include "entity.h"
-#include "game_event.h"
-#include "object.h"
-#include "server_class.h"
-#include "string_table.h"
-#include "user.h"
+#include "csgopy/csgopp/client.h"
+#include "csgopy/csgopp/common/vector.h"
+#include "csgopy/csgopp/client/data_table.h"
+#include "csgopy/csgopp/demo.h"
+#include "csgopy/csgopp/client/entity.h"
+#include "csgopy/csgopp/client/game_event.h"
+#include "csgopy/objective/object.h"
+#include "csgopy/csgopp/client/server_class.h"
+#include "csgopy/csgopp/client/string_table.h"
+#include "csgopy/csgopp/client/user.h"
 
 using namespace nanobind::literals;
 

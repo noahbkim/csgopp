@@ -1,5 +1,5 @@
-#include "server_class.h"
-#include "entity.h"
+#include "csgopy/csgopp/client/server_class.h"
+#include "csgopy/csgopp/client/entity.h"
 
 nanobind::class_<ServerClassAdapter> ServerClassAdapter::bind(nanobind::module_& module_)
 {

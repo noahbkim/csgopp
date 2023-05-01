@@ -1,4 +1,4 @@
-#include "game_event.h"
+#include "csgopy/csgopp/client/game_event.h"
 
 nanobind::class_ <GameEventTypeAdapter> GameEventTypeAdapter::bind(nanobind::module_& module_)
 {

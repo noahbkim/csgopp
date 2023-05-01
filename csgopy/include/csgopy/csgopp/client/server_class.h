@@ -1,10 +1,10 @@
 #pragma once
 
 #include <string>
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-#include <csgopp/client/server_class.h>
-#include "adapter.h"
+#include "nanobind/nanobind.h"
+#include "nanobind/stl/string.h"
+#include "csgopp/client/server_class.h"
+#include "csgopy/adapter.h"
 
 using csgopp::client::server_class::ServerClass;
 
