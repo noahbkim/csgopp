@@ -14,13 +14,13 @@ namespace csgopp::client::game_event
 {
 
 using common::database::DatabaseWithNameId;
-using object::code::Metadata;
-using object::code::Declaration;
-using object::TrivialValueType;
-using object::Instance;
-using object::ObjectType;
-using object::Type;
-using object::WrapperType;
+using objective::code::Metadata;
+using objective::code::Declaration;
+using objective::TrivialValueType;
+using objective::Instance;
+using objective::ObjectType;
+using objective::Type;
+using objective::WrapperType;
 
 struct DataType : public Type
 {

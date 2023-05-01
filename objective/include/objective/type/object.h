@@ -6,7 +6,7 @@
 #include <absl/container/flat_hash_map.h>
 #include "../type.h"
 
-namespace object::type
+namespace objective::type
 {
 
 struct ObjectType : public Type

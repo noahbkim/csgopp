@@ -553,7 +553,7 @@ void DataArrayType::update(char* address, BitStream& stream, const Property* pro
     size_t data_length;
     OK(stream.read(&data_length, size_bits));
 
-    // Inner type cannot be an object; this has to be a runtime invariant
+    // Inner type cannot be an objective; this has to be a runtime invariant
     const auto* value_type = dynamic_cast<const DataType*>(this->type.element.get());
     assert(value_type != nullptr);
 

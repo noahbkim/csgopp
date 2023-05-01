@@ -2,7 +2,7 @@
 
 #include "../type.h"
 
-namespace object::type
+namespace objective::type
 {
 
 template<typename T, typename Base = Type>

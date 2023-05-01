@@ -10,10 +10,10 @@ namespace csgopp::client::data_table::property
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::common::bits::BitStream;
-using object::code::Metadata;
-using object::code::Declaration;
-using object::ObjectType;
-using object::Type;
+using objective::code::Metadata;
+using objective::code::Declaration;
+using objective::ObjectType;
+using objective::Type;
 
 /// \brief Flags attached to each property by whoever defines it.
 ///
@@ -121,9 +121,9 @@ struct Property : public Metadata<Declaration&, Declaration::Member&>
     /// requires as few bytes as possible. See `DataTable::materialize()`.
     Priority priority;
 
-    /// \brief An absolute object offset.
+    /// \brief An absolute objective offset.
     ///
-    /// This object serves as a lens into objects initialized via the parent
+    /// This objective serves as a lens into objects initialized via the parent
     /// `DataTable::entity_type`. This we have to keep track of this here
     /// because the entity type and prioritized property list (which we use to
     /// update the entity) passes occur separately and assume different
@@ -153,13 +153,13 @@ struct Property : public Metadata<Declaration&, Declaration::Member&>
     /// you're not working directly with the virtual interface.
     [[nodiscard]] virtual Kind::T kind() const = 0;
 
-    /// \brief Materialize an `object::Type` from the property.
+    /// \brief Materialize an `objective::Type` from the property.
     ///
-    /// \return a `std::shared_ptr` to a `object::Type` that
-    ///     corresponds to this object.
+    /// \return a `std::shared_ptr` to a `objective::Type` that
+    ///     corresponds to this objective.
     ///
     /// This method is used internally to construct the dynamic type associated
-    /// with each server class. It's important that we adhere to `object`'s use
+    /// with each server class. It's important that we adhere to `objective`'s use
     /// of `std::shared_ptr` because there isn't always a clear owner for a
     /// given type.
     ///
@@ -167,7 +167,7 @@ struct Property : public Metadata<Declaration&, Declaration::Member&>
     /// referenced from several places that only shared access to the property.
     ///
     /// \sa `csgopp::client::entity`
-    /// \sa `csgopp::common::object`
+    /// \sa `csgopp::common::objective`
     [[nodiscard]] virtual std::shared_ptr<const Type> construct_type() = 0;
 
     /// \brief Attach this property to an `EntityType`

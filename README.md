@@ -12,7 +12,7 @@ This project provides a couple things:
 
 Let's take a look at some examples of how to use `csgopp` as a static C++ library.
 The entrypoint for user code is the `csgopp::client::Client`, which is parameterized on an `Observer` template.
-This `Observer` object is responsible for providing event handler classes that are constructed on the stack at runtime for performance.
+This `Observer` objective is responsible for providing event handler classes that are constructed on the stack at runtime for performance.
 You can skip a bunch of boilerplate by inheriting from the `csgopp::client::ClientObserverBase` as follows:
 
 ```cpp
@@ -83,7 +83,7 @@ class MyObserver final : ClientObserverBase<MyObserver>
 };
 ```
 
-Before we talk about the `User` object, we have to access data from the `GameEvent`.
+Before we talk about the `User` objective, we have to access data from the `GameEvent`.
 We know what the layout of the `"player_team"` event looks like from the `csgopp.cli` command `generate`:
 
 ```
@@ -106,7 +106,7 @@ struct player_team
 };
 ```
 
-We can query this object dynamically at runtime using `csgopp::common::object` machinery, e.g. `event["userid"].is<int16_t>()`.
+We can query this objective dynamically at runtime using `csgopp::common::objective` machinery, e.g. `event["userid"].is<int16_t>()`.
 This allows us to then get the associated `User` via `client.users()`, which offers per-id lookup.
 The rest is pretty straightforward.
 
@@ -165,7 +165,7 @@ class MyObserver final : ClientObserverBase<MyObserver>
                 // This is discrete, primitive(ish) value that was updated
                 const EntityDatum& datum = entity->type->prioritized.at(index);
                 
-                // Check if it's within the bounds of the m_iWeaponPurchasesThisRound object (> is overloaded)
+                // Check if it's within the bounds of the m_iWeaponPurchasesThisRound objective (> is overloaded)
                 if (this->weapon_purchases_accessor > datum)
                 {
                     const User* user = client.users().at_index(entity->id);
@@ -178,12 +178,12 @@ class MyObserver final : ClientObserverBase<MyObserver>
 }
 ```
 
-In order to figure out when a player purchases a weapon, we need to know the offset of the `m_iWeaponPurchasesThisRound` object the player server class.
+In order to figure out when a player purchases a weapon, we need to know the offset of the `m_iWeaponPurchasesThisRound` objective the player server class.
 We figure this out in `on_server_class_creation`, which is called sometime near the start of the demo when server classes are registered.
 We know the player server class is called `"CCSPlayer"`, so we save the pointer and find the accessor we're looking for.
 
-When we get an entity update callback, we check whether the updated datum is within the byte range of the `m_iWeaponPurchasesThisRound` object.
-From the generated classes, we know that each member of this object is named after its weapon index, e.g. `"001"`, `"002"`, etc., so the rest is as simple as parsing that integer and printing its corresponding weapon name.
+When we get an entity update callback, we check whether the updated datum is within the byte range of the `m_iWeaponPurchasesThisRound` objective.
+From the generated classes, we know that each member of this objective is named after its weapon index, e.g. `"001"`, `"002"`, etc., so the rest is as simple as parsing that integer and printing its corresponding weapon name.
 
 ## To Do
 

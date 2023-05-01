@@ -4,7 +4,7 @@
 #include "code.h"
 #include "layout.h"
 
-namespace object
+namespace objective
 {
 
 static constexpr size_t align(size_t offset, size_t alignment)

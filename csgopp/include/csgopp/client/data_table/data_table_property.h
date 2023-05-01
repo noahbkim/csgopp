@@ -17,11 +17,11 @@ namespace csgopp::client::data_table::data_table_property
 
 using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::client::data_table::property::Property;
-using object::code::Declaration;
-using object::ObjectType;
-using object::Type;
+using objective::code::Declaration;
+using objective::ObjectType;
+using objective::Type;
 
-/// \brief Represents the object described by another data table.
+/// \brief Represents the objective described by another data table.
 ///
 /// `DataTable` properties are used to format nested structs in the entity
 /// data structure. Most of the time, data tables correspond to allocated

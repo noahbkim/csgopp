@@ -19,8 +19,8 @@ using csgopp::client::GameEvent;
 using csgopp::client::entity::EntityType;
 using csgopp::client::entity::EntityDatum;
 using csgopp::client::entity::EntityConstantReference;
-using object::Lens;
-using object::ConstantReference;
+using objective::Lens;
+using objective::ConstantReference;
 
 const char* describe_game_phase(uint32_t phase)
 {

@@ -13,8 +13,8 @@ using csgopp::client::entity::PropertyNode;
 using csgopp::client::data_table::data_property::DataProperty;
 using csgopp::common::control::concatenate;
 using csgopp::error::GameError;
-using object::make_shared_static;
-using object::Type;
+using objective::make_shared_static;
+using objective::Type;
 
 DataTable::DataTable(const CSVCMsg_SendTable& data)
     : name(data.net_table_name())

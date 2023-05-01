@@ -9,13 +9,13 @@
 
 using csgopp::common::vector::Vector2;
 using csgopp::common::vector::Vector3;
-using object::Instance;
-using object::ConstantReference;
-using object::Lens;
-using object::Type;
-using object::ValueType;
-using object::View;
-using object::TypeError;
+using objective::Instance;
+using objective::ConstantReference;
+using objective::Lens;
+using objective::Type;
+using objective::ValueType;
+using objective::View;
+using objective::TypeError;
 
 struct ViewBinding
 {

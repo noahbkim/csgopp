@@ -10,7 +10,7 @@
 #include "objective/type/wrapper.h"
 #include "objective/view.h"
 
-namespace object
+namespace objective
 {
 
 using type::ValueType;
@@ -79,14 +79,14 @@ struct Instance
     [[nodiscard]] ConstantReference operator[](size_t index) const;
 
     template<typename U>
-    [[nodiscard]] U& is() { return object::is<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] U& is() { return objective::is<U>(this->type.get(), this->data.get()); }
     template<typename U>
-    [[nodiscard]] const U& is() const { object::is<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] const U& is() const { objective::is<U>(this->type.get(), this->data.get()); }
 
     template<typename U>
-    [[nodiscard]] U* as() { return object::as<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] U* as() { return objective::as<U>(this->type.get(), this->data.get()); }
     template<typename U>
-    [[nodiscard]] const U* as() const { return object::as<U>(this->type.get(), this->data.get()); }
+    [[nodiscard]] const U* as() const { return objective::as<U>(this->type.get(), this->data.get()); }
 
     [[nodiscard]] std::shared_ptr<char[]> get() { return this->data; }
     [[nodiscard]] std::shared_ptr<const char[]> get() const { return this->data; }
@@ -201,9 +201,9 @@ struct Reference : public ReferenceBase<char[]>
     }
 
     template<typename U>
-    [[nodiscard]] U& is() { return object::is<U, char>(this->type.get(), this->get()); }
+    [[nodiscard]] U& is() { return objective::is<U, char>(this->type.get(), this->get()); }
     template<typename U>
-    [[nodiscard]] U* as() { return object::as<U, char>(this->type.get(), this->get()); }
+    [[nodiscard]] U* as() { return objective::as<U, char>(this->type.get(), this->get()); }
 };
 
 struct ConstantReference : public ReferenceBase<const char[]>
@@ -230,9 +230,9 @@ struct ConstantReference : public ReferenceBase<const char[]>
     }
 
     template<typename U>
-    [[nodiscard]] const U& is() const { return object::is<const U, const char>(this->type.get(), this->get()); }
+    [[nodiscard]] const U& is() const { return objective::is<const U, const char>(this->type.get(), this->get()); }
     template<typename U>
-    [[nodiscard]] const U* as() const { return object::as<const U, const char>(this->type.get(), this->get()); }
+    [[nodiscard]] const U* as() const { return objective::as<const U, const char>(this->type.get(), this->get()); }
 };
 
 

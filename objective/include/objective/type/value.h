@@ -6,7 +6,7 @@
 #include "../error.h"
 #include "../type.h"
 
-namespace object::type
+namespace objective::type
 {
 
 struct ValueType : public Type

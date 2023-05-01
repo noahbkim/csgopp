@@ -2,7 +2,7 @@
 
 #include <ostream>
 
-namespace object::layout
+namespace objective::layout
 {
 
 struct Cursor

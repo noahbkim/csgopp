@@ -4,7 +4,7 @@
 #include <memory>
 #include "../type.h"
 
-namespace object::type
+namespace objective::type
 {
 
 struct ArrayType : public Type

@@ -15,16 +15,16 @@
 
 using namespace nanobind::literals;
 
-using object::Type;
+using objective::Type;
 
 NB_MODULE(csgopy, module_)
 {
     nanobind::exception<csgopp::client::GameError>(module_, "GameError");
 
-    auto object_error = nanobind::exception<object::Error>(module_, "ObjectError");
-    nanobind::exception<object::MemberError>(module_, "ObjectMemberError", object_error);
-    nanobind::exception<object::IndexError>(module_, "ObjectIndexError", object_error);
-    nanobind::exception<object::TypeError>(module_, "ObjectTypeError", object_error);
+    auto object_error = nanobind::exception<objective::Error>(module_, "ObjectError");
+    nanobind::exception<objective::MemberError>(module_, "ObjectMemberError", object_error);
+    nanobind::exception<objective::IndexError>(module_, "ObjectIndexError", object_error);
+    nanobind::exception<objective::TypeError>(module_, "ObjectTypeError", object_error);
 
     DataTableAdapter::bind(module_);
     ServerClassAdapter::bind(module_);

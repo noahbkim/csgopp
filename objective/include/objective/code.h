@@ -10,7 +10,7 @@
 #include <absl/container/flat_hash_set.h>
 #include <absl/container/flat_hash_map.h>
 
-namespace object::code
+namespace objective::code
 {
 
 struct Declaration

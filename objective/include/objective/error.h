@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace object
+namespace objective
 {
 
 struct Error : public std::runtime_error

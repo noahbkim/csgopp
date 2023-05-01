@@ -16,8 +16,8 @@
 #include "common.h"
 
 using argparse::ArgumentParser;
-using object::code::Generator;
-using object::code::Declaration;
+using objective::code::Generator;
+using objective::code::Declaration;
 using csgopp::client::ServerClass;
 using csgopp::client::DataTable;
 using csgopp::client::StringTable;
@@ -195,7 +195,7 @@ struct GenerateCommand
             if (data_table->type())
             {
                 out << data_table->type()->name;  // Newline is added
-                object::layout::Cursor cursor(out);
+                objective::layout::Cursor cursor(out);
                 data_table->type()->emit(cursor);
                 out << std::endl;
             }

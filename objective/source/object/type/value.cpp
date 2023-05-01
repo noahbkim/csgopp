@@ -1,6 +1,6 @@
 #include "objective/type/value.h"
 
-namespace object::type
+namespace objective::type
 {
 
 void ValueType::emit(code::Declaration& declaration, code::Declaration::Member& member) const

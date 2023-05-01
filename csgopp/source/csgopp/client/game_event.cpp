@@ -6,9 +6,9 @@
 namespace csgopp::client::game_event
 {
 
-using object::Type;
+using objective::Type;
 using csgopp::error::GameError;
-using object::make_shared_static;
+using objective::make_shared_static;
 
 void StringType::emit(Declaration& declaration, Declaration::Member& member) const
 {

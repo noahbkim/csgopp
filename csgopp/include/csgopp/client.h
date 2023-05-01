@@ -53,7 +53,7 @@ using google::protobuf::io::CodedInputStream;
 
 /// \brief The core DEMO parser and game client.
 ///
-/// This is where the magic happens! The Client object is responsible for
+/// This is where the magic happens! The Client objective is responsible for
 /// consuming frames from the input stream, parsing them, and mutating the
 /// client state correspondingly.
 ///

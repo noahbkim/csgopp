@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace object
+namespace objective
 {
 
 template<typename T>

@@ -18,7 +18,7 @@ using csgopp::client::data_table::data_type::UnsignedInt32Type;
 using csgopp::client::data_table::data_type::UnsignedInt64Type;
 using csgopp::client::data_table::data_type::Vector2Type;
 using csgopp::client::data_table::data_type::Vector3Type;
-using object::make_shared_static;
+using objective::make_shared_static;
 
 Int32Property::Int32Property(CSVCMsg_SendTable_sendprop_t&& data)
     : bits(data.num_bits())

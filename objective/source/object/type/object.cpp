@@ -2,7 +2,7 @@
 #include "objective/magic.h"
 #include "objective/type/object.h"
 
-namespace object::type
+namespace objective::type
 {
 
 size_t ObjectType::Builder::embed(const ObjectType& type)

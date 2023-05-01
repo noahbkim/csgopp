@@ -1,7 +1,7 @@
 #include "objective/error.h"
 #include "objective/type/array.h"
 
-namespace object::type
+namespace objective::type
 {
 
 ArrayType::ArrayType(std::shared_ptr<const Type> element, size_t length)

@@ -25,11 +25,11 @@ using csgopp::client::data_table::DataTable;
 using csgopp::client::data_table::property::Property;
 using csgopp::client::server_class::ServerClass;
 using csgopp::common::database::Database;
-using object::Lens;
-using object::ConstantReference;
-using object::Instance;
-using object::ObjectType;
-using object::Type;
+using objective::Lens;
+using objective::ConstantReference;
+using objective::Instance;
+using objective::ObjectType;
+using objective::Type;
 
 // Allows us to get the qualified name of a property
 struct PropertyNode

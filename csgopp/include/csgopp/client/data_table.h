@@ -30,7 +30,7 @@ struct EntityType;
 }
 
 /// This namespace defines a framework for efficiently representing sendtables
-/// in memory. It is closely integrated with the `common::object` library,
+/// in memory. It is closely integrated with the `common::objective` library,
 /// which we use to build and use entity types at run time.
 namespace csgopp::client::data_table
 {
@@ -40,9 +40,9 @@ using csgopp::client::entity::EntityType;
 using csgopp::client::server_class::ServerClass;
 using csgopp::common::database::DatabaseWithName;
 using csgopp::error::GameError;
-using object::ArrayType;
-using object::code::Metadata;
-using object::code::Declaration;
+using objective::ArrayType;
+using objective::code::Metadata;
+using objective::code::Declaration;
 
 using Exclude = std::pair<std::string, std::string>;
 

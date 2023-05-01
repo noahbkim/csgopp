@@ -9,7 +9,7 @@
 namespace csgopp::client::data_table::data_table_property
 {
 
-using object::ObjectType;
+using objective::ObjectType;
 
 void DataTableProperty::attach(Declaration& declaration, Declaration::Member& member)
 {

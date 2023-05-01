@@ -14,11 +14,11 @@ using csgopp::client::data_table::property::Property;
 using csgopp::common::bits::BitStream;
 using csgopp::common::vector::Vector2;
 using csgopp::common::vector::Vector3;
-using object::code::Declaration;
-using object::TrivialValueType;
-using object::ArrayType;
-using object::WrapperType;
-using object::Type;
+using objective::code::Declaration;
+using objective::TrivialValueType;
+using objective::ArrayType;
+using objective::WrapperType;
+using objective::Type;
 
 struct DataType : public Type
 {

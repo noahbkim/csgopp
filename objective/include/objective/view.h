@@ -7,7 +7,7 @@
 #include "type.h"
 #include "type/value.h"
 
-namespace object
+namespace objective
 {
 
 template<typename T, typename C>

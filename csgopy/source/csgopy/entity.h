@@ -12,8 +12,8 @@ using csgopp::client::entity::EntityDatum;
 using csgopp::client::entity::EntityLens;
 using csgopp::client::entity::EntityType;
 using csgopp::client::server_class::ServerClass;
-using object::ConstantReference;
-using object::Lens;
+using objective::ConstantReference;
+using objective::Lens;
 
 struct EntityLensBinding
 {

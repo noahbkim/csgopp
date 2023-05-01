@@ -4,7 +4,7 @@
 
 #include <objective.h>
 
-using namespace object;
+using namespace objective;
 
 #define BOOL std::make_shared<TrivialValueType<bool>>()
 #define UINT8 std::make_shared<TrivialValueType<uint8_t>>()

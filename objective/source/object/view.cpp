@@ -2,11 +2,11 @@
 #include "objective/type/object.h"
 #include "objective/type/array.h"
 
-namespace object
+namespace objective
 {
 
-using object::type::ObjectType;
-using object::type::ArrayType;
+using objective::type::ObjectType;
+using objective::type::ArrayType;
 
 View View::at(const Type* type, const std::string& name, size_t offset)
 {

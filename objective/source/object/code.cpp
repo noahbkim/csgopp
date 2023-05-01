@@ -2,7 +2,7 @@
 
 #define TAB "    "
 
-namespace object::code
+namespace objective::code
 {
 
 void Declaration::write(std::ostream& out) const

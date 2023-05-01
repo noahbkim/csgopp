@@ -31,7 +31,9 @@ struct GameEventBinding
 
     [[nodiscard]] static GameEventType::Id id(GameEvent* self) { return self->id; }
     [[nodiscard]] static GameEventTypeAdapter type(GameEvent* self) { return GameEventTypeAdapter(self->type); }
-    [[nodiscard]] static const std::vector<std::string> keys(GameEvent* self) { return self->type->keys(); }
+
+    // TODO: return tuple so immutable
+    [[nodiscard]] static std::vector<std::string> keys(GameEvent* self) { return self->type->keys(); }
 
     static nanobind::class_ <GameEvent> bind(nanobind::module_& module_);
 };

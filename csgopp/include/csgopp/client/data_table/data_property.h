@@ -12,8 +12,8 @@ using csgo::message::net::CSVCMsg_SendTable_sendprop_t;
 using csgopp::client::data_table::data_type::DataArrayType;
 using csgopp::client::data_table::data_type::DataType;
 using csgopp::client::data_table::property::Property;
-using object::ObjectType;
-using object::Type;
+using objective::ObjectType;
+using objective::Type;
 
 struct DataProperty : public Property
 {
@@ -25,15 +25,15 @@ struct DataProperty : public Property
     {
     }
 
-    /// \brief Materialize a `object::Type` from the property.
+    /// \brief Materialize a `objective::Type` from the property.
     ///
-    /// \return a `std::shared_ptr` to a `object::Type` that
-    ///     corresponds to this object.
+    /// \return a `std::shared_ptr` to a `objective::Type` that
+    ///     corresponds to this objective.
     ///
     /// Return the constructed type; unchecked.
     ///
     /// \sa `csgopp::client::entity`
-    /// \sa `csgopp::common::object`
+    /// \sa `csgopp::common::objective`
     [[nodiscard]] virtual std::shared_ptr<const DataType> type() const = 0;
 };
 
