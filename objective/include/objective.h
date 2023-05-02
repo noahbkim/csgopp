@@ -14,7 +14,6 @@ namespace objective
 {
 
 using type::ValueType;
-using type::TrivialValueType;
 using type::ArrayType;
 using type::ObjectType;
 using type::WrapperType;
@@ -92,7 +91,7 @@ struct Instance
     [[nodiscard]] std::shared_ptr<const char[]> get() const { return this->data; }
 };
 
-using Value = Instance<ValueType>;
+using Value = Instance<Type>;
 using Array = Instance<ArrayType>;
 using Object = Instance<ObjectType>;
 

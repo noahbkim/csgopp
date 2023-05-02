@@ -10,20 +10,17 @@
 namespace objective
 {
 
+using objective::type::ValueType;
+
 template<typename T, typename C>
 T& is(const Type* type, C* data)
 {
-    auto* value_type = dynamic_cast<const type::ValueType*>(type);
-    if (value_type == nullptr)
-    {
-        throw TypeError("Can only cast value types, not " + type->represent());
-    }
-    if (value_type->info() != typeid(T))
+    if (type->info() != typeid(T))
     {
         throw TypeError(
             concatenate(
                 "Value of type ",
-                value_type->info().name(),
+                type->represent(),
                 " cannot be accessed as ",
                 typeid(T).name()
             )

@@ -1,8 +1,9 @@
 #pragma once
 
+#include <typeindex>
+
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
-
 #include <csgopp/common/vector.h>
 #include <objective.h>
 #include <objective/view.h>
@@ -66,27 +67,7 @@ struct ConstantReferenceBinding
     using CasterMap = absl::flat_hash_map<const std::type_info*, Caster>;
     static CasterMap casters;
 
-    static nanobind::class_<ConstantReference> bind(nanobind::module_& module_, nanobind::class_<Lens>& base)
-    {
-        return nanobind::class_<ConstantReference>(module_, "ConstantReference", base)
-            .def("__getitem__", [](const ConstantReference* self, const std::string& name) { return self->operator[](name); })
-            .def("__getitem__", [](const ConstantReference* self, size_t index) { return self->operator[](index); })
-            .def("type", [](const ConstantReference* self) { return TypeAdapter<Type>(self->type); })
-            .def("value", [](const ConstantReference* self)
-            {
-                auto* value_type = dynamic_cast<const ValueType*>(self->type.get());
-                if (value_type != nullptr)
-                {
-                    Caster caster = ConstantReferenceBinding::casters[&value_type->info()];
-                    return caster(self->data.get());
-                }
-                else
-                {
-                    throw TypeError("cast is only available for values!");
-                }
-            })
-            ;
-    }
+    static nanobind::class_<ConstantReference> bind(nanobind::module_& module_, nanobind::class_<Lens>& base);
 };
 
 template<typename T>

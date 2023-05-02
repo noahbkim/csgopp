@@ -16,7 +16,7 @@ struct ObjectType : public Type
         std::string name;
         std::shared_ptr<const Type> type;
         size_t offset;
-        code::Metadata<code::Declaration&, code::Declaration::Member&>* metadata;
+        code::Metadata<code::Declaration&, code::Declaration::Member&>* metadata = nullptr;
 
         Member(
             std::string name,
@@ -42,7 +42,7 @@ struct ObjectType : public Type
         std::shared_ptr<const ObjectType> base;
         Members members;
         MemberLookup lookup;
-        code::Metadata<code::Declaration&>* metadata;
+        code::Metadata<code::Declaration&>* metadata = nullptr;
 
         Builder() = default;
         explicit Builder(const std::shared_ptr<const ObjectType>& base)
@@ -73,7 +73,7 @@ struct ObjectType : public Type
     MemberLookup lookup;
     Members members;
     std::shared_ptr<const ObjectType> base;
-    code::Metadata<code::Declaration&>* metadata;
+    code::Metadata<code::Declaration&>* metadata = nullptr;
 
     ObjectType() = default;
     explicit ObjectType(Builder&& builder);

@@ -2,6 +2,7 @@
 
 #include <string>
 #include "code.h"
+#include "error.h"
 #include "layout.h"
 
 namespace objective
@@ -25,6 +26,10 @@ struct Type
 
     [[nodiscard]] virtual size_t size() const = 0;
     [[nodiscard]] virtual size_t alignment() const = 0;
+    [[nodiscard]] virtual const std::type_info& info() const
+    {
+        throw TypeError("Type does not have static counterpart!");
+    };
 
     virtual void construct(char* address) const = 0;
     virtual void destroy(char* address) const = 0;

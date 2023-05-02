@@ -15,7 +15,7 @@ using csgopp::common::bits::BitStream;
 using csgopp::common::vector::Vector2;
 using csgopp::common::vector::Vector3;
 using objective::code::Declaration;
-using objective::TrivialValueType;
+using objective::ValueType;
 using objective::ArrayType;
 using objective::WrapperType;
 using objective::Type;
@@ -26,7 +26,7 @@ struct DataType : public Type
     virtual void update(char* address, BitStream& stream, const Property* property) const = 0;
 };
 
-struct BoolType final : public WrapperType<TrivialValueType<bool>, DataType>
+struct BoolType final : public WrapperType<ValueType<bool>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -35,7 +35,7 @@ struct BoolType final : public WrapperType<TrivialValueType<bool>, DataType>
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct UnsignedInt32Type final : public WrapperType<TrivialValueType<uint32_t>, DataType>
+struct UnsignedInt32Type final : public WrapperType<ValueType<uint32_t>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -44,7 +44,7 @@ struct UnsignedInt32Type final : public WrapperType<TrivialValueType<uint32_t>, 
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct SignedInt32Type final : public WrapperType<TrivialValueType<int32_t>, DataType>
+struct SignedInt32Type final : public WrapperType<ValueType<int32_t>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -53,7 +53,7 @@ struct SignedInt32Type final : public WrapperType<TrivialValueType<int32_t>, Dat
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct FloatType final : public WrapperType<TrivialValueType<float>, DataType>
+struct FloatType final : public WrapperType<ValueType<float>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -62,7 +62,7 @@ struct FloatType final : public WrapperType<TrivialValueType<float>, DataType>
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct Vector3Type final : public WrapperType<TrivialValueType<Vector3>, DataType>
+struct Vector3Type final : public WrapperType<ValueType<Vector3>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -71,7 +71,7 @@ struct Vector3Type final : public WrapperType<TrivialValueType<Vector3>, DataTyp
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct Vector2Type final : public WrapperType<TrivialValueType<Vector2>, DataType>
+struct Vector2Type final : public WrapperType<ValueType<Vector2>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -80,7 +80,7 @@ struct Vector2Type final : public WrapperType<TrivialValueType<Vector2>, DataTyp
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct StringType final : public WrapperType<TrivialValueType<std::string>, DataType>
+struct StringType final : public WrapperType<ValueType<std::string>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -89,7 +89,7 @@ struct StringType final : public WrapperType<TrivialValueType<std::string>, Data
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct UnsignedInt64Type final : public WrapperType<TrivialValueType<uint64_t>, DataType>
+struct UnsignedInt64Type final : public WrapperType<ValueType<uint64_t>, DataType>
 {
     using WrapperType::WrapperType;
 
@@ -98,7 +98,7 @@ struct UnsignedInt64Type final : public WrapperType<TrivialValueType<uint64_t>, 
 //    void format(const char* address, std::ostream& out) const override;
 };
 
-struct SignedInt64Type final : public WrapperType<TrivialValueType<int64_t>, DataType>
+struct SignedInt64Type final : public WrapperType<ValueType<int64_t>, DataType>
 {
     using WrapperType::WrapperType;
 

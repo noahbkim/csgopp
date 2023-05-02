@@ -9,16 +9,8 @@
 namespace objective::type
 {
 
-struct ValueType : public Type
-{
-    [[nodiscard]] virtual const std::type_info& info() const = 0;
-
-    void emit(code::Declaration& declaration, code::Declaration::Member& member) const override;
-    void emit(layout::Cursor& cursor) const override;
-};
-
 template<typename T>
-struct TrivialValueType : public ValueType
+struct ValueType : public Type
 {
     static_assert(std::is_constructible<T>::value);
     static_assert(std::is_destructible<T>::value);
@@ -53,6 +45,16 @@ struct TrivialValueType : public ValueType
     [[nodiscard]] virtual std::string represent() const override
     {
         return typeid(T).name();
+    }
+
+    void emit(code::Declaration& declaration, code::Declaration::Member& member) const override
+    {
+        member.type = this->represent();
+    }
+
+    void emit(layout::Cursor& cursor) const override
+    {
+        cursor.note(this->represent());
     }
 
     [[nodiscard]] std::vector<std::string> keys() const override
