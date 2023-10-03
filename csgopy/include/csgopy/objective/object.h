@@ -4,6 +4,7 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 #include <csgopp/common/vector.h>
 #include <objective.h>
 #include <objective/view.h>
@@ -63,9 +64,10 @@ nanobind::object cast(const char* address)
 
 struct ConstantReferenceBinding
 {
-    using Caster = nanobind::object (*)(const char*);
-    using CasterMap = absl::flat_hash_map<const std::type_info*, Caster>;
-    static CasterMap casters;
+    [[nodiscard]] std::string repr(const ConstantReference* self) const
+    {
+        return "ConstantReference<" + self->type->represent() + ">";
+    }
 
     static nanobind::class_<ConstantReference> bind(nanobind::module_& module_, nanobind::class_<Lens>& base);
 };
@@ -78,15 +80,17 @@ struct InstanceAdapter : public Adapter<const Instance<const T>>
     [[nodiscard]] TypeAdapter<const T> type() const { return TypeAdapter<const T>(this->self->type); }
     [[nodiscard]] ConstantReference getitem_name(const std::string& name) const { return this->self->operator[](name); }
     [[nodiscard]] ConstantReference getitem_index(size_t index) const { return this->self->operator[](index); }
-//    [[nodiscard]] std::optional<std::vector<std::string>> keys() const {}
-//    [[nodiscard]] std::optional<size_t> length() const {}
+    [[nodiscard]] size_t len() const { return this->self->type->count(); }
+    [[nodiscard]] std::vector<std::string> keys() const { return this->self->type->keys(); }
 
     static nanobind::class_<InstanceAdapter<T>> bind(nanobind::module_& module, const char* name)
     {
         return nanobind::class_<InstanceAdapter<T>>(module, name)
-            .def("type", &InstanceAdapter::type)
             .def("__getitem__", &InstanceAdapter::getitem_name)
             .def("__getitem__", &InstanceAdapter::getitem_index)
+            .def("__len__", &InstanceAdapter::len)
+            .def_prop_ro("type", &InstanceAdapter::type)
+            .def("keys", &InstanceAdapter::keys)
             ;
     }
 };

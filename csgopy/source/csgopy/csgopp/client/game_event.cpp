@@ -1,6 +1,6 @@
 #include "csgopy/csgopp/client/game_event.h"
 
-nanobind::class_ <GameEventTypeAdapter> GameEventTypeAdapter::bind(nanobind::module_& module_)
+nanobind::class_<GameEventTypeAdapter> GameEventTypeAdapter::bind(nanobind::module_& module_)
 {
     return nanobind::class_<GameEventTypeAdapter>(module_, "GameEventType")
         .def("__repr__", &GameEventTypeAdapter::repr)
