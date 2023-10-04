@@ -1,15 +1,16 @@
-add_library(object STATIC
-        source/object/type/array.cpp
-        source/object/type/object.cpp
-        source/object/type/value.cpp
-        source/object/code.cpp
-        source/object/view.cpp
+add_library(objective STATIC
+        source/objective/type/array.cpp
+        source/objective/type/object.cpp
+        source/objective/type/value.cpp
+        source/objective/code.cpp
+        source/objective/view.cpp
         )
 
-set_target_properties(object PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_features(object PRIVATE cxx_std_20)
+find_package(absl REQUIRED)
+target_link_libraries(objective PRIVATE abseil::abseil)
 
-target_include_directories(object PUBLIC include)
-target_link_libraries(object PUBLIC CONAN_PKG::abseil)
+set_target_properties(objective PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(objective PRIVATE cxx_std_20)
+target_include_directories(objective PUBLIC include)
 
 add_subdirectory(tests)

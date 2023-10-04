@@ -8,10 +8,15 @@
 
 # CMake
 CMakeCache.txt
+CMakeUserPresets.json
 CMakeFiles/
 Makefile
 cmake_install.cmake
 cmake-build-*
+
+# Conan
+/conan-build-release
+/conan-build-debug
 
 # VSC++
 *.vcxproj

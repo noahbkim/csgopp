@@ -1,12 +1,10 @@
 [requires]
-protobuf/3.21.9
-abseil/20230125.1
+protobuf/3.21.12
+abseil/20230125.3
 argparse/2.9
-
-[build_requires]
 gtest/1.12.1
-doxygen/1.9.4
-xapian-core/1.4.19
+# doxygen/1.9.4
 
 [generators]
-cmake
+CMakeDeps
+CMakeToolchain

@@ -11,16 +11,18 @@ add_library(csgopp STATIC
         source/csgopp/demo.cpp
         )
 
-add_subdirectory(docs)
-add_subdirectory(messages)
-add_subdirectory(tests)
-
 set_target_properties(csgopp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(csgopp PRIVATE cxx_std_20)
-
 target_include_directories(csgopp PUBLIC include)
+
+find_package(absl REQUIRED)
+find_package(protobuf REQUIRED)
 target_link_libraries(csgopp
-        PUBLIC object
+        PUBLIC objective
         PUBLIC csgopp.messages
-        PUBLIC CONAN_PKG::abseil
-        PUBLIC CONAN_PKG::protobuf)
+        PRIVATE abseil::abseil
+        PUBLIC protobuf::protobuf)  # Public API requires protobuf
+
+# add_subdirectory(docs)
+add_subdirectory(messages)
+add_subdirectory(tests)

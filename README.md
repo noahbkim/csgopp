@@ -197,6 +197,20 @@ From the generated classes, we know that each member of this objective is named 
 - [ ] SetConVar
 - [ ] EncryptedData
 
+## Setup
+
+Setting up this project requires `conan` and `cmake`.
+
+```bash
+# You will need a separate conan profile for release and debug builds
+$ conan profile detect               # Automatically names it `default`
+$ conan profile detect --name debug  # Edit this such that `build_type=Debug`
+
+# Install everything
+$ conan install . --build missing --output-folder conan-build-release
+$ conan install . --build missing --output-folder conan-build-debug --profile debug
+```
+
 ## Alternatives
 
 - Go: https://github.com/markus-wa/demoinfocs-golang
